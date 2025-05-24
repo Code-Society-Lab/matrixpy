@@ -1,0 +1,3 @@
+class Context:
+    def __init__(self, bot, room, event):
+        ...

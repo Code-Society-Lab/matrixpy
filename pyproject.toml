@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+
+[project]
+name = "matrix.py"
+version = "0.0.1-alpha"
+authors = [
+    { name="Simon Roy" },
+    { name=" Chris Dedman Rollet " }
+]
+maintainers = [
+    { name="Code Society Lab", email="admin@codesociety.xyz" }
+]
+description = "An easy-to-use Matrix bot framework designed for quick development and minimal setup"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.10"
+
+dependencies = [
+    "matrix-nio",
+    "logger",
+]
+
+[project.urls]
+"Homepage" = "https://codesociety.xyz"
+"Source" = "https://github.com/Code-Society-Lab/matrixpy"
+
+[tool.setuptools]
+packages = ["matrix"]
+license-files = []
