@@ -174,21 +174,15 @@ class Bot:
         if self.start_at and self.start_at > (event.server_timestamp / 1000):
             return True
 
-        try:
-            await self._dispatch(room, event)
-        except Exception:
-            self.log.exception(
-                "uncaught exception while dispatching %s",
-                event
-            )
+        ctx = Context(bot=self, room=room, event=event)
+        await self._dispatch(ctx)
 
-    async def _dispatch(self, room: MatrixRoom, event: Event) -> None:
+    async def _dispatch(self, ctx: Context) -> None:
         """Internal type-based fan-out plus optional command handling."""
         for event_type, funcs in self._handlers.items():
-            if isinstance(event, event_type):
+            if isinstance(ctx.event, event_type):
                 for func in funcs:
                     try:
-                        ctx = Context(bot=self, room=room, event=event)
                         await func(ctx)
                     except Exception:
                         self.log.exception(
@@ -196,34 +190,26 @@ class Bot:
                             func.__name__
                         )
 
-    async def _process_commands(
-        self,
-        ctx: Context
-    ) -> None:
+    async def _process_commands(self, ctx: Context) -> None:
         """Parse and execute commands"""
-        if not self.prefix or not ctx.event.body.startswith(self.prefix):
+        if not ctx.command:
             return
-
-        parts = ctx.event.body[len(self.prefix) :].split()
-        if not parts:
-            return
-
-        cmd_name, *args = parts
-        cmd = self.commands.get(cmd_name.lower())
+        
+        cmd = self.commands.get(ctx.command.lower())
         if not cmd:
-            self.log.warning("unknown command '%s'", cmd_name)
+            ctx.logger.warning("unknown command '%s'", ctx.command.lower())
             return
 
         try:
             await cmd(ctx)
         except Exception:
-            self.log.exception("error while executing command '%s'", cmd_name)
+            ctx.logger.exception("error while executing command '%s'", ctx.command)
 
     async def on_ready(self) -> None:  # noqa: D401 (keep name for consistency)
         """Invoked after a successful login, before sync starts."""
         self.log.info("bot is ready")
 
-    async def on_message(self, ctx: Context):
+    async def on_message(self, ctx: Context) -> None:
         """
         Invoked when a message event is received.
 
