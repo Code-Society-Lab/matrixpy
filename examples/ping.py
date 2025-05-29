@@ -1,15 +1,11 @@
-from matrix.bot import Bot
-from nio import MatrixRoom, RoomMessageText
+from matrix.bot import Bot, Context
 
 bot = Bot("https://matrix.org", prefix="!")
 
 
-@bot.command()
-async def ping(room, event):
-    await bot.client.room_send(room.room_id, "m.room.message", {
-        "msgtype": "m.text", 
-        "body": "Pong!"
-    })
-
+@bot.command("ping")
+async def ping(ctx: Context):
+  print(f"{ctx.sender} invoked {ctx.body} in room {ctx.room_name}.")
+  await ctx.send("Pong!")
 
 bot.start("user id", "password")
