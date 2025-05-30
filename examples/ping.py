@@ -1,5 +1,5 @@
 from matrix.bot import Bot
-from nio import MatrixRoom, RoomMessageText
+
 
 bot = Bot("https://matrix.org", prefix="!")
 
