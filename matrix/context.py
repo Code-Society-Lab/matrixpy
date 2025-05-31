@@ -1,26 +1,29 @@
+import shlex
 from nio import Event, MatrixRoom
+
 
 class Context:
     def __init__(self, bot, room: MatrixRoom, event: Event):
-        self.bot     = bot
-        self.room    = room
-        self.event   = event
+        self.bot = bot
+        self.room = room
+        self.event = event
 
-        self.prefix  = bot.prefix
-        self.body    = getattr(event, "body", "")
-        self.sender  = event.sender
+        self.body = getattr(event, "body", "")
+        self.sender = event.sender
 
         # Room informations extracted.
-        self.room_id   = room.room_id
+        self.room_id = room.room_id
         self.room_name = room.name
 
-        if self.prefix and self.body.startswith(self.prefix):
-            parts        = self.body[len(self.prefix):].split()
-            self.command = parts[0].lower() if parts else None
-            self.args    = parts[1:]
-        else:
-            self.command = None
-            self.args    = []
+        self.prefix = bot.prefix
+        self.command = None
+        self._args = shlex.split(self.body)
+
+    @property
+    def args(self):
+        if self.command:
+            return self._args[1:]
+        return self._args
 
     async def send(self, message: str) -> None:
         """
