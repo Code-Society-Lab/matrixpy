@@ -3,14 +3,14 @@ import asyncio
 import logging
 from collections import defaultdict
 from typing import (
-    Awaitable,
-    Callable,
+    Any,
     Dict,
     List,
-    Optional,
     Type,
-    TypeVar,
     Union,
+    Optional,
+    Callable,
+    Coroutine,
 )
 
 from nio import (
@@ -21,17 +21,38 @@ from nio import (
     RoomMemberEvent,
     TypingNoticeEvent,
 )
-
 from matrix.context import Context
+from matrix.command import Command
+from matrix.errors import AlreadyRegisteredError, CommandNotFoundError
 
-Callback = Callable[[Context], Awaitable[None]]
+
+Callback = Callable[..., Coroutine[Any, Any, Any]]
+ErrorCallback = Callable[[Exception], Coroutine]
+
 
 class Bot:
+    """
+    The base class defining a Matrix bot.
+
+    This class manages the connection to a Matrix homeserver, listens
+    for events, and dispatches them to registered handlers. It also supports
+    a command system with decorators for easy registration.
+
+    :param homeserver: The URL of the Matrix homeserver to connect to.
+    :type homeserver: str
+    :keyword prefix: A string prefix used to recognize commands in messages.
+    :type prefix: str, optional
+
+    :raises TypeError: If an event or command handler is not a coroutine.
+    :raises ValueError: If an unknown event name
+    :raises AlreadyRegisteredError: If a new command is already registered.
+    """
+
     EVENT_MAP: Dict[str, Type[Event]] = {
-        "on_message":      RoomMessageText,
-        "on_typing":       TypingNoticeEvent,
-        "on_member_join":  RoomMemberEvent,
-        "on_member_leave": RoomMemberEvent,
+        "on_typing":        TypingNoticeEvent,
+        "on_message":       RoomMessageText,
+        "on_member_join":   RoomMemberEvent,
+        "on_member_leave":  RoomMemberEvent,
         "on_member_invite": RoomMemberEvent,
         "on_member_ban":    RoomMemberEvent,
         "on_member_kick":   RoomMemberEvent,
@@ -45,8 +66,9 @@ class Bot:
         self.prefix: str = prefix
         self.start_at: float | None = None  # unix timestamp
 
-        self.commands: Dict[str, Callback] = {}
+        self.commands: Dict[str, Command] = {}
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
+        self._on_error: Optional[ErrorCallback] = None
 
         self.client.add_event_callback(self._on_event, Event)
         self._auto_register_events()
@@ -56,7 +78,7 @@ class Bot:
         func: Optional[Callback] = None,
         *,
         event_spec: Union[str, Type[Event], None] = None,
-    ) -> Callable[[Callback], Callback]:
+    ) -> Union[Callback, Callable[[Callback], Callback]]:
         """
         Decorator to register a coroutine as an event handler.
 
@@ -114,7 +136,6 @@ class Bot:
                 f.__name__,
                 event_type.__name__
             )
-
             return f
 
         if func is None:
@@ -124,33 +145,42 @@ class Bot:
 
     def command(
         self,
-        name: str | None = None
-    ) -> Callable[[Callback], Callback]:
+        name: Optional[str] = None
+    ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
 
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function name is used.
+        :param name: The name of the command. If omitted, the function 
+                     name is used.
         :type name: str, optional
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If a command with the same name is registered.
         :return: Decorator that registers the command handler.
         :rtype: Callback
         """
-        def wrapper(func: Callback) -> Callback:
-            cmd_name = (name or func.__name__).lower()
+        def wrapper(func: Callback) -> Command:
+            cmd = Command(func, name=name)
 
+            if cmd in self.commands:
+                raise AlreadyRegisteredError(cmd)
+
+            self.commands[cmd.name] = cmd
+            self.log.debug("command %s registered", cmd)
+
+            return cmd
+        return wrapper
+
+    def error(self):
+        """Decorator to register a custom error handler for the command."""
+
+        def wrapper(func: ErrorCallback) -> Callable:
             if not asyncio.iscoroutinefunction(func):
-                raise TypeError("Commands must be coroutines")
+                raise TypeError('The error handler must be a coroutine.')
 
-            if cmd_name in self.commands:
-                raise ValueError(f"Command '{cmd_name}' already exists")
-
-            self.commands[cmd_name] = func
-            self.log.debug("registered command %s", cmd_name)
-
+            self._on_error = func
             return func
         return wrapper
 
@@ -168,44 +198,46 @@ class Bot:
     async def _on_event(self, room: MatrixRoom, event: Event) -> None:
         # ignore bot events
         if event.sender == self.client.user:
-            return True
+            return
 
         # ignore events that happened before the bot started
         if self.start_at and self.start_at > (event.server_timestamp / 1000):
-            return True
+            return
 
-        ctx = Context(bot=self, room=room, event=event)
-        await self._dispatch(ctx)
+        try:
+            ctx = Context(bot=self, room=room, event=event)
+            await self._dispatch(ctx)
+        except Exception as error:
+            await self.on_error(error)
 
     async def _dispatch(self, ctx: Context) -> None:
         """Internal type-based fan-out plus optional command handling."""
         for event_type, funcs in self._handlers.items():
             if isinstance(ctx.event, event_type):
                 for func in funcs:
-                    try:
-                        await func(ctx)
-                    except Exception:
-                        self.log.exception(
-                            "error in handler %s",
-                            func.__name__
-                        )
+                    await func(ctx)
 
     async def _process_commands(self, ctx: Context) -> None:
         """Parse and execute commands"""
-        if not ctx.command:
+        if not self.prefix or not ctx.body.startswith(self.prefix):
             return
-        
-        cmd = self.commands.get(ctx.command.lower())
+
+        parts = ctx.body[len(self.prefix):].split()
+
+        if parts:
+            cmd_name = parts[0]
+            cmd = self.commands.get(cmd_name)
+
         if not cmd:
-            ctx.logger.warning("unknown command '%s'", ctx.command.lower())
-            return
+            raise CommandNotFoundError(cmd_name)
 
         try:
+            ctx.command = cmd
             await cmd(ctx)
-        except Exception:
-            ctx.logger.exception("error while executing command '%s'", ctx.command)
+        except Exception as error:
+            await cmd.on_error(ctx, error)
 
-    async def on_ready(self) -> None:  # noqa: D401 (keep name for consistency)
+    async def on_ready(self) -> None:
         """Invoked after a successful login, before sync starts."""
         self.log.info("bot is ready")
 
@@ -214,13 +246,20 @@ class Bot:
         Invoked when a message event is received.
 
         This method is automatically called when a :class:`nio.RoomMessageText`
-        event is detected. It is primarily responsible for detecting and processing
-        commands that match the bot's defined prefix.
+        event is detected. It is primarily responsible for detecting and
+        processing commands that match the bot's defined prefix.
 
-        :param ctx: The context object containing information about the Matrix room and the message event.
+        :param ctx: The context object containing information about the Matrix
+                    room and the message event.
         :type ctx: Context
         """
         await self._process_commands(ctx)
+
+    async def on_error(self, error: Exception) -> None:
+        if self._on_error:
+            await self._on_error(error)
+            return
+        self.log.exception("Unhandled error: '%s'", error)
 
     async def run(self, user_id: str, password: str) -> None:
         """
@@ -231,7 +270,7 @@ class Bot:
         calls the :meth:`on_ready` hook, and starts the long-running
         sync loop for receiving events.
 
-        :param user_id: Fully-qualified Matrix user ID (e.g., ``@bot:example.org``).
+        :param user_id: Matrix user ID
         :type user_id: str
         :param password: Account password for the user.
         :type password: str

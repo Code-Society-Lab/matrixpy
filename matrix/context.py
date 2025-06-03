@@ -1,26 +1,65 @@
+import shlex
 from nio import Event, MatrixRoom
+from typing import TYPE_CHECKING, Optional, Any, List
+from matrix.errors import MatrixError
+
+
+if TYPE_CHECKING:
+    from matrix.bot import Bot
+    from matrix.command import Command
+
 
 class Context:
-    def __init__(self, bot, room: MatrixRoom, event: Event):
-        self.bot     = bot
-        self.room    = room
-        self.event   = event
+    """
+    Represents the context in which a command is executed. Provides
+    access to the bot instance, room and event metadata, parsed arguments,
+    and other utilities.
 
-        self.prefix  = bot.prefix
-        self.body    = getattr(event, "body", "")
-        self.sender  = event.sender
+    :param bot: The bot instance executing the command.
+    :type bot: Bot
+    :param room: The Matrix room where the event occurred.
+    :type room: MatrixRoom
+    :param event: The event that triggered the command or message.
+    :type event: Event
 
-        # Room informations extracted.
-        self.room_id   = room.room_id
-        self.room_name = room.name
+    raises MatrixError: If a Matrix operation fails.
+    """
 
-        if self.prefix and self.body.startswith(self.prefix):
-            parts        = self.body[len(self.prefix):].split()
-            self.command = parts[0].lower() if parts else None
-            self.args    = parts[1:]
-        else:
-            self.command = None
-            self.args    = []
+    def __init__(self, bot: "Bot", room: MatrixRoom, event: Event):
+        self.bot = bot
+        self.room = room
+        self.event = event
+
+        self.body: str = getattr(event, "body", "")
+        self.sender: str = event.sender
+
+        # Room metadata.
+        self.room_id: str = room.room_id
+        self.room_name: str = room.name
+
+        # Command metdata
+        self.prefix: str = bot.prefix
+        self.command: Optional[Command] = None
+        self._args: List[str] = shlex.split(self.body)
+
+    @property
+    def args(self) -> List[str]:
+        """
+        Returns the list of parsed arguments from the message body.
+
+        If a command is present, the command name is excluded.
+
+        :return: The list of arguments.
+        :rtype: List[str]
+        """
+        if self.command:
+            return self._args[1:]
+        return self._args
+
+    @property
+    def logger(self) -> Any:
+        """Logger for instance specific to the current room or event."""
+        return self.bot.log.getChild(self.room_id)
 
     async def send(self, message: str) -> None:
         """
@@ -36,10 +75,4 @@ class Context:
                 content={"msgtype": "m.text", "body": message}
             )
         except Exception as e:
-            print(f"Failed to send message: {e}")
-            raise
-
-    @property
-    def logger(self):
-        """Logger for instance specific to the current room or event."""
-        return self.bot.log.getChild(self.room_id)
+            raise MatrixError(f"Failed to send message: {e}")
