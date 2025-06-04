@@ -20,8 +20,8 @@ class Config:
     def __init__(self, config_file: str) -> None:
         with open(config_file, 'r') as f:
             config = yaml.safe_load(f)
-            self.homeserver: str      = config.get('SERVER', 'https://matrix.org')
-            self.user_id: str         = config.get('USERNAME')
+            self.homeserver: str = config.get('SERVER', 'https://matrix.org')
+            self.user_id: str = config.get('USERNAME')
             self.password: str | None = config.get('PASSWORD', None)
-            self.token: str | None    = config.get('TOKEN', None)
-            self.prefix: str          = config.get('PREFIX', '!')
+            self.token: str | None = config.get('TOKEN', None)
+            self.prefix: str = config.get('PREFIX', '!')
