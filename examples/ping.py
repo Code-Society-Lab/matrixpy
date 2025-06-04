@@ -1,7 +1,8 @@
-from matrix.bot import Bot, Context
+from matrix.bot import Bot, Context, Config
 
 
-bot = Bot("https://matrix.org", prefix="!")
+config = Config(config_file='examples/config.yaml')
+bot    = Bot(config)
 
 
 @bot.command("ping")
@@ -10,4 +11,4 @@ async def ping(ctx: Context):
     await ctx.send("Pong!")
 
 
-bot.start("user id", "password")
+bot.start()
