@@ -29,11 +29,10 @@ pip install git+ssh://git@github.com:Code-Society-Lab/matrixpy.git
 
 
 ```python
-from matrix import Bot, Context, Config
+from matrix import Bot, Context
 
 
-config = Config('examples/config.yaml')
-bot = Bot(config)
+bot = Bot('examples/config.yaml')
 
 
 @bot.command("ping")

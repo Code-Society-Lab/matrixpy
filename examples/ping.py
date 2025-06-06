@@ -1,8 +1,7 @@
-from matrix.bot import Bot, Context, Config
+from matrix.bot import Bot, Context
 
 
-config = Config('examples/config.yaml')
-bot = Bot(config)
+bot = Bot('examples/config.yaml')
 
 
 @bot.command("ping")
