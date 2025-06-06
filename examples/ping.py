@@ -1,7 +1,7 @@
 from matrix.bot import Bot, Context, Config
 
 
-config = Config(config_file='examples/config.yaml')
+config = Config('examples/config.yaml')
 bot = Bot(config)
 
 
