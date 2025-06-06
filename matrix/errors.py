@@ -19,3 +19,8 @@ class AlreadyRegisteredError(CommandError):
 class MissingArgumentError(CommandError):
     def __init__(self, param):
         super().__init__(f"Missing required argument: '{param.name}'")
+
+
+class ConfigError(MatrixError):
+    def __init__(self, error):
+        super().__init__(f"Missing required configuration: '{error}'")

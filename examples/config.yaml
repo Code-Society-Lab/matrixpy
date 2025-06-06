@@ -1,0 +1,4 @@
+HOMESERVER: "your_matrix_server(default to matrix.org)"
+USERNAME: "your_bot_username"
+PASSWORD: "your_Password"
+PREFIX: "your_custom_prefix(default to !)"

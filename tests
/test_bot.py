@@ -9,7 +9,10 @@ from matrix.bot import Bot
 
 @pytest.fixture
 def bot():
-    return Bot(homeserver="https://matrix.example.org", prefix="!")
+    return Bot(
+        username="grace",
+        password="grace1234"
+    )
 
 
 @pytest.mark.asyncio

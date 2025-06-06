@@ -31,16 +31,18 @@ pip install git+ssh://git@github.com:Code-Society-Lab/matrixpy.git
 ```python
 from matrix import Bot, Context
 
-bot = Bot("https://matrix.org", prefix="!")
+
+bot = Bot('examples/config.yaml')
 
 
-@bot.command()
+@bot.command("ping")
 async def ping(ctx: Context):
-  print(f"{ctx.sender} invoked {ctx.body} in room {ctx.room_id}.")
-  await ctx.send("Pong!")
+    print(f"{ctx.sender} invoked {ctx.body} in room {ctx.room_name}.")
+    await ctx.send("Pong!")
+
 
 if __name__ == "__main__":
-    bot.start("@yourbot:matrix.org", "yourpassword")
+    bot.start()
 ```
 
 
