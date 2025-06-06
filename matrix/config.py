@@ -1,4 +1,5 @@
 import yaml
+from matrix.errors import ConfigError
 from typing import Optional
 
 
@@ -20,6 +21,7 @@ class Config:
 
     :raises FileNotFoundError: If the configuration file does not exist.
     :raises yaml.YAMLError: If the configuration file cannot be parsed.
+    :raises ConfigError: If neither password or token has been provided.
     """
 
     def __init__(self, config_path: Optional[str] = None, **kwargs):
@@ -31,13 +33,19 @@ class Config:
 
         if config_path:
             self.load_from_file(config_path)
+        elif not (self.password or self.token):
+            raise ConfigError("username and password or token")
 
     def load_from_file(self, config_path: str):
         """Load Matrix client settings via YAML config file."""
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
-            self.homeserver: str = config.get("HOMESERVER", "https://matrix.org")
-            self.user_id: str = config.get("USERNAME")
-            self.password: str | None = config.get("PASSWORD", None)
-            self.token: str | None = config.get("TOKEN", None)
-            self.prefix: str = config.get("PREFIX", "!")
+
+            if not (config.get("PASSWORD", None) or config.get("TOKEN", None)):
+                raise ConfigError("USERNAME and PASSWORD or TOKEN")
+
+            self.homeserver = config.get("HOMESERVER", "https://matrix.org")
+            self.user_id = config.get("USERNAME")
+            self.password = config.get("PASSWORD", None)
+            self.token = config.get("TOKEN", None)
+            self.prefix = config.get("PREFIX", "!")
