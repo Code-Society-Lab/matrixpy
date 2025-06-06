@@ -164,7 +164,7 @@ class Command:
         await self.callback(ctx, *parsed_args)
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, Command) and self.name == other.name
+        return self.name == other
 
     def __hash__(self) -> int:
         return hash(self.name)
