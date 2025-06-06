@@ -26,9 +26,9 @@ class Config:
 
     def __init__(self, config_path: Optional[str] = None, **kwargs):
         self.homeserver: str = kwargs.get("homeserver", "https://matrix.org")
-        self.user_id: str = kwargs.get("username")
-        self.password: str | None = kwargs.get("password", None)
-        self.token: str | None = kwargs.get("token", None)
+        self.user_id: Optional[str] = kwargs.get("username")
+        self.password: Optional[str] = kwargs.get("password", None)
+        self.token: Optional[str] = kwargs.get("token", None)
         self.prefix: str = kwargs.get("prefix", "!")
 
         if config_path:

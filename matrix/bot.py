@@ -58,7 +58,11 @@ class Bot:
         "on_member_change": RoomMemberEvent,
     }
 
-    def __init__(self, config: Union[Config, str] = None, **kwargs) -> None:
+    def __init__(
+        self,
+        config: Optional[Union[Config, str]] = None,
+        **kwargs
+    ) -> None:
         if isinstance(config, Config):
             self.config = config
         elif isinstance(config, str):
@@ -90,7 +94,7 @@ class Bot:
 
         Can be used with or without arguments:
 
-        - Without arguments, registers based on coroutine name 
+        - Without arguments, registers based on coroutine name
           lookup in ``EVENT_MAP``::
 
             @bot.event
@@ -117,7 +121,7 @@ class Bot:
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If the event name or string is unknown.
         :return: Decorator that registers the event handler.
-        :rtype: Callable[[Callable[..., Awaitable[None]]], 
+        :rtype: Callable[[Callable[..., Awaitable[None]]],
                 Callable[..., Awaitable[None]]]
         """
         def wrapper(f: Callback) -> Callback:
@@ -159,7 +163,7 @@ class Bot:
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function 
+        :param name: The name of the command. If omitted, the function
                      name is used.
         :type name: str, optional
         :raises TypeError: If the decorated function is not a coroutine.

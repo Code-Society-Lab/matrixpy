@@ -22,6 +22,15 @@ dependencies = [
     'PyYAML',
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "flake8",
+    "mypy",
+    "types-PyYAML"
+]
+
 [project.urls]
 "Homepage" = "https://codesociety.xyz"
 "Source" = "https://github.com/Code-Society-Lab/matrixpy"
