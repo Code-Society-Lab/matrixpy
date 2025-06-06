@@ -41,7 +41,7 @@ class Config:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-            if not (config.get("PASSWORD", None) or config.get("TOKEN", None)):
+            if not (config.get("PASSWORD") or config.get("TOKEN")):
                 raise ConfigError("USERNAME and PASSWORD or TOKEN")
 
             self.homeserver = config.get("HOMESERVER", "https://matrix.org")
