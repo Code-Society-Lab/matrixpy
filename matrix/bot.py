@@ -58,12 +58,18 @@ class Bot:
         "on_member_change": RoomMemberEvent,
     }
 
-    def __init__(self, config: Config) -> None:
-        self.config = config
-        self.client: AsyncClient = AsyncClient(config.homeserver)
+    def __init__(self, config: Union[Config, str] = None, **kwargs) -> None:
+        self.config = Config(**kwargs)
+
+        if isinstance(config, Config):
+            self.config = config
+        elif isinstance(config, str):
+            self.config = Config(config_path=config)
+
+        self.client: AsyncClient = AsyncClient(self.config.homeserver)
         self.log: logging.Logger = logging.getLogger(__name__)
 
-        self.prefix: str = config.prefix
+        self.prefix: str = self.config.prefix
         self.start_at: float | None = None  # unix timestamp
 
         self.commands: Dict[str, Command] = {}
