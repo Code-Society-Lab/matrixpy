@@ -59,12 +59,12 @@ class Bot:
     }
 
     def __init__(self, config: Union[Config, str] = None, **kwargs) -> None:
-        self.config = Config(**kwargs)
-
         if isinstance(config, Config):
             self.config = config
         elif isinstance(config, str):
             self.config = Config(config_path=config)
+        else:
+            self.config = Config(**kwargs)
 
         self.client: AsyncClient = AsyncClient(self.config.homeserver)
         self.log: logging.Logger = logging.getLogger(__name__)
