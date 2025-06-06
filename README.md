@@ -32,8 +32,8 @@ pip install git+ssh://git@github.com:Code-Society-Lab/matrixpy.git
 from matrix import Bot, Context, Config
 
 
-config = Config(config_file='examples/config.yaml')
-bot    = Bot(config)
+config = Config('examples/config.yaml')
+bot = Bot(config)
 
 
 @bot.command("ping")
