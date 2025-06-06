@@ -36,7 +36,7 @@ class Config:
         """Load Matrix client settings via YAML config file."""
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
-            self.homeserver: str = config.get("SERVER", "https://matrix.org")
+            self.homeserver: str = config.get("HOMESERVER", "https://matrix.org")
             self.user_id: str = config.get("USERNAME")
             self.password: str | None = config.get("PASSWORD", None)
             self.token: str | None = config.get("TOKEN", None)
