@@ -1,4 +1,5 @@
 import yaml
+from typing import Optional
 
 
 class Config:
@@ -11,15 +12,29 @@ class Config:
         token: (Optional) One of the password or token must be provided.
         prefix: Defaults to '!' if not specified in the config file.
 
-    :param config_file: Path to the YAML configuration file.
-    :type config_file: str
+    :param config_path: (Optional) Path to the YAML configuration file.
+    :type config_path: str
+
+    :param **kwargs: (Optional) Varaiable to Matrix client configuration.
+    :type **kwargs: dict[str, Any]
 
     :raises FileNotFoundError: If the configuration file does not exist.
     :raises yaml.YAMLError: If the configuration file cannot be parsed.
     """
 
-    def __init__(self, config_file: str) -> None:
-        with open(config_file, "r") as f:
+    def __init__(self, config_path: Optional[str] = None, **kwargs):
+        self.homeserver: str = kwargs.get("homeserver", "https://matrix.org")
+        self.user_id: str = kwargs.get("username")
+        self.password: str | None = kwargs.get("password", None)
+        self.token: str | None = kwargs.get("token", None)
+        self.prefix: str = kwargs.get("prefix", "!")
+
+        if config_path:
+            self.load_from_file(config_path)
+
+    def load_from_file(self, config_path: str):
+        """Load Matrix client settings via YAML config file."""
+        with open(config_path, "r") as f:
             config = yaml.safe_load(f)
             self.homeserver: str = config.get("SERVER", "https://matrix.org")
             self.user_id: str = config.get("USERNAME")
