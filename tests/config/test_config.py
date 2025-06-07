@@ -21,6 +21,6 @@ def test_config_without_password_or_token():
 def test_load_from_file():
     cfg = Config(config_path="tests/config/config_file.yaml")
     assert cfg.homeserver == "https://matrix.org"
-    assert cfg.user_id == "grace"
+    assert cfg.user_id == "@grace:matrix.org"
     assert cfg.password == "grace1234"
     assert cfg.prefix == "!"
