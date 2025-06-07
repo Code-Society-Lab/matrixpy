@@ -215,43 +215,44 @@ class Bot:
             return
 
         try:
-            ctx = Context(bot=self, room=room, event=event)
-            await self._dispatch(ctx)
+            await self._dispatch(room, event)
         except Exception as error:
             await self.on_error(error)
 
-    async def _dispatch(self, ctx: Context) -> None:
+    async def _dispatch(self, room: MatrixRoom, event: Event) -> None:
         """Internal type-based fan-out plus optional command handling."""
         for event_type, funcs in self._handlers.items():
-            if isinstance(ctx.event, event_type):
+            if isinstance(event, event_type):
                 for func in funcs:
-                    await func(ctx)
+                    await func(room, event)
 
-    async def _process_commands(self, ctx: Context) -> None:
+    async def _process_commands(self, room: MatrixRoom, event: Event) -> None:
         """Parse and execute commands"""
+        ctx = await self._build_context(room, event)
+
+        print(ctx.command)
+
+        if ctx.command:
+            await ctx.command(ctx)
+
+    async def _build_context(self, room: MatrixRoom, event: Event):
+        """Builds the base context and extracts the command from the event"""
+        ctx = Context(bot=self, room=room, event=event)
+
         if not self.prefix or not ctx.body.startswith(self.prefix):
-            return
+            return ctx
 
-        parts = ctx.body[len(self.prefix):].split()
-
-        if parts:
+        if parts := ctx.body[len(self.prefix):].split():
             cmd_name = parts[0]
             cmd = self.commands.get(cmd_name)
 
         if not cmd:
             raise CommandNotFoundError(cmd_name)
 
-        try:
-            ctx.command = cmd
-            await cmd(ctx)
-        except Exception as error:
-            await cmd.on_error(ctx, error)
+        ctx.command = cmd
+        return ctx
 
-    async def on_ready(self) -> None:
-        """Invoked after a successful login, before sync starts."""
-        self.log.info("bot is ready")
-
-    async def on_message(self, ctx: Context) -> None:
+    async def on_message(self, room: MatrixRoom, event: Event) -> None:
         """
         Invoked when a message event is received.
 
@@ -263,7 +264,11 @@ class Bot:
                     room and the message event.
         :type ctx: Context
         """
-        await self._process_commands(ctx)
+        await self._process_commands(room, event)
+
+    async def on_ready(self) -> None:
+        """Invoked after a successful login, before sync starts."""
+        self.log.info("bot is ready")
 
     async def on_error(self, error: Exception) -> None:
         if self._on_error:

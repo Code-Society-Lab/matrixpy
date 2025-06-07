@@ -160,8 +160,11 @@ class Command:
         :param ctx: The command execution context.
         :type ctx: Context
         """
-        parsed_args = self._parse_arguments(ctx)
-        await self.callback(ctx, *parsed_args)
+        try:
+            parsed_args = self._parse_arguments(ctx)
+            await self.callback(ctx, *parsed_args)
+        except Exception as error:
+            await self.on_error(ctx, error)
 
     def __eq__(self, other) -> bool:
         return self.name == other

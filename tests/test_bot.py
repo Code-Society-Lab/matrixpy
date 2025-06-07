@@ -39,7 +39,7 @@ async def test_on_event_dispatches(bot):
     called = False
 
     @bot.event()
-    async def on_message(ctx):
+    async def on_message(_r, _e):
         nonlocal called
         called = True
 
