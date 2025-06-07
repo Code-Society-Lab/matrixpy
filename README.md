@@ -1,11 +1,11 @@
 # matrix.py
-> A simple, developer-friendly library for creating [Matrix](https://matrix.org) bots.
+> A simple, developer-friendly library to create powerful [Matrix](https://matrix.org) bots.
 
 [![Static Badge](https://img.shields.io/badge/%F0%9F%93%9A-Documentation-%235c5c5c)](https://github.com/Code-Society-Lab/matrixpy/wiki)
 [![Join on Discord](https://discordapp.com/api/guilds/823178343943897088/widget.png?style=shield)](https://discord.gg/code-society-823178343943897088)
 [![Tests](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml)
 
-matrix.py is a lightweight and intuitive Python library for building bots on
+matrix.py is a lightweight and intuitive Python library to build bots on
 the [Matrix protocol]([Matrix](https://matrix.org)). It provides a clean,
 decorator-based API similar to popular event-driven frameworks, allowing
 developers to focus on behavior rather than boilerplate.
@@ -26,6 +26,11 @@ developers to focus on behavior rather than boilerplate.
 pip install git+ssh://git@github.com:Code-Society-Lab/matrixpy.git
 ```
 
+If you plan on contributing to matrix.py, we recommend to install the development libraries:
+```
+pip install .[env]
+```
+
 *Note*: It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) when installing python packages.
 
 
@@ -44,8 +49,7 @@ async def ping(ctx: Context):
 bot.start()
 ```
 
-
-[See documentation](https://github.com/Code-Society-Lab/matrixpy/wiki)
+[Documentation](https://github.com/Code-Society-Lab/matrixpy/wiki) - [Examples]([https://github.com/Code-Society-Lab/matrixpy/wiki](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples))
 
 # Contributing
 We welcome everyone to contribute! 
