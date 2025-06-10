@@ -12,7 +12,7 @@ from typing import (
 
 
 if TYPE_CHECKING:
-    from matrix.context import Context
+    from matrix.context import Context  # pragma: no cover
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]

@@ -5,8 +5,8 @@ from matrix.errors import MatrixError
 
 
 if TYPE_CHECKING:
-    from matrix.bot import Bot
-    from matrix.command import Command
+    from matrix.bot import Bot  # pragma: no cover
+    from matrix.command import Command  # pragma: no cover
 
 
 class Context:
