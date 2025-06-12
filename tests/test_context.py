@@ -71,11 +71,16 @@ def test_logger_property(bot, room, event):
 @pytest.mark.asyncio
 async def test_send_success(bot, room, event):
     ctx = Context(bot, room, event)
-    await ctx.send("Hello!")
+    await ctx.reply("Hello!")
     bot.client.room_send.assert_awaited_once_with(
         room_id="!room:id",
         message_type="m.room.message",
-        content={"msgtype": "m.text", "body": "Hello!"}
+        content={
+            "msgtype": "m.text",
+            "body": "Hello!",
+            'format': 'org.matrix.custom.html',
+            'formatted_body': '<p>Hello!</p>'
+        }
     )
 
 
@@ -85,4 +90,4 @@ async def test_send_failure_raises_matrix_error(bot, room, event):
     ctx = Context(bot, room, event)
 
     with pytest.raises(MatrixError, match="Failed to send message: API failure"):
-        await ctx.send("Test failure")
+        await ctx.reply("Test failure")
