@@ -20,6 +20,7 @@ dependencies = [
     "matrix-nio",
     "logger",
     'PyYAML',
+    'markdown',
 ]
 
 [project.optional-dependencies]
