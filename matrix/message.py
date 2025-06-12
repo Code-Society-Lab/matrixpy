@@ -64,7 +64,7 @@ class Message:
             "body": body,
         }
         if html:
-            html_body = markdown.markdown(body, extension=["nl2br"])
+            html_body = markdown.markdown(body, extensions=["nl2br"])
             base["format"] = self.MATRIX_CUSTOM_HTML
             base["formatted_body"] = html_body
 
