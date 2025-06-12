@@ -29,7 +29,8 @@ dev = [
     "pytest-asyncio",
     "flake8",
     "mypy",
-    "types-PyYAML"
+    "types-PyYAML",
+    'types-Markdown',
 ]
 
 [project.urls]
