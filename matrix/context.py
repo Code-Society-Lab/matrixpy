@@ -2,7 +2,7 @@ import shlex
 from nio import Event, MatrixRoom
 from typing import TYPE_CHECKING, Optional, Any, List
 from matrix.errors import MatrixError
-
+from matrix.message import Message
 
 if TYPE_CHECKING:
     from matrix.bot import Bot  # pragma: no cover
@@ -61,18 +61,18 @@ class Context:
         """Logger for instance specific to the current room or event."""
         return self.bot.log.getChild(self.room_id)
 
-    async def send(self, message: str) -> None:
+    async def reply(self, message: str) -> None:
         """
         Send a message to the Matrix room.
 
         :param message: The message to send.
         :type message: str
+
+        :return: None
         """
+
         try:
-            await self.bot.client.room_send(
-                room_id=self.room_id,
-                message_type="m.room.message",
-                content={"msgtype": "m.text", "body": message}
-            )
+            c = Message(self.bot)
+            await c.send(room_id=self.room_id, message=message)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
