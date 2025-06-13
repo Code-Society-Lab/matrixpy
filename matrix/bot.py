@@ -21,11 +21,11 @@ from nio import (
     RoomMemberEvent,
     TypingNoticeEvent,
 )
+from matrix.room import Room
 from matrix.config import Config
 from matrix.context import Context
 from matrix.command import Command
 from matrix.errors import AlreadyRegisteredError, CommandNotFoundError
-
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 ErrorCallback = Callable[[Exception], Coroutine]
@@ -193,6 +193,17 @@ class Bot:
             self._on_error = func
             return func
         return wrapper
+
+    def get_room(self, room_id: str) -> Room:
+        """
+        Retrieve a Room instance based on the room_id.
+
+        :param room_id: The ID of the room to retrieve.
+        :type room_id: str
+        :return: An instance of the Room class.
+        :rtype: Room
+        """
+        return Room(room_id=room_id, bot=self)
 
     def _auto_register_events(self) -> None:
         for attr in dir(self):
