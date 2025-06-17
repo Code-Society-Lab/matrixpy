@@ -20,6 +20,7 @@ dependencies = [
     "matrix-nio",
     "logger",
     'PyYAML',
+    'markdown',
 ]
 
 [project.optional-dependencies]
@@ -28,7 +29,8 @@ dev = [
     "pytest-asyncio",
     "flake8",
     "mypy",
-    "types-PyYAML"
+    "types-PyYAML",
+    'types-Markdown',
 ]
 
 [project.urls]

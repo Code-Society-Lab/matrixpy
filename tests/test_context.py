@@ -27,13 +27,15 @@ def room():
 
 @pytest.fixture
 def event():
-    return RoomMessageText.from_dict({
-        "content": {"body": "!echo hello world", "msgtype": "m.text"},
-        "event_id": "$id",
-        "origin_server_ts": 123456,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
+    return RoomMessageText.from_dict(
+        {
+            "content": {"body": "!echo hello world", "msgtype": "m.text"},
+            "event_id": "$id",
+            "origin_server_ts": 123456,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
 
 
 def test_context_initialization(bot, room, event):
@@ -71,11 +73,16 @@ def test_logger_property(bot, room, event):
 @pytest.mark.asyncio
 async def test_send_success(bot, room, event):
     ctx = Context(bot, room, event)
-    await ctx.send("Hello!")
+    await ctx.reply("Hello!")
     bot.client.room_send.assert_awaited_once_with(
         room_id="!room:id",
         message_type="m.room.message",
-        content={"msgtype": "m.text", "body": "Hello!"}
+        content={
+            "msgtype": "m.text",
+            "body": "Hello!",
+            "format": "org.matrix.custom.html",
+            "formatted_body": "<p>Hello!</p>",
+        },
     )
 
 
@@ -85,4 +92,4 @@ async def test_send_failure_raises_matrix_error(bot, room, event):
     ctx = Context(bot, room, event)
 
     with pytest.raises(MatrixError, match="Failed to send message: API failure"):
-        await ctx.send("Test failure")
+        await ctx.reply("Test failure")
