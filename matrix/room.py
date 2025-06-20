@@ -62,7 +62,7 @@ class Room:
         self,
         room_id: str,
         user_id: str,
-        reason: str = None
+        reason: Optional[str] = None
     ) -> None:
         """
         Ban a user from a room.
@@ -110,7 +110,7 @@ class Room:
         self,
         room_id: str,
         user_id: str,
-        reason: str = None
+        reason: Optional[str] = None
     ) -> None:
         """
         Kick a user from a room.
