@@ -84,7 +84,7 @@ class Room:
                 reason=reason
             )
         except Exception as e:
-            raise MatrixError(f"Failed to invite user: {e}")
+            raise MatrixError(f"Failed to ban user: {e}")
 
     async def unban_user(self, room_id: str, user_id: str) -> None:
         """
@@ -104,7 +104,7 @@ class Room:
                 user_id=user_id
             )
         except Exception as e:
-            raise MatrixError(f"Failed to invite user: {e}")
+            raise MatrixError(f"Failed to unban user: {e}")
 
     async def kick_user(
         self,
@@ -132,4 +132,4 @@ class Room:
                 reason=reason
             )
         except Exception as e:
-            raise MatrixError(f"Failed to invite user: {e}")
+            raise MatrixError(f"Failed to kick user: {e}")
