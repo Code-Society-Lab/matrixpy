@@ -130,7 +130,6 @@ class Message:
             event_id = event.event_id
         else:
             event_id = event
-            print("hi")
 
         await self._send_to_room(
             room_id=room_id,
