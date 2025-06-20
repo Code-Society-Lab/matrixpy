@@ -50,7 +50,7 @@ class Message:
 
     def _make_content(
         self,
-        body: Optional[str] = "",
+        body: str = "",
         html: Optional[bool] = None,
         reaction: Optional[bool] = None,
         event_id: Optional[str] = None,
@@ -94,7 +94,7 @@ class Message:
     async def send(
         self,
         room_id: str,
-        message: Optional[str],
+        message: str,
         format_markdown: Optional[bool] = True
     ) -> None:
         """
