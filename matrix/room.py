@@ -21,9 +21,9 @@ class Room:
         self.bot = bot
 
     async def send(
-            self,
-            message: str,
-            markdown: Optional[bool] = True
+        self,
+        message: str,
+        markdown: Optional[bool] = True
     ) -> None:
         """
         Send a message to the room.
@@ -54,6 +54,82 @@ class Room:
             await self.bot.client.room_invite(
                 room_id=self.room_id,
                 user_id=user_id
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to invite user: {e}")
+
+    async def ban_user(
+        self,
+        room_id: str,
+        user_id: str,
+        reason: str = None
+    ) -> None:
+        """
+        Ban a user from a room.
+
+        :param room_id: The ID of the room to ban the user.
+        :type room_id: str
+        :param user_id: The ID of the user to ban of the room.
+        :type user_id: str
+        :param reason: The reason to ban the user.
+        :type reason: str
+
+        :raises MatrixError: If banning the user fails.
+        """
+        try:
+            # TODO: Abstract this to Context?
+            await self.bot.client.room_ban(
+                room_id=room_id,
+                user_id=user_id,
+                reason=reason
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to invite user: {e}")
+
+    async def unban_user(self, room_id: str, user_id: str) -> None:
+        """
+        Unban a user from a room.
+
+        :param room_id: The ID of the room to unban the user.
+        :type room_id: str
+        :param user_id: The ID of the user to unban of the room.
+        :type user_id: str
+
+        :raises MatrixError: If unbanning the user fails.
+        """
+        try:
+            # TODO: Abstract this to Context?
+            await self.bot.client.room_unban(
+                room_id=room_id,
+                user_id=user_id
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to invite user: {e}")
+
+    async def kick_user(
+        self,
+        room_id: str,
+        user_id: str,
+        reason: str = None
+    ) -> None:
+        """
+        Kick a user from a room.
+
+        :param room_id: The ID of the room to kick the user.
+        :type room_id: str
+        :param user_id: The ID of the user to kick of the room.
+        :type user_id: str
+        :param reason: The reason to kick the user.
+        :type reason: str
+
+        :raises MatrixError: If kicking the user fails.
+        """
+        try:
+            # TODO: Abstract this to Context?
+            await self.bot.client.room_kick(
+                room_id=room_id,
+                user_id=user_id,
+                reason=reason
             )
         except Exception as e:
             raise MatrixError(f"Failed to invite user: {e}")
