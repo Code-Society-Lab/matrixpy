@@ -1,6 +1,7 @@
 from matrix.errors import MatrixError
 from matrix.message import Message
 from typing import TYPE_CHECKING, Optional
+from nio import Event
 
 if TYPE_CHECKING:
     from matrix.bot import Bot  # pragma: no cover
@@ -21,23 +22,32 @@ class Room:
         self.bot = bot
 
     async def send(
-            self,
-            message: str,
-            markdown: Optional[bool] = True
+        self,
+        message: Optional[str] = None,
+        markdown: Optional[bool] = True,
+        event: Optional[Event] = None,
+        key: Optional[str] = None,
     ) -> None:
         """
         Send a message to the room.
 
         :param message: The message to send.
-        :type message: str
+        :type message: Optional[str]
         :param markdown: Whether to format the message as Markdown.
-        :type markdown: bool
+        :type markdown: Optional[bool]
+        :param event: An event object to react to.
+        :type event: Optional[Event]
+        :param key: The reaction to the message.
+        :type key: Optional[str]
 
         :raises MatrixError: If sending the message fails.
         """
         try:
             room = Message(self.bot)
-            await room.send(self.room_id, message, markdown)
+            if key:
+                await room.send_reaction(self.room_id, event, key)
+            else:
+                await room.send(self.room_id, message, markdown)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
