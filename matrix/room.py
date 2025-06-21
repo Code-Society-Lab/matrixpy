@@ -67,3 +67,71 @@ class Room:
             )
         except Exception as e:
             raise MatrixError(f"Failed to invite user: {e}")
+
+    async def ban_user(
+        self,
+        user_id: str,
+        reason: Optional[str] = None
+    ) -> None:
+        """
+        Ban a user from a room.
+
+        :param user_id: The ID of the user to ban of the room.
+        :type user_id: str
+        :param reason: The reason to ban the user.
+        :type reason: str
+
+        :raises MatrixError: If banning the user fails.
+        """
+        try:
+            # TODO: Abstract this to Context?
+            await self.bot.client.room_ban(
+                room_id=self.room_id,
+                user_id=user_id,
+                reason=reason
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to ban user: {e}")
+
+    async def unban_user(self, user_id: str) -> None:
+        """
+        Unban a user from a room.
+
+        :param user_id: The ID of the user to unban of the room.
+        :type user_id: str
+
+        :raises MatrixError: If unbanning the user fails.
+        """
+        try:
+            # TODO: Abstract this to Context?
+            await self.bot.client.room_unban(
+                room_id=self.room_id,
+                user_id=user_id
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to unban user: {e}")
+
+    async def kick_user(
+        self,
+        user_id: str,
+        reason: Optional[str] = None
+    ) -> None:
+        """
+        Kick a user from a room.
+
+        :param user_id: The ID of the user to kick of the room.
+        :type user_id: str
+        :param reason: The reason to kick the user.
+        :type reason: str
+
+        :raises MatrixError: If kicking the user fails.
+        """
+        try:
+            # TODO: Abstract this to Context?
+            await self.bot.client.room_kick(
+                room_id=self.room_id,
+                user_id=user_id,
+                reason=reason
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to kick user: {e}")
