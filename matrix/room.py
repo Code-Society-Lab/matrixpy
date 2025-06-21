@@ -66,8 +66,6 @@ class Room:
         """
         Ban a user from a room.
 
-        :param room_id: The ID of the room to ban the user.
-        :type room_id: str
         :param user_id: The ID of the user to ban of the room.
         :type user_id: str
         :param reason: The reason to ban the user.
@@ -89,8 +87,6 @@ class Room:
         """
         Unban a user from a room.
 
-        :param room_id: The ID of the room to unban the user.
-        :type room_id: str
         :param user_id: The ID of the user to unban of the room.
         :type user_id: str
 
@@ -113,8 +109,6 @@ class Room:
         """
         Kick a user from a room.
 
-        :param room_id: The ID of the room to kick the user.
-        :type room_id: str
         :param user_id: The ID of the user to kick of the room.
         :type user_id: str
         :param reason: The reason to kick the user.
