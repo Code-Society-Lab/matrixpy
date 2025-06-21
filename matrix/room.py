@@ -60,7 +60,6 @@ class Room:
 
     async def ban_user(
         self,
-        room_id: str,
         user_id: str,
         reason: Optional[str] = None
     ) -> None:
@@ -79,14 +78,14 @@ class Room:
         try:
             # TODO: Abstract this to Context?
             await self.bot.client.room_ban(
-                room_id=room_id,
+                room_id=self.room_id,
                 user_id=user_id,
                 reason=reason
             )
         except Exception as e:
             raise MatrixError(f"Failed to ban user: {e}")
 
-    async def unban_user(self, room_id: str, user_id: str) -> None:
+    async def unban_user(self, user_id: str) -> None:
         """
         Unban a user from a room.
 
@@ -100,7 +99,7 @@ class Room:
         try:
             # TODO: Abstract this to Context?
             await self.bot.client.room_unban(
-                room_id=room_id,
+                room_id=self.room_id,
                 user_id=user_id
             )
         except Exception as e:
@@ -108,7 +107,6 @@ class Room:
 
     async def kick_user(
         self,
-        room_id: str,
         user_id: str,
         reason: Optional[str] = None
     ) -> None:
@@ -127,7 +125,7 @@ class Room:
         try:
             # TODO: Abstract this to Context?
             await self.bot.client.room_kick(
-                room_id=room_id,
+                room_id=self.room_id,
                 user_id=user_id,
                 reason=reason
             )
