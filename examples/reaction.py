@@ -4,7 +4,7 @@ bot = Bot("examples/config.yaml")
 
 
 @bot.event
-async def on_message_react(room, event):
+async def on_message(room, event):
     """
     This function listens for new messages in a room and reacts based
     on the message content.
@@ -22,7 +22,7 @@ async def on_message_react(room, event):
 
 
 @bot.event
-async def on_member_react(room, event):
+async def on_react(room, event):
     """
     This function listens for new member reaction to messages in a room,
     and reacts based on the reaction emoji.
