@@ -1,10 +1,9 @@
 from matrix.bot import Bot
-from nio import RoomMessageText
 
 bot = Bot("examples/config.yaml")
 
 
-@bot.event(event_spec=RoomMessageText)
+@bot.event(event_spec="on_react")
 async def react_event(room, event):
     room = bot.get_room(room.room_id)
     if event.body.lower().startswith("thanks"):
