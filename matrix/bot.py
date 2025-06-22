@@ -20,6 +20,7 @@ from nio import (
     RoomMessageText,
     RoomMemberEvent,
     TypingNoticeEvent,
+    ReactionEvent,
 )
 from matrix.room import Room
 from matrix.config import Config
@@ -50,7 +51,8 @@ class Bot:
     EVENT_MAP: Dict[str, Type[Event]] = {
         "on_typing":        TypingNoticeEvent,
         "on_message":       RoomMessageText,
-        "on_react":         RoomMessageText,
+        "on_message_react": RoomMessageText,
+        "on_member_react":  ReactionEvent,
         "on_member_join":   RoomMemberEvent,
         "on_member_leave":  RoomMemberEvent,
         "on_member_invite": RoomMemberEvent,
