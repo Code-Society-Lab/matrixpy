@@ -43,11 +43,11 @@ class Room:
         :raises MatrixError: If sending the message fails.
         """
         try:
-            message = Message(self.bot)
+            msg = Message(self.bot)
             if key:
-                await message.send_reaction(self.room_id, event, key)
+                await msg.send_reaction(self.room_id, event, key)
             else:
-                await message.send(self.room_id, message, markdown)
+                await msg.send(self.room_id, message, markdown)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
