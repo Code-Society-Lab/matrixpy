@@ -51,8 +51,7 @@ class Bot:
     EVENT_MAP: Dict[str, Type[Event]] = {
         "on_typing":        TypingNoticeEvent,
         "on_message":       RoomMessageText,
-        "on_message_react": RoomMessageText,
-        "on_member_react":  ReactionEvent,
+        "on_react":         ReactionEvent,
         "on_member_join":   RoomMemberEvent,
         "on_member_leave":  RoomMemberEvent,
         "on_member_invite": RoomMemberEvent,
