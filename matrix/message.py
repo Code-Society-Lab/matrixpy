@@ -62,11 +62,11 @@ class Message:
         :param body: The body of the message.
         :type body: str
         :param html: Wheter to format the message as HTML.
-        :type html: bool
+        :type html: Optional[bool]
         :param reaction: Wheter to format the context with a reaction event.
-        :type reaction: bool
+        :type reaction: Optional[bool]
         :param event_id: The ID of the event to react to.
-        :type event_id: str
+        :type event_id: Optional[str]
         :param key: The reaction to the message.
         :type key: Optional[str]
 
@@ -106,7 +106,7 @@ class Message:
         :type message: str
         :param format_markdown: Whether to format the message as Markdown
             (default to True).
-        :type format_markdown: bool
+        :type format_markdown: Optional[bool]
         """
         await self._send_to_room(
             room_id=room_id,

@@ -32,7 +32,7 @@ class Room:
         Send a message to the room.
 
         :param message: The message to send.
-        :type message: Optional[str]
+        :type message: str
         :param markdown: Whether to format the message as Markdown.
         :type markdown: Optional[bool]
         :param event: An event object to react to.
@@ -79,7 +79,7 @@ class Room:
         :param user_id: The ID of the user to ban of the room.
         :type user_id: str
         :param reason: The reason to ban the user.
-        :type reason: str
+        :type reason: Optional[str]
 
         :raises MatrixError: If banning the user fails.
         """
@@ -122,7 +122,7 @@ class Room:
         :param user_id: The ID of the user to kick of the room.
         :type user_id: str
         :param reason: The reason to kick the user.
-        :type reason: str
+        :type reason: Optional[str]
 
         :raises MatrixError: If kicking the user fails.
         """
