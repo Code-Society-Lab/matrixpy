@@ -1,6 +1,7 @@
 from matrix.errors import MatrixError
 from matrix.message import Message
 from typing import TYPE_CHECKING, Optional
+from nio import Event
 
 if TYPE_CHECKING:
     from matrix.bot import Bot  # pragma: no cover
@@ -22,8 +23,10 @@ class Room:
 
     async def send(
         self,
-        message: str,
-        markdown: Optional[bool] = True
+        message: str = "",
+        markdown: Optional[bool] = True,
+        event: Optional[Event] = None,
+        key: Optional[str] = None,
     ) -> None:
         """
         Send a message to the room.
@@ -31,13 +34,20 @@ class Room:
         :param message: The message to send.
         :type message: str
         :param markdown: Whether to format the message as Markdown.
-        :type markdown: bool
+        :type markdown: Optional[bool]
+        :param event: An event object to react to.
+        :type event: Optional[Event]
+        :param key: The reaction to the message.
+        :type key: Optional[str]
 
         :raises MatrixError: If sending the message fails.
         """
         try:
-            room = Message(self.bot)
-            await room.send(self.room_id, message, markdown)
+            msg = Message(self.bot)
+            if key:
+                await msg.send_reaction(self.room_id, event, key)
+            else:
+                await msg.send(self.room_id, message, markdown)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
@@ -69,7 +79,7 @@ class Room:
         :param user_id: The ID of the user to ban of the room.
         :type user_id: str
         :param reason: The reason to ban the user.
-        :type reason: str
+        :type reason: Optional[str]
 
         :raises MatrixError: If banning the user fails.
         """
@@ -112,7 +122,7 @@ class Room:
         :param user_id: The ID of the user to kick of the room.
         :type user_id: str
         :param reason: The reason to kick the user.
-        :type reason: str
+        :type reason: Optional[str]
 
         :raises MatrixError: If kicking the user fails.
         """
