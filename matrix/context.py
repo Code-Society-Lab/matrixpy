@@ -80,4 +80,6 @@ class Context:
             raise MatrixError(f"Failed to send message: {e}")
 
     async def send_help(self) -> None:
+        if not self.command:
+            return await self.bot.help.execute(self)
         await self.reply(self.command.help)

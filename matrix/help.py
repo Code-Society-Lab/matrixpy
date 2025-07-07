@@ -102,7 +102,7 @@ class HelpCommand(Command):
     To customize pagination display, override the format_page_info() method.
     """
 
-    DEFAULT_PER_PAGE = 1
+    DEFAULT_PER_PAGE = 5
 
     def __init__(
         self,
@@ -220,7 +220,7 @@ class HelpCommand(Command):
 
         Usage patterns:
         - `help` - Show first page of all commands
-        - `help 2` - Show page 2 of all commands  
+        - `help 2` - Show page 2 of all commands
         - `help ping` - Show help for specific command
 
         :param ctx: Command context
