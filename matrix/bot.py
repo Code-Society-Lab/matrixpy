@@ -1,6 +1,7 @@
 import time
 import asyncio
 import logging
+
 from collections import defaultdict
 from typing import (
     Any,
@@ -22,11 +23,14 @@ from nio import (
     TypingNoticeEvent,
     ReactionEvent,
 )
-from matrix.room import Room
-from matrix.config import Config
-from matrix.context import Context
-from matrix.command import Command
-from matrix.errors import AlreadyRegisteredError, CommandNotFoundError
+
+from .room import Room
+from .config import Config
+from .context import Context
+from .command import Command
+from .help import HelpCommand
+from .errors import AlreadyRegisteredError, CommandNotFoundError
+
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 ErrorCallback = Callable[[Exception], Coroutine]
@@ -81,6 +85,12 @@ class Bot:
         self.commands: Dict[str, Command] = {}
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
+
+        self.help: HelpCommand = kwargs.get(
+            "help",
+            HelpCommand(prefix=self.prefix)
+        )
+        self.register_command(self.help)
 
         self.client.add_event_callback(self._on_event, Event)
         self._auto_register_events()
@@ -174,16 +184,18 @@ class Bot:
         :rtype: Callback
         """
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name)
-
-            if cmd in self.commands:
-                raise AlreadyRegisteredError(cmd)
-
-            self.commands[cmd.name] = cmd
-            self.log.debug("command %s registered", cmd)
-
-            return cmd
+            cmd = Command(func, name=name, prefix=self.prefix)
+            return self.register_command(cmd)
         return wrapper
+
+    def register_command(self, cmd: Command):
+        if cmd in self.commands:
+            raise AlreadyRegisteredError(cmd)
+
+        self.commands[cmd.name] = cmd
+        self.log.debug("command %s registered", cmd)
+
+        return cmd
 
     def error(self):
         """Decorator to register a custom error handler for the command."""
@@ -242,8 +254,6 @@ class Bot:
     async def _process_commands(self, room: MatrixRoom, event: Event) -> None:
         """Parse and execute commands"""
         ctx = await self._build_context(room, event)
-
-        print(ctx.command)
 
         if ctx.command:
             await ctx.command(ctx)

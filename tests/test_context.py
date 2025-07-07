@@ -27,15 +27,13 @@ def room():
 
 @pytest.fixture
 def event():
-    return RoomMessageText.from_dict(
-        {
-            "content": {"body": "!echo hello world", "msgtype": "m.text"},
-            "event_id": "$id",
-            "origin_server_ts": 123456,
-            "sender": "@user:matrix.org",
-            "type": "m.room.message",
-        }
-    )
+    return RoomMessageText.from_dict({
+        "content": {"body": "!echo hello world", "msgtype": "m.text"},
+        "event_id": "$id",
+        "origin_server_ts": 123456,
+        "sender": "@user:matrix.org",
+        "type": "m.room.message",
+    })
 
 
 def test_context_initialization(bot, room, event):
@@ -74,6 +72,7 @@ def test_logger_property(bot, room, event):
 async def test_send_success(bot, room, event):
     ctx = Context(bot, room, event)
     await ctx.reply("Hello!")
+
     bot.client.room_send.assert_awaited_once_with(
         room_id="!room:id",
         message_type="m.room.message",

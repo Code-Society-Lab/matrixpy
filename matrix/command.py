@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from matrix.errors import MissingArgumentError
+
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -10,9 +10,10 @@ from typing import (
     get_type_hints
 )
 
+from .errors import MissingArgumentError
 
 if TYPE_CHECKING:
-    from matrix.context import Context  # pragma: no cover
+    from .context import Context  # pragma: no cover
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
@@ -44,9 +45,10 @@ class Command:
         self.name: str = name
         self.callback = func
 
-        self._help: str = kwargs.get("help", "")
-        self._usage: str = kwargs.get("usage", "")
         self.description: str = kwargs.get("description", "")
+        self.prefix: str = kwargs.get("prefix", "")
+        self.usage: str = kwargs.get("usage", self._build_usage())
+        self.help: str = self._build_help()
 
         self._on_error: Optional[ErrorCallback] = None
 
@@ -79,30 +81,26 @@ class Command:
         self.signature = inspect.signature(func)
         self.params = list(self.signature.parameters.values())[1:]
 
-    @property
-    def usage(self) -> str:
+    def _build_help(self) -> str:
         """
-        Returns the usage string for the command. Builds one if none has been
+        Returns the help text for the command.
+
+        :return: The help text for the command.
+        :rtype: str
+        """
+        default_help = f"{self.description}\n\nusage: {self.usage}"
+        return inspect.cleandoc(default_help)
+
+    def _build_usage(self) -> str:
+        """
+        Builds and returns the default usage string for the command.
         set at the command initalization.
 
         :return: A usage string.
         :rtype: str
         """
-        if self._usage:
-            return self._usage
-
-        params = " ".join(f"<{p.name}>" for p in self.params)
-        return f"{self.name} {params}"
-
-    @property
-    def help(self) -> str:
-        """
-        Returns the help text for the command.
-
-        :return: The help text, cleaned of leading whitespace.
-        :rtype: str
-        """
-        return inspect.cleandoc(self._help)
+        params = " ".join(f"[{p.name}]" for p in self.params)
+        return f"{self.prefix}{self.name} {params}"
 
     def _parse_arguments(self, ctx: "Context") -> list[Any]:
         parsed_args = []
@@ -148,6 +146,8 @@ class Command:
         :param error: The exception that was raised.
         :type error: Exception
         """
+        await ctx.send_help()
+
         if self._on_error:
             await self._on_error(ctx, error)
             return

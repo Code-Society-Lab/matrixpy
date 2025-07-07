@@ -1,5 +1,5 @@
 import yaml
-from matrix.errors import ConfigError
+from .errors import ConfigError
 from typing import Optional
 
 

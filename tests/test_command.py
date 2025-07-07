@@ -11,6 +11,9 @@ class DummyContext:
         self.args = args or []
         self.logger = MagicMock()
 
+    async def send_help(self):
+        return "this is the help"
+
 
 @pytest.mark.asyncio
 async def test_command_init():
@@ -44,7 +47,7 @@ def test_usage_property():
 
     # default usage
     cmd = Command(valid_command)
-    expected_usage = "valid_command <arg1> <arg2>"
+    expected_usage = "valid_command [arg1] [arg2]"
     assert cmd.usage == expected_usage
 
     # usage override
@@ -56,11 +59,8 @@ def test_help_property():
     async def my_command(ctx):
         pass
 
-    cmd = Command(my_command, help="""
-        This is
-          help text.
-    """)
-    assert cmd.help == "This is\n  help text."
+    cmd = Command(my_command, description="some command")
+    assert cmd.help == "some command\n\nusage: my_command "
 
 
 def test_parse_arguments():
