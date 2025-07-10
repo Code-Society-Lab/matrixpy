@@ -21,6 +21,11 @@ class MissingArgumentError(CommandError):
         super().__init__(f"Missing required argument: '{param.name}'")
 
 
+class CheckError(CommandError):
+    def __init__(self, cmd, check):
+        super().__init__(f"'{check.__name__}' has failed for '{cmd.name}'!")
+
+
 class ConfigError(MatrixError):
     def __init__(self, error):
         super().__init__(f"Missing required configuration: '{error}'")

@@ -10,7 +10,7 @@ from typing import (
     get_type_hints
 )
 
-from .errors import MissingArgumentError
+from .errors import MissingArgumentError, CheckError
 
 if TYPE_CHECKING:
     from .context import Context  # pragma: no cover
@@ -44,12 +44,15 @@ class Command:
 
         self.name: str = name
         self.callback = func
+        self.checks = []
 
         self.description: str = kwargs.get("description", "")
         self.prefix: str = kwargs.get("prefix", "")
         self.usage: str = kwargs.get("usage", self._build_usage())
         self.help: str = self._build_help()
 
+        self._before_invoke: Optional[Callback] = None
+        self._after_invoke: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
 
     @property
@@ -120,22 +123,68 @@ class Command:
 
         return parsed_args
 
-    def error(self) -> Callable:
+    def check(self, func: Callback) -> Callable:
         """
-        Decorator to register a custom error handler for the command.
+        Register a check callback
 
-        :return: A decorator that registers the error handler.
+        :param func: The check callback
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("Checks must be coroutine")
+
+        self.checks.append(func)
+
+    def before_invoke(self, func: Callback) -> Callable:
+        """
+        Registers a coroutine to be called before the command is invoked.
+
+        :param func: The coroutine function to call before command invocation.
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        :return: The registered function.
         :rtype: Callable
-        :raises TypeError: If the decorated function is not a coroutine.
         """
 
-        def wrapper(func: ErrorCallback) -> Callable:
-            if not asyncio.iscoroutinefunction(func):
-                raise TypeError('The error handler must be a coroutine.')
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError('The hook must be a coroutine.')
 
-            self._on_error = func
-            return func
-        return wrapper
+        self._before_invoke = func
+
+    def after_invoke(self, func: Callback) -> Callable:
+        """
+        Registers a coroutine to be called after the command is invoked.
+
+        :param func: The coroutine function to call after command execution.
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        :return: The registered function.
+        :rtype: Callable
+        """
+
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError('The hook must be a coroutine.')
+
+        self._after_invoke = func
+
+    def error(self, func: ErrorCallback) -> Callable:
+        """
+        Register a custom error handler for the command.
+
+        :param func: The error callback
+        :type func: ErrorCallback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError('The error handler must be a coroutine.')
+
+        self._on_error = func
 
     async def on_error(self, ctx: "Context", error: Exception) -> None:
         """
@@ -146,12 +195,24 @@ class Command:
         :param error: The exception that was raised.
         :type error: Exception
         """
-        await ctx.send_help()
-
         if self._on_error:
             await self._on_error(ctx, error)
             return
+        else:
+            await ctx.send_help()
         ctx.logger.exception("error while executing command '%s'", self)
+
+    async def __before_invoke(self, ctx: "Context") -> None:
+        for check in self.checks:
+            if not await check(ctx):
+                raise CheckError(self, check)
+
+        if self._before_invoke:
+            await self._before_invoke(ctx)
+
+    async def __after_invoke(self, ctx: "Context") -> None:
+        if self._after_invoke:
+            await self._after_invoke(ctx)
 
     async def __call__(self, ctx: "Context") -> None:
         """
@@ -161,8 +222,12 @@ class Command:
         :type ctx: Context
         """
         try:
+            await self.__before_invoke(ctx)
+
             parsed_args = self._parse_arguments(ctx)
             await self.callback(ctx, *parsed_args)
+
+            await self.__after_invoke(ctx)
         except Exception as error:
             await self.on_error(ctx, error)
 
