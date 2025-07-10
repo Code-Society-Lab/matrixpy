@@ -2,8 +2,8 @@ import pytest
 import inspect
 from unittest.mock import MagicMock
 
-from matrix.errors import MissingArgumentError
-from matrix.command import Command  # Adjust to your actual import path
+from matrix.errors import CheckError, MissingArgumentError
+from matrix.command import Command
 
 
 class DummyContext:
@@ -112,14 +112,113 @@ async def test_error_handler():
     ctx.logger.exception.assert_called_once()
 
     with pytest.raises(TypeError):
-        @cmd.error()
-        def invalid_handler(ctx, exc):
+        @cmd.error
+        def invalid_handler(_ctx, _error):
             pass
 
-    @cmd.error()
-    async def handler(ctx, exc):
+    @cmd.error
+    async def handler(_ctx, _error):
         nonlocal called
         called = True
 
     await cmd(ctx)
     assert called
+
+
+@pytest.mark.asyncio
+async def test_before_and_after_invoke():
+    call_order = []
+
+    async def my_command(ctx):
+        call_order.append("command")
+
+    cmd = Command(my_command)
+    ctx = DummyContext(args=[])
+
+    @cmd.before_invoke
+    async def run_before(ctx):
+        call_order.append("before")
+
+    @cmd.after_invoke
+    async def run_after(ctx):
+        call_order.append("after")
+
+    await cmd(ctx)
+    assert call_order == ["before", "command", "after"]
+
+
+@pytest.mark.asyncio
+async def test_invalid_before_invoke():
+    async def my_command(ctx, x: int):
+        pass
+
+    cmd = Command(my_command)
+
+    with pytest.raises(TypeError):
+        @cmd.before_invoke
+        def invalid_hook(_ctx, _error):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_invalid_after_invoke():
+    async def my_command(ctx, x: int):
+        pass
+
+    cmd = Command(my_command)
+
+    with pytest.raises(TypeError):
+        @cmd.after_invoke
+        def invalid_hook(_ctx, _error):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_invalid_command_check():
+    async def my_command(ctx, x: int):
+        pass
+
+    cmd = Command(my_command)
+
+    with pytest.raises(TypeError):
+        @cmd.check
+        def invalid_check(_ctx, _error):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_command_executes_when_all_checks_pass():
+    called = False
+
+    async def my_command(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(my_command)
+    ctx = DummyContext(args=[])
+
+    @cmd.check
+    async def passing_check(ctx):
+        return True
+
+    await cmd(ctx)
+    assert called is True
+
+
+@pytest.mark.asyncio
+async def test_command_does_not_execute_when_a_check_fails():
+    called = False
+
+    async def my_command(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(my_command)
+    ctx = DummyContext(args=[])
+
+    @cmd.check
+    async def always_fails(ctx):
+        return False
+
+    await cmd(ctx)
+    assert called is False
