@@ -7,6 +7,7 @@ from typing import (
     Optional,
     Callable,
     Coroutine,
+    List,
     get_type_hints
 )
 
@@ -44,7 +45,7 @@ class Command:
 
         self.name: str = name
         self.callback = func
-        self.checks = []
+        self.checks: List[Callback] = []
 
         self.description: str = kwargs.get("description", "")
         self.prefix: str = kwargs.get("prefix", "")
@@ -123,7 +124,7 @@ class Command:
 
         return parsed_args
 
-    def check(self, func: Callback) -> Callable:
+    def check(self, func: Callback) -> None:
         """
         Register a check callback
 
@@ -137,7 +138,7 @@ class Command:
 
         self.checks.append(func)
 
-    def before_invoke(self, func: Callback) -> Callable:
+    def before_invoke(self, func: Callback) -> None:
         """
         Registers a coroutine to be called before the command is invoked.
 
@@ -145,8 +146,6 @@ class Command:
         :type func: Callback
 
         :raises TypeError: If the function is not a coroutine.
-        :return: The registered function.
-        :rtype: Callable
         """
 
         if not asyncio.iscoroutinefunction(func):
@@ -154,7 +153,7 @@ class Command:
 
         self._before_invoke = func
 
-    def after_invoke(self, func: Callback) -> Callable:
+    def after_invoke(self, func: Callback) -> None:
         """
         Registers a coroutine to be called after the command is invoked.
 
@@ -162,8 +161,6 @@ class Command:
         :type func: Callback
 
         :raises TypeError: If the function is not a coroutine.
-        :return: The registered function.
-        :rtype: Callable
         """
 
         if not asyncio.iscoroutinefunction(func):
@@ -171,7 +168,7 @@ class Command:
 
         self._after_invoke = func
 
-    def error(self, func: ErrorCallback) -> Callable:
+    def error(self, func: ErrorCallback) -> None:
         """
         Register a custom error handler for the command.
 
