@@ -36,7 +36,7 @@ async def test_send_message_success(message_default):
     room_id = "!room:id"
     message = "Hello, world!"
 
-    await message_default.send(room_id, message)
+    await message_default.send_message(room_id, message)
     message_default.bot.client.room_send.assert_awaited_once()
 
 
@@ -49,7 +49,7 @@ async def test_send_message_failure(message_default):
         "Failed to send message"
     )
     with pytest.raises(MatrixError, match="Failed to send message"):
-        await message_default.send(room_id, message)
+        await message_default.send_message(room_id, message)
 
 
 def test_make_content_with_html(message_default):
@@ -76,7 +76,7 @@ def test_make_content_without_html(message_default):
 async def test_send_reaction_success(message_default, event):
     room_id = "!room:id"
 
-    await message_default.send_reaction(room_id, event, "hi")
+    await message_default.send_reaction(room_id, "hi")
     message_default.bot.client.room_send.assert_awaited_once()
 
 
@@ -88,4 +88,4 @@ async def test_send_reaction_failure(message_default, event):
         "Failed to send message"
     )
     with pytest.raises(MatrixError, match="Failed to send message"):
-        await message_default.send_reaction(room_id, event, "🙏")
+        await message_default.send_reaction(room_id, "🙏")
