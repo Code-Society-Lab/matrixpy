@@ -43,11 +43,24 @@ class Room:
         :raises MatrixError: If sending the message fails.
         """
         try:
-            msg = Message(self.bot)
+            msg = self.get_message(self.bot, event)
             if key:
-                await msg.send_reaction(self.room_id, event, key)
+                await msg.send_reaction(self.room_id, key)
             else:
-                await msg.send(self.room_id, message, markdown)
+                await msg.send_message(self.room_id, message, markdown)
+        except Exception as e:
+            raise MatrixError(f"Failed to send message: {e}")
+
+    @staticmethod
+    def get_message(bot: "Bot", event: Event):
+        if not event and not bot:
+            raise MatrixError("Failed to get message.")
+
+        return Message.from_event(bot, event)
+
+    async def react(self, event: Event, key: str) -> None:
+        try:
+            await self.send(event=event, key=key)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
