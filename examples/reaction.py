@@ -1,6 +1,6 @@
 from matrix import Bot
 
-bot = Bot("config.yaml")
+bot = Bot("examples/config.yaml")
 
 
 @bot.event
