@@ -73,6 +73,6 @@ class Context:
 
         try:
             c = Message(self.bot)
-            await c.send(room_id=self.room_id, message=message)
+            await c.send_message(room_id=self.room_id, message=message)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
