@@ -2,6 +2,7 @@ from matrix.errors import MatrixError
 from matrix.message import Message
 from typing import TYPE_CHECKING, Optional
 from nio import Event
+from nio import Event
 
 if TYPE_CHECKING:
     from matrix.bot import Bot  # pragma: no cover
@@ -23,6 +24,10 @@ class Room:
 
     async def send(
         self,
+        message: str = "",
+        markdown: Optional[bool] = True,
+        event: Optional[Event] = None,
+        key: Optional[str] = None,
         message: str = "",
         markdown: Optional[bool] = True,
         event: Optional[Event] = None,
@@ -93,6 +98,7 @@ class Room:
         :type user_id: str
         :param reason: The reason to ban the user.
         :type reason: Optional[str]
+        :type reason: Optional[str]
 
         :raises MatrixError: If banning the user fails.
         """
@@ -135,6 +141,7 @@ class Room:
         :param user_id: The ID of the user to kick of the room.
         :type user_id: str
         :param reason: The reason to kick the user.
+        :type reason: Optional[str]
         :type reason: Optional[str]
 
         :raises MatrixError: If kicking the user fails.

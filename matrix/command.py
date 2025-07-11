@@ -1,18 +1,20 @@
 import asyncio
 import inspect
-from matrix.errors import MissingArgumentError
+
 from typing import (
     TYPE_CHECKING,
     Any,
     Optional,
     Callable,
     Coroutine,
+    List,
     get_type_hints
 )
 
+from .errors import MissingArgumentError, CheckError
 
 if TYPE_CHECKING:
-    from matrix.context import Context  # pragma: no cover
+    from .context import Context  # pragma: no cover
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
@@ -43,11 +45,15 @@ class Command:
 
         self.name: str = name
         self.callback = func
+        self.checks: List[Callback] = []
 
-        self._help: str = kwargs.get("help", "")
-        self._usage: str = kwargs.get("usage", "")
         self.description: str = kwargs.get("description", "")
+        self.prefix: str = kwargs.get("prefix", "")
+        self.usage: str = kwargs.get("usage", self._build_usage())
+        self.help: str = self._build_help()
 
+        self._before_invoke: Optional[Callback] = None
+        self._after_invoke: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
 
     @property
@@ -79,30 +85,26 @@ class Command:
         self.signature = inspect.signature(func)
         self.params = list(self.signature.parameters.values())[1:]
 
-    @property
-    def usage(self) -> str:
+    def _build_help(self) -> str:
         """
-        Returns the usage string for the command. Builds one if none has been
+        Returns the help text for the command.
+
+        :return: The help text for the command.
+        :rtype: str
+        """
+        default_help = f"{self.description}\n\nusage: {self.usage}"
+        return inspect.cleandoc(default_help)
+
+    def _build_usage(self) -> str:
+        """
+        Builds and returns the default usage string for the command.
         set at the command initalization.
 
         :return: A usage string.
         :rtype: str
         """
-        if self._usage:
-            return self._usage
-
-        params = " ".join(f"<{p.name}>" for p in self.params)
-        return f"{self.name} {params}"
-
-    @property
-    def help(self) -> str:
-        """
-        Returns the help text for the command.
-
-        :return: The help text, cleaned of leading whitespace.
-        :rtype: str
-        """
-        return inspect.cleandoc(self._help)
+        params = " ".join(f"[{p.name}]" for p in self.params)
+        return f"{self.prefix}{self.name} {params}"
 
     def _parse_arguments(self, ctx: "Context") -> list[Any]:
         parsed_args = []
@@ -122,22 +124,64 @@ class Command:
 
         return parsed_args
 
-    def error(self) -> Callable:
+    def check(self, func: Callback) -> None:
         """
-        Decorator to register a custom error handler for the command.
+        Register a check callback
 
-        :return: A decorator that registers the error handler.
-        :rtype: Callable
-        :raises TypeError: If the decorated function is not a coroutine.
+        :param func: The check callback
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("Checks must be coroutine")
+
+        self.checks.append(func)
+
+    def before_invoke(self, func: Callback) -> None:
+        """
+        Registers a coroutine to be called before the command is invoked.
+
+        :param func: The coroutine function to call before command invocation.
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
         """
 
-        def wrapper(func: ErrorCallback) -> Callable:
-            if not asyncio.iscoroutinefunction(func):
-                raise TypeError('The error handler must be a coroutine.')
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError('The hook must be a coroutine.')
 
-            self._on_error = func
-            return func
-        return wrapper
+        self._before_invoke = func
+
+    def after_invoke(self, func: Callback) -> None:
+        """
+        Registers a coroutine to be called after the command is invoked.
+
+        :param func: The coroutine function to call after command execution.
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError('The hook must be a coroutine.')
+
+        self._after_invoke = func
+
+    def error(self, func: ErrorCallback) -> None:
+        """
+        Register a custom error handler for the command.
+
+        :param func: The error callback
+        :type func: ErrorCallback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError('The error handler must be a coroutine.')
+
+        self._on_error = func
 
     async def on_error(self, ctx: "Context", error: Exception) -> None:
         """
@@ -151,7 +195,21 @@ class Command:
         if self._on_error:
             await self._on_error(ctx, error)
             return
+        else:
+            await ctx.send_help()
         ctx.logger.exception("error while executing command '%s'", self)
+
+    async def __before_invoke(self, ctx: "Context") -> None:
+        for check in self.checks:
+            if not await check(ctx):
+                raise CheckError(self, check)
+
+        if self._before_invoke:
+            await self._before_invoke(ctx)
+
+    async def __after_invoke(self, ctx: "Context") -> None:
+        if self._after_invoke:
+            await self._after_invoke(ctx)
 
     async def __call__(self, ctx: "Context") -> None:
         """
@@ -161,8 +219,12 @@ class Command:
         :type ctx: Context
         """
         try:
+            await self.__before_invoke(ctx)
+
             parsed_args = self._parse_arguments(ctx)
             await self.callback(ctx, *parsed_args)
+
+            await self.__after_invoke(ctx)
         except Exception as error:
             await self.on_error(ctx, error)
 

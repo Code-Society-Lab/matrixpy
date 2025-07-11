@@ -1,12 +1,14 @@
 import shlex
+
 from nio import Event, MatrixRoom
 from typing import TYPE_CHECKING, Optional, Any, List
-from matrix.errors import MatrixError
-from matrix.message import Message
+
+from .errors import MatrixError
+from .message import Message
 
 if TYPE_CHECKING:
-    from matrix.bot import Bot  # pragma: no cover
-    from matrix.command import Command  # pragma: no cover
+    from .bot import Bot  # pragma: no cover
+    from .command import Command  # pragma: no cover
 
 
 class Context:
@@ -76,3 +78,8 @@ class Context:
             await c.send_message(room_id=self.room_id, message=message)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
+
+    async def send_help(self) -> None:
+        if not self.command:
+            return await self.bot.help.execute(self)
+        await self.reply(self.command.help)
