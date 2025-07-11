@@ -93,7 +93,10 @@ class Message:
         return base
 
     async def send_message(
-        self, room_id: str, message: str, format_markdown: Optional[bool] = True
+        self,
+        room_id: str,
+        message: str,
+        format_markdown: Optional[bool] = True
     ) -> None:
         """
         Send a message to a Matrix room.
