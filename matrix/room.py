@@ -2,7 +2,6 @@ from matrix.errors import MatrixError
 from matrix.message import Message
 from typing import TYPE_CHECKING, Optional
 from nio import Event
-from nio import Event
 
 if TYPE_CHECKING:
     from matrix.bot import Bot  # pragma: no cover
@@ -24,10 +23,6 @@ class Room:
 
     async def send(
         self,
-        message: str = "",
-        markdown: Optional[bool] = True,
-        event: Optional[Event] = None,
-        key: Optional[str] = None,
         message: str = "",
         markdown: Optional[bool] = True,
         event: Optional[Event] = None,
