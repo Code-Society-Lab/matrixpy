@@ -18,7 +18,8 @@ async def on_message(room, event):
         await room.send(event=event, key="hi")
 
     if event.body.lower().startswith("❤️"):
-        await room.send(event=event, message="❤️")
+        # Or directly reply as a message instead of a reaction
+        await room.send(message="❤️")
 
 
 @bot.event
@@ -29,14 +30,8 @@ async def on_react(room, event):
     """
     room = bot.get_room(room.room_id)
 
-    emoji = event.key
-    event_id = event.source["content"]["m.relates_to"]["event_id"]
-
-    if emoji == "🙏":
-        await room.send(event=event_id, key="❤️")
-
-    if emoji == "❤️":
-        await room.send(message="❤️")
+    if event.key == "🙏":
+        await room.react(event, "hi")
 
 
 bot.start()
