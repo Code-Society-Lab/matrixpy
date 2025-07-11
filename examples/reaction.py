@@ -29,9 +29,13 @@ async def on_react(room, event):
     and reacts based on the reaction emoji.
     """
     room = bot.get_room(room.room_id)
+    emoji = event.key
 
-    if event.key == "🙏":
+    if emoji == "🙏":
         await room.react(event, "hi")
+
+    if emoji == "❤️":
+        await room.react(event, "❤️")
 
 
 bot.start()
