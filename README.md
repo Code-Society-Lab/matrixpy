@@ -1,11 +1,18 @@
-# matrix.py
-> A simple, developer-friendly library to create powerful [Matrix](https://matrix.org) bots.
+<h1 align="center">Matrix.py</h1>
+
+<div align="center">
+  <em>A simple, developer-friendly library to create powerful <a href="https://matrix.org">Matrix</a> bots.</em>
+</div>
+
+<img width="3016" height="880" alt="image" src="https://github.com/user-attachments/assets/ce8ca0b3-0fb4-4673-b2bc-e0c1307747f7" />
+
+<hr />
 
 [![Static Badge](https://img.shields.io/badge/%F0%9F%93%9A-Documentation-%235c5c5c)](https://github.com/Code-Society-Lab/matrixpy/wiki)
 [![Join on Discord](https://discordapp.com/api/guilds/823178343943897088/widget.png?style=shield)](https://discord.gg/code-society-823178343943897088)
 [![Tests](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml)
 
-matrix.py is a lightweight and intuitive Python library to build bots on
+Matrix.py is a lightweight and intuitive Python library to build bots on
 the [Matrix protocol]([Matrix](https://matrix.org)). It provides a clean,
 decorator-based API similar to popular event-driven frameworks, allowing
 developers to focus on behavior rather than boilerplate.
