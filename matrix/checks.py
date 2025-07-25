@@ -53,7 +53,7 @@ class Cooldown:
             self.calls[user_id].append(now)
             return result
 
-        return wrapper
+        return wrapper # type: ignore
 
 
 def cooldown(rate: float, period: float) -> Cooldown:
