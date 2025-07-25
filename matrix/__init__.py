@@ -3,7 +3,7 @@ from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
-from .checks import Cooldown
+from .checks import cooldown
 
 __all__ = [
     "Bot",
@@ -11,5 +11,5 @@ __all__ = [
     "Command",
     "Context",
     "HelpCommand",
-    "Cooldown",
+    "cooldown",
 ]
