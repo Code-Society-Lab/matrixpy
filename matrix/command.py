@@ -151,7 +151,7 @@ class Command:
         if not asyncio.iscoroutinefunction(func):
             raise TypeError('The hook must be a coroutine.')
 
-        self._before_invoke = func
+        self._before_invoke_callback = func
 
     def after_invoke(self, func: Callback) -> None:
         """
@@ -166,7 +166,7 @@ class Command:
         if not asyncio.iscoroutinefunction(func):
             raise TypeError('The hook must be a coroutine.')
 
-        self._after_invoke = func
+        self._after_invoke_callback = func
 
     def error(self, func: ErrorCallback) -> None:
         """
@@ -199,17 +199,25 @@ class Command:
             await ctx.send_help()
         ctx.logger.exception("error while executing command '%s'", self)
 
-    async def __before_invoke(self, ctx: "Context") -> None:
-        for check in self.checks:
-            if not await check(ctx):
-                raise CheckError(self, check)
+    async def invoke(self, ctx):
+        parsed_args = self._parse_arguments(ctx)
+        await self.callback(ctx, *parsed_args)
 
-        if self._before_invoke:
-            await self._before_invoke(ctx)
+    async def _invoke(self, ctx: "Context"):
+        try:
+            for check in self.checks:
+                if not await check(ctx):
+                    raise CheckError(self, check)
 
-    async def __after_invoke(self, ctx: "Context") -> None:
-        if self._after_invoke:
-            await self._after_invoke(ctx)
+            if self._before_invoke:
+                await self._before_invoke(ctx)
+
+            await self.invoke(ctx)
+
+            if self._after_invoke:
+                await self._after_invoke(ctx)
+        except Exception as error:
+            await self.on_error(ctx, error)
 
     async def __call__(self, ctx: "Context") -> None:
         """
@@ -218,15 +226,7 @@ class Command:
         :param ctx: The command execution context.
         :type ctx: Context
         """
-        try:
-            await self.__before_invoke(ctx)
-
-            parsed_args = self._parse_arguments(ctx)
-            await self.callback(ctx, *parsed_args)
-
-            await self.__after_invoke(ctx)
-        except Exception as error:
-            await self.on_error(ctx, error)
+        await self._invoke(ctx)
 
     def __eq__(self, other) -> bool:
         return self.name == other
