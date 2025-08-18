@@ -9,6 +9,7 @@ from .message import Message
 if TYPE_CHECKING:
     from .bot import Bot  # pragma: no cover
     from .command import Command  # pragma: no cover
+    from .group import Group
 
 
 class Context:
@@ -42,6 +43,7 @@ class Context:
         # Command metdata
         self.prefix: str = bot.prefix
         self.command: Optional[Command] = None
+        self.subcommand: Optional[Command] = None
         self._args: List[str] = shlex.split(self.body)
 
     @property
@@ -54,8 +56,12 @@ class Context:
         :return: The list of arguments.
         :rtype: List[str]
         """
+        if self.subcommand:
+            return self._args[2:]
+
         if self.command:
             return self._args[1:]
+
         return self._args
 
     @property

@@ -25,11 +25,15 @@ from nio import (
 )
 
 from .room import Room
+from .group import Group
 from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
-from .errors import AlreadyRegisteredError, CommandNotFoundError
+from .errors import (
+    AlreadyRegisteredError,
+    CommandNotFoundError,
+    GroupAlreadyRegisteredError)
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
@@ -83,6 +87,8 @@ class Bot:
         self.start_at: float | None = None  # unix timestamp
 
         self.commands: Dict[str, Command] = {}
+        # self.groups: Dict[str, Group] = {}
+
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
 
@@ -188,14 +194,29 @@ class Bot:
             return self.register_command(cmd)
         return wrapper
 
-    def register_command(self, cmd: Command):
+    def register_command(self, cmd: Command) -> Command:
         if cmd in self.commands:
             raise AlreadyRegisteredError(cmd)
 
         self.commands[cmd.name] = cmd
-        self.log.debug("command %s registered", cmd)
+        self.log.debug("command '%s' registered", cmd)
 
         return cmd
+
+    def group(self, name: Optional[str] = None) -> Group:
+        def wrapper(func: Callback) -> Group:
+            group = Group(func, name=name, prefix=self.prefix)
+            return self.register_group(group)
+        return wrapper
+
+    def register_group(self, group: Group) -> Group:
+        if group in self.commands:
+            raise GroupAlreadyRegisteredError(group)
+
+        self.commands[group.name] = group
+        self.log.debug("group '%s' registered", group)
+
+        return group
 
     def error(self):
         """Decorator to register a custom error handler for the command."""
