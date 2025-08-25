@@ -30,6 +30,7 @@ from .context import Context
 from .command import Command
 from .help import HelpCommand
 from .errors import AlreadyRegisteredError, CommandNotFoundError, CheckError
+from .scheduler import Scheduler
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
@@ -84,6 +85,8 @@ class Bot:
 
         self.commands: Dict[str, Command] = {}
         self.checks: List[Callback] = []
+        self.scheduler = Scheduler()
+        
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
 
@@ -201,6 +204,35 @@ class Bot:
         def wrapper(func: Callback) -> Command:
             cmd = Command(func, name=name, prefix=self.prefix)
             return self.register_command(cmd)
+        return wrapper
+    
+    def schedule(
+        self,
+        cron: str,
+    ):
+        """
+        Decorator to register a coroutine function as a scheduled task.
+
+        The cron string defines the schedule for the task.
+
+        :param cron: The cron string defining the schedule.
+        :type cron: str
+        :raises TypeError: If the decorated function is not a coroutine.
+        :return: Decorator that registers the scheduled task.
+        :rtype: Callback
+        """
+        def wrapper(f: Callback) -> Callback:
+            if not asyncio.iscoroutinefunction(func):
+                raise TypeError("Scheduled tasks must be coroutines")
+
+            self.scheduler.schedule(cron, f)
+            self.log.debug(
+                "registered scheduled task %s for cron %s",
+                f.__name__,
+                cron
+            )
+            return f
+
         return wrapper
 
     def register_command(self, cmd: Command):
@@ -352,6 +384,7 @@ class Bot:
         """
         try:
             asyncio.run(self.run())
+            self.scheduler.start()
         except KeyboardInterrupt:
             self.log.info("bot interrupted by user")
         finally:

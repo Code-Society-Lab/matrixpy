@@ -21,6 +21,7 @@ dependencies = [
     "logger",
     'PyYAML',
     'markdown',
+    'APScheduler',
 ]
 
 [project.optional-dependencies]
