@@ -5,30 +5,6 @@ from typing import Any, Callable, Coroutine
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 
 
-class Task:
-    def __init__(self, cron: str, func: Callback) -> None:
-        self.cron = cron
-        self.func = func
-
-    def _parse_cron(self) -> dict:
-        """Parse a cron string into its components.
-
-        :return: A dictionary with cron components.
-        :rtype: dict
-        """
-        fields = self.cron.split()
-        if len(fields) != 5:
-            raise ValueError("Cron string must have exactly 5 fields")
-
-        return {
-            "minute": fields[0],
-            "hour": fields[1],
-            "day": fields[2],
-            "month": fields[3],
-            "day_of_week": fields[4],
-        }
-
-
 class Scheduler:
     def __init__(self) -> None:
         """The Scheduler class used to schedule tasks for a bot.
@@ -36,7 +12,26 @@ class Scheduler:
         Uses APScheduler under the hood.
         """
         self.scheduler = AsyncIOScheduler()
-        self.tasks: list[Task] = []
+
+    def _parse_cron(self, cron: str) -> dict:
+        """
+        Parse a cron string into a dictionary suitable for CronTrigger.
+
+        :param cron: The cron string to parse.
+        :type cron: str
+        :return: A dictionary with cron fields.
+        :rtype: dict
+        """
+        fields = cron.split()
+        if len(fields) != 5:
+            raise ValueError("Cron string must have exactly 5 fields")
+        return {
+            "minute": fields[0],
+            "hour": fields[1],
+            "day": fields[2],
+            "month": fields[3],
+            "day_of_week": fields[4],
+        }
 
     def schedule(self, cron: str, func: Callback) -> None:
         """
@@ -47,11 +42,8 @@ class Scheduler:
         :param func: The coroutine function to run.
         :type func: Callback
         """
-        task = Task(cron, func)
-        self.tasks.append(task)
-
-        cron_trigger = CronTrigger(**task._parse_cron())
-        self.scheduler.add_job(task.func, cron_trigger)
+        cron_trigger = CronTrigger(**self._parse_cron(cron))
+        self.scheduler.add_job(func, trigger=cron_trigger)
 
     def start(self) -> None:
         """Start the scheduler."""
