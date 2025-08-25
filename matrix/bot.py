@@ -29,7 +29,7 @@ from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
-from .errors import AlreadyRegisteredError, CommandNotFoundError
+from .errors import AlreadyRegisteredError, CommandNotFoundError, CheckError
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
@@ -83,6 +83,7 @@ class Bot:
         self.start_at: float | None = None  # unix timestamp
 
         self.commands: Dict[str, Command] = {}
+        self.checks: List[Callback] = []
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
 
@@ -94,6 +95,20 @@ class Bot:
 
         self.client.add_event_callback(self._on_event, Event)
         self._auto_register_events()
+
+    def check(self, func: Callback) -> None:
+        """
+        Register a check callback
+
+        :param func: The check callback
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("Checks must be coroutine")
+
+        self.checks.append(func)
 
     def event(
         self,
@@ -254,6 +269,10 @@ class Bot:
     async def _process_commands(self, room: MatrixRoom, event: Event) -> None:
         """Parse and execute commands"""
         ctx = await self._build_context(room, event)
+
+        for check in self.checks:
+            if not await check(ctx):
+                raise CheckError(None, check)
 
         if ctx.command:
             await ctx.command(ctx)

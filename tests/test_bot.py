@@ -254,6 +254,42 @@ async def test_command_not_found_raises(bot):
 
 
 @pytest.mark.asyncio
+async def test_bot_does_not_execute_when_global_check_fails(bot, event):
+    called = False
+
+    @bot.command()
+    async def greet(ctx):
+        nonlocal called
+        called = True
+
+    @bot.check
+    async def global_check(ctx):
+        return False
+    
+    event = RoomMessageText.from_dict({
+        "content": {
+            "body": "!greet",
+            "msgtype": "m.text"
+        },
+        "event_id": "$ev2",
+        "origin_server_ts": 1234567890,
+        "sender": "@user:matrix.org",
+        "type": "m.room.message",
+    })
+    
+    room = MatrixRoom("!roomid", "alias")
+
+    with patch("matrix.context.Context", autospec=True) as MockContext: 
+        mock_ctx = MagicMock()
+        mock_ctx.body = "!greet"
+        mock_ctx.command = bot.commands["greet"]
+        MockContext.return_value = mock_ctx
+
+        await bot._process_commands(room, event)
+
+    assert not called, "Expected command handler not to be called"
+
+@pytest.mark.asyncio
 async def test_command_executes(bot):
     called = False
 
