@@ -43,7 +43,7 @@ class Scheduler:
         :type func: Callback
         """
         cron_trigger = CronTrigger(**self._parse_cron(cron))
-        self.scheduler.add_job(func, trigger=cron_trigger)
+        self.scheduler.add_job(func, trigger=cron_trigger, name=func.__name__)
 
     def start(self) -> None:
         """Start the scheduler."""
