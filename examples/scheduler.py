@@ -19,4 +19,20 @@ async def scheduled_task():
     await message.send(room_id=room_id, message="Scheduled ping!")
 
 
+@bot.schedule("0 * * * *")
+async def hourly_task():
+    print("This task runs every hour.")
+    message = Message(bot)
+    await message.send(room_id=room_id, message="Hourly ping!")
+
+
+@bot.schedule("0 9 * * 1-5")
+async def weekday_morning_task():
+    print("This task runs every weekday at 9 AM.")
+    message = Message(bot)
+    await message.send(
+        room_id=room_id, message="Good morning! Here's your daily update."
+    )
+
+
 bot.start()
