@@ -270,11 +270,11 @@ class Bot:
         """Parse and execute commands"""
         ctx = await self._build_context(room, event)
 
-        for check in self.checks:
-            if not await check(ctx):
-                raise CheckError(None, check)
-
         if ctx.command:
+            for check in self.checks:
+                if not await check(ctx):
+                    raise CheckError(ctx.command, check)
+
             await ctx.command(ctx)
 
     async def _build_context(self, room: MatrixRoom, event: Event):

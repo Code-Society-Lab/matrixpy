@@ -23,12 +23,7 @@ class MissingArgumentError(CommandError):
 
 class CheckError(CommandError):
     def __init__(self, cmd, check):
-        if cmd is None:
-            cmd_name = "global check"
-        else:
-            cmd_name = cmd.name
-
-        super().__init__(f"'{check.__name__}' has failed for '{cmd_name}'!")
+        super().__init__(f"'{check.__name__}' has failed for '{cmd.name}'!")
 
 
 class ConfigError(MatrixError):
