@@ -206,10 +206,7 @@ class Bot:
             return self.register_command(cmd)
         return wrapper
     
-    def schedule(
-        self,
-        cron: str,
-    ):
+    def schedule(self, cron: str):
         """
         Decorator to register a coroutine function as a scheduled task.
 
@@ -222,7 +219,7 @@ class Bot:
         :rtype: Callback
         """
         def wrapper(f: Callback) -> Callback:
-            if not asyncio.iscoroutinefunction(func):
+            if not asyncio.iscoroutinefunction(f):
                 raise TypeError("Scheduled tasks must be coroutines")
 
             self.scheduler.schedule(cron, f)
@@ -370,6 +367,8 @@ class Bot:
             login_resp = await self.client.login(self.config.password)
             self.log.info("logged in: %s", login_resp)
 
+        self.scheduler.start()
+
         await self.on_ready()
         await self.client.sync_forever(timeout=30_000)
 
@@ -384,7 +383,6 @@ class Bot:
         """
         try:
             asyncio.run(self.run())
-            self.scheduler.start()
         except KeyboardInterrupt:
             self.log.info("bot interrupted by user")
         finally:
