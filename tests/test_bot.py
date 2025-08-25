@@ -419,3 +419,13 @@ def test_start_handles_keyboard_interrupt(caplog):
 
     assert "bot interrupted by user" in caplog.text
     bot.client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_scheduled_task_in_scheduler(bot):
+    @bot.schedule("* * * * *")
+    async def scheduled_task():
+        pass
+
+    job_names = list(map(lambda j: j.name, bot.scheduler.scheduler.get_jobs()))
+    assert "scheduled_task" in job_names, "Scheduled task not found in scheduler"
