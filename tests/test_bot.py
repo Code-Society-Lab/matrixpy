@@ -6,6 +6,7 @@ from nio import MatrixRoom, RoomMessageText
 from matrix.bot import Bot
 from matrix.config import Config
 from matrix.errors import (
+    CheckError,
     CommandNotFoundError,
     AlreadyRegisteredError,
     ConfigError
@@ -285,7 +286,8 @@ async def test_bot_does_not_execute_when_global_check_fails(bot, event):
         mock_ctx.command = bot.commands["greet"]
         MockContext.return_value = mock_ctx
 
-        await bot._process_commands(room, event)
+        with pytest.raises(CheckError):
+            await bot._process_commands(room, event)
 
     assert not called, "Expected command handler not to be called"
 
