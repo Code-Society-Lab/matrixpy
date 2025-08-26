@@ -165,10 +165,7 @@ class Command:
 
             if len(calls) >= self.cooldown_rate:
                 retry = self.cooldown_period - (now - calls[0])
-                # await ctx.reply(
-                #    f"You're on cooldown. Try again in {retry:.1f} seconds."
-                #)
-                raise CooldownError(self, cooldown_function)
+                raise CooldownError(self, cooldown_function, retry)
 
             calls.append(now)
             return True
