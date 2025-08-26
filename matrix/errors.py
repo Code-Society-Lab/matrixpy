@@ -32,5 +32,6 @@ class ConfigError(MatrixError):
 
 
 class CooldownError(CheckError):
-    def __init__(self, cmd, check):
+    def __init__(self, cmd, check, retry):
+        self.retry = retry
         super().__init__(cmd, check)
