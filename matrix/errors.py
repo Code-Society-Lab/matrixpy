@@ -31,6 +31,6 @@ class ConfigError(MatrixError):
         super().__init__(f"Missing required configuration: '{error}'")
 
 
-class CooldownError(MatrixError):
-    def __init__(self, arg):
-        super().__init__(f"Missing required argument: '{arg}'")
+class CooldownError(CheckError):
+    def __init__(self, cmd, check):
+        super().__init__(cmd, check)
