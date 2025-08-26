@@ -226,16 +226,13 @@ class Command:
         :param error: The exception that was raised.
         :type error: Exception
         """
-        if isinstance(error, CooldownError):
-            # Cooldown check already handled in cooldown function
-            return
-
         if self._on_error:
             await self._on_error(ctx, error)
-            return
         else:
             await ctx.send_help()
+
         ctx.logger.exception("error while executing command '%s'", self)
+        raise error
 
     async def __before_invoke(self, ctx: "Context") -> None:
         for check in self.checks:
