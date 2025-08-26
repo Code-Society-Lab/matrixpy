@@ -19,6 +19,9 @@ class Group(Command):
 
         super().__init__(callback, **kwargs)
 
+    def _build_usage(self):
+        return f"{self.prefix}{self.name} [subcommand]"
+
     def get_command(self, cmd_name: str):
         if cmd := self.commands.get(cmd_name):
             return cmd
@@ -43,7 +46,12 @@ class Group(Command):
         :rtype: Callback
         """
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name, prefix=self.prefix)
+            cmd = Command(
+                func,
+                name=name,
+                prefix=self.prefix,
+                parent=self.name
+            )
             return self.register_command(cmd)
         return wrapper
 

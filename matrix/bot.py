@@ -173,7 +173,7 @@ class Bot:
 
     def command(
         self,
-        name: Optional[str] = None
+        **kwargs
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -181,16 +181,13 @@ class Bot:
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function
-                     name is used.
-        :type name: str, optional
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If a command with the same name is registered.
         :return: Decorator that registers the command handler.
         :rtype: Callback
         """
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name, prefix=self.prefix)
+            cmd = Command(func, prefix=self.prefix, **kwargs)
             return self.register_command(cmd)
         return wrapper
 
@@ -203,9 +200,11 @@ class Bot:
 
         return cmd
 
-    def group(self, name: Optional[str] = None) -> Group:
+    def group(self, **kwargs) -> Group:
+        """Decorator to register a custom error handler for the command."""
+
         def wrapper(func: Callback) -> Group:
-            group = Group(func, name=name, prefix=self.prefix)
+            group = Group(func, prefix=self.prefix, **kwargs)
             return self.register_group(group)
         return wrapper
 

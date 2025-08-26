@@ -49,6 +49,7 @@ class Command:
 
         self.description: str = kwargs.get("description", "")
         self.prefix: str = kwargs.get("prefix", "")
+        self.parent: str = kwargs.get("parent", "")
         self.usage: str = kwargs.get("usage", self._build_usage())
         self.help: str = self._build_help()
 
@@ -104,7 +105,12 @@ class Command:
         :rtype: str
         """
         params = " ".join(f"[{p.name}]" for p in self.params)
-        return f"{self.prefix}{self.name} {params}"
+        command_name = self.name
+
+        if self.parent:
+            command_name = f"{self.parent} {self.name}"
+
+        return f"{self.prefix}{command_name} {params}"
 
     def _parse_arguments(self, ctx: "Context") -> list[Any]:
         parsed_args = []
