@@ -8,10 +8,13 @@ from typing import (
     Callable,
     Coroutine,
     List,
-    get_type_hints
+    get_type_hints,
+    DefaultDict
 )
 
-from .errors import MissingArgumentError, CheckError
+from .errors import MissingArgumentError, CheckError, CooldownError
+from time import monotonic
+from collections import defaultdict
 
 if TYPE_CHECKING:
     from .context import Context  # pragma: no cover
@@ -55,6 +58,10 @@ class Command:
         self._before_invoke: Optional[Callback] = None
         self._after_invoke: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
+
+        self.cooldown_rate: Optional[int] = None
+        self.cooldown_period: Optional[float] = None
+        self.cooldown_calls: DefaultDict[str, list[float]] = defaultdict(list)
 
     @property
     def callback(self) -> Callback:
@@ -138,6 +145,36 @@ class Command:
 
         self.checks.append(func)
 
+    def set_cooldown(self, rate: int, period: float) -> None:
+        self.cooldown_rate = rate
+        self.cooldown_period = period
+
+        async def cooldown_function(ctx):
+            if ctx is None or not hasattr(ctx, "sender"):
+                return False
+
+            now = monotonic()
+            user_id = ctx.sender
+
+            calls = [
+                t for t in self.cooldown_calls[user_id]
+                if now - t < self.cooldown_period
+            ]
+            self.cooldown_calls[user_id] = calls
+
+            if len(calls) >= self.cooldown_rate:
+                oldest = min(calls)
+                retry = self.cooldown_period - (now - oldest)
+                await ctx.reply(
+                    f"You're on cooldown. Try again in {retry:.1f} seconds."
+                )
+                raise CooldownError(self, cooldown_function)
+
+            self.cooldown_calls[user_id].append(now)
+            return True
+
+        self.checks.append(cooldown_function)
+
     def before_invoke(self, func: Callback) -> None:
         """
         Registers a coroutine to be called before the command is invoked.
@@ -192,6 +229,10 @@ class Command:
         :param error: The exception that was raised.
         :type error: Exception
         """
+        if isinstance(error, CooldownError):
+            # Cooldown check already handled in cooldown function
+            return
+
         if self._on_error:
             await self._on_error(ctx, error)
             return
