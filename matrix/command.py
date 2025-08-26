@@ -14,7 +14,7 @@ from typing import (
 
 from .errors import MissingArgumentError, CheckError, CooldownError
 from time import monotonic
-from collections import defaultdict
+from collections import defaultdict, deque
 
 if TYPE_CHECKING:
     from .context import Context  # pragma: no cover
@@ -61,7 +61,10 @@ class Command:
 
         self.cooldown_rate: Optional[int] = None
         self.cooldown_period: Optional[float] = None
-        self.cooldown_calls: DefaultDict[str, list[float]] = defaultdict(list)
+        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
+        
+        if cooldown := kwargs.get("cooldown"):
+            self.set_cooldown(*cooldown)
 
     @property
     def callback(self) -> Callback:
@@ -155,22 +158,19 @@ class Command:
 
             now = monotonic()
             user_id = ctx.sender
+            calls = self.cooldown_calls[user_id]
 
-            calls = [
-                t for t in self.cooldown_calls[user_id]
-                if now - t < self.cooldown_period
-            ]
-            self.cooldown_calls[user_id] = calls
+            while calls and now - calls[0] >= self.cooldown_period:
+                calls.popleft()
 
             if len(calls) >= self.cooldown_rate:
-                oldest = min(calls)
-                retry = self.cooldown_period - (now - oldest)
-                await ctx.reply(
-                    f"You're on cooldown. Try again in {retry:.1f} seconds."
-                )
+                retry = self.cooldown_period - (now - calls[0])
+                # await ctx.reply(
+                #    f"You're on cooldown. Try again in {retry:.1f} seconds."
+                #)
                 raise CooldownError(self, cooldown_function)
 
-            self.cooldown_calls[user_id].append(now)
+            calls.append(now)
             return True
 
         self.checks.append(cooldown_function)
