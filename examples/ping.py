@@ -1,4 +1,4 @@
-from matrix import Bot, Context, cooldown
+from matrix import Bot, Context
 
 bot = Bot("examples/config.yaml")
 
