@@ -8,10 +8,13 @@ from typing import (
     Callable,
     Coroutine,
     List,
-    get_type_hints
+    get_type_hints,
+    DefaultDict
 )
 
-from .errors import MissingArgumentError, CheckError
+from .errors import MissingArgumentError, CheckError, CooldownError
+from time import monotonic
+from collections import defaultdict, deque
 
 if TYPE_CHECKING:
     from .context import Context  # pragma: no cover
@@ -55,6 +58,13 @@ class Command:
         self._before_invoke: Optional[Callback] = None
         self._after_invoke: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
+
+        self.cooldown_rate: Optional[int] = None
+        self.cooldown_period: Optional[float] = None
+        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
+        
+        if cooldown := kwargs.get("cooldown"):
+            self.set_cooldown(*cooldown)
 
     @property
     def callback(self) -> Callback:
@@ -138,6 +148,30 @@ class Command:
 
         self.checks.append(func)
 
+    def set_cooldown(self, rate: int, period: float) -> None:
+        self.cooldown_rate = rate
+        self.cooldown_period = period
+
+        async def cooldown_function(ctx):
+            if ctx is None or not hasattr(ctx, "sender"):
+                return False
+
+            now = monotonic()
+            user_id = ctx.sender
+            calls = self.cooldown_calls[user_id]
+
+            while calls and now - calls[0] >= self.cooldown_period:
+                calls.popleft()
+
+            if len(calls) >= self.cooldown_rate:
+                retry = self.cooldown_period - (now - calls[0])
+                raise CooldownError(self, cooldown_function, retry)
+
+            calls.append(now)
+            return True
+
+        self.checks.append(cooldown_function)
+
     def before_invoke(self, func: Callback) -> None:
         """
         Registers a coroutine to be called before the command is invoked.
@@ -194,10 +228,11 @@ class Command:
         """
         if self._on_error:
             await self._on_error(ctx, error)
-            return
         else:
             await ctx.send_help()
+
         ctx.logger.exception("error while executing command '%s'", self)
+        raise error
 
     async def __before_invoke(self, ctx: "Context") -> None:
         for check in self.checks:

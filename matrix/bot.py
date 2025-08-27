@@ -185,7 +185,8 @@ class Bot:
 
     def command(
         self,
-        name: Optional[str] = None
+        name: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -202,7 +203,7 @@ class Bot:
         :rtype: Callback
         """
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name, prefix=self.prefix)
+            cmd = Command(func, name=name, cooldown=cooldown, prefix=self.prefix)
             return self.register_command(cmd)
         return wrapper
     
