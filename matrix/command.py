@@ -56,8 +56,8 @@ class Command:
         self.usage: str = kwargs.get("usage", self._build_usage())
         self.help: str = self._build_help()
 
-        self._before_invoke: Optional[Callback] = None
-        self._after_invoke: Optional[Callback] = None
+        self._before_invoke_callback: Optional[Callback] = None
+        self._after_invoke_callback: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
 
         self.cooldown_rate: Optional[int] = None
@@ -250,13 +250,13 @@ class Command:
                 if not await check(ctx):
                     raise CheckError(self, check)
 
-            if self._before_invoke:
-                await self._before_invoke(ctx)
+            if self._before_invoke_callback:
+                await self._before_invoke_callback(ctx)
 
             await self.invoke(ctx)
 
-            if self._after_invoke:
-                await self._after_invoke(ctx)
+            if self._after_invoke_callback:
+                await self._after_invoke_callback(ctx)
         except Exception as error:
             await self.on_error(ctx, error)
 
