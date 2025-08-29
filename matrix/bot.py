@@ -41,6 +41,7 @@ from .errors import (
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
+GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
 
 
@@ -246,7 +247,7 @@ class Bot:
 
         return cmd
 
-    def group(self, **kwargs) -> Group:
+    def group(self, **kwargs) -> GroupCallable:
         """Decorator to register a custom error handler for the command."""
 
         def wrapper(func: Callback) -> Group:

@@ -329,11 +329,6 @@ class HelpCommand(Command):
 
         if subcommand := self.find_subcommand(cmd, subcommand_name):
             await ctx.reply(self.format_subcommand(subcommand))
-        else:
-            await ctx.reply(
-                f"Subcommand `{subcommand_name}` not " /
-                f"found in group `{command_name}`."
-            )
 
     async def show_help_page(self, ctx: Context, page_number: int = 1) -> None:
         """Show a paginated help page for all commands.
