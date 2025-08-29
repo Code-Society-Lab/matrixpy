@@ -30,10 +30,14 @@ from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
+from .scheduler import Scheduler
+
 from .errors import (
     AlreadyRegisteredError,
     CommandNotFoundError,
-    GroupAlreadyRegisteredError)
+    CheckError,
+    GroupAlreadyRegisteredError
+)
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
@@ -87,6 +91,8 @@ class Bot:
         self.start_at: float | None = None  # unix timestamp
 
         self.commands: Dict[str, Command] = {}
+        self.checks: List[Callback] = []
+        self.scheduler = Scheduler()
 
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
@@ -99,6 +105,20 @@ class Bot:
 
         self.client.add_event_callback(self._on_event, Event)
         self._auto_register_events()
+
+    def check(self, func: Callback) -> None:
+        """
+        Register a check callback
+
+        :param func: The check callback
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("Checks must be coroutine")
+
+        self.checks.append(func)
 
     def event(
         self,
@@ -187,8 +207,34 @@ class Bot:
         :rtype: Callback
         """
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, prefix=self.prefix, **kwargs)
+            cmd = Command(func, name=name, prefix=self.prefix, **kwargs)
             return self.register_command(cmd)
+        return wrapper
+    
+    def schedule(self, cron: str):
+        """
+        Decorator to register a coroutine function as a scheduled task.
+
+        The cron string defines the schedule for the task.
+
+        :param cron: The cron string defining the schedule.
+        :type cron: str
+        :raises TypeError: If the decorated function is not a coroutine.
+        :return: Decorator that registers the scheduled task.
+        :rtype: Callback
+        """
+        def wrapper(f: Callback) -> Callback:
+            if not asyncio.iscoroutinefunction(f):
+                raise TypeError("Scheduled tasks must be coroutines")
+
+            self.scheduler.schedule(cron, f)
+            self.log.debug(
+                "registered scheduled task %s for cron %s",
+                f.__name__,
+                cron
+            )
+            return f
+
         return wrapper
 
     def register_command(self, cmd: Command) -> Command:
@@ -276,6 +322,10 @@ class Bot:
         ctx = await self._build_context(room, event)
 
         if ctx.command:
+            for check in self.checks:
+                if not await check(ctx):
+                    raise CheckError(ctx.command, check)
+
             await ctx.command(ctx)
 
     async def _build_context(self, room: MatrixRoom, event: Event):
@@ -338,6 +388,8 @@ class Bot:
         else:
             login_resp = await self.client.login(self.config.password)
             self.log.info("logged in: %s", login_resp)
+
+        self.scheduler.start()
 
         await self.on_ready()
         await self.client.sync_forever(timeout=30_000)

@@ -25,7 +25,7 @@ class Context:
     :param event: The event that triggered the command or message.
     :type event: Event
 
-    raises MatrixError: If a Matrix operation fails.
+    :raises MatrixError: If a Matrix operation fails.
     """
 
     def __init__(self, bot: "Bot", room: MatrixRoom, event: Event):

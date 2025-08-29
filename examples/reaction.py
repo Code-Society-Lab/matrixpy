@@ -1,4 +1,4 @@
-from matrix.bot import Bot
+from matrix import Bot
 
 bot = Bot("examples/config.yaml")
 

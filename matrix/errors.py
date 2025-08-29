@@ -38,3 +38,9 @@ class GroupAlreadyRegisteredError(GroupError):
 class ConfigError(MatrixError):
     def __init__(self, error):
         super().__init__(f"Missing required configuration: '{error}'")
+
+
+class CooldownError(CheckError):
+    def __init__(self, cmd, check, retry):
+        self.retry = retry
+        super().__init__(cmd, check)

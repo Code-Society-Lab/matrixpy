@@ -6,6 +6,7 @@ from nio import MatrixRoom, RoomMessageText
 from matrix.bot import Bot
 from matrix.config import Config
 from matrix.errors import (
+    CheckError,
     CommandNotFoundError,
     AlreadyRegisteredError,
     ConfigError
@@ -254,6 +255,43 @@ async def test_command_not_found_raises(bot):
 
 
 @pytest.mark.asyncio
+async def test_bot_does_not_execute_when_global_check_fails(bot, event):
+    called = False
+
+    @bot.command()
+    async def greet(ctx):
+        nonlocal called
+        called = True
+
+    @bot.check
+    async def global_check(ctx):
+        return False
+    
+    event = RoomMessageText.from_dict({
+        "content": {
+            "body": "!greet",
+            "msgtype": "m.text"
+        },
+        "event_id": "$ev2",
+        "origin_server_ts": 1234567890,
+        "sender": "@user:matrix.org",
+        "type": "m.room.message",
+    })
+    
+    room = MatrixRoom("!roomid", "alias")
+
+    with patch("matrix.context.Context", autospec=True) as MockContext: 
+        mock_ctx = MagicMock()
+        mock_ctx.body = "!greet"
+        mock_ctx.command = bot.commands["greet"]
+        MockContext.return_value = mock_ctx
+
+        with pytest.raises(CheckError):
+            await bot._process_commands(room, event)
+
+    assert not called, "Expected command handler not to be called"
+
+@pytest.mark.asyncio
 async def test_command_executes(bot):
     called = False
 
@@ -381,3 +419,13 @@ def test_start_handles_keyboard_interrupt(caplog):
 
     assert "bot interrupted by user" in caplog.text
     bot.client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_scheduled_task_in_scheduler(bot):
+    @bot.schedule("* * * * *")
+    async def scheduled_task():
+        pass
+
+    job_names = list(map(lambda j: j.name, bot.scheduler.scheduler.get_jobs()))
+    assert "scheduled_task" in job_names, "Scheduled task not found in scheduler"

@@ -108,7 +108,8 @@ async def test_error_handler():
     ctx = DummyContext(args=[])
     called = False
 
-    await cmd(ctx)
+    with pytest.raises(MissingArgumentError):
+        await cmd(ctx)
     ctx.logger.exception.assert_called_once()
 
     with pytest.raises(TypeError):
@@ -121,7 +122,8 @@ async def test_error_handler():
         nonlocal called
         called = True
 
-    await cmd(ctx)
+    with pytest.raises(MissingArgumentError):
+        await cmd(ctx)
     assert called
 
 
@@ -220,5 +222,6 @@ async def test_command_does_not_execute_when_a_check_fails():
     async def always_fails(ctx):
         return False
 
-    await cmd(ctx)
+    with pytest.raises(Exception):
+        await cmd(ctx)
     assert called is False

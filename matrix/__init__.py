@@ -4,6 +4,8 @@ from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
+from .checks import cooldown
+from .errors import CooldownError
 
 __all__ = [
     "Bot",
@@ -12,4 +14,6 @@ __all__ = [
     "Command",
     "Context",
     "HelpCommand",
+    "cooldown",
+    "CooldownError",
 ]
