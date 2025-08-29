@@ -87,7 +87,6 @@ class Bot:
         self.start_at: float | None = None  # unix timestamp
 
         self.commands: Dict[str, Command] = {}
-        # self.groups: Dict[str, Group] = {}
 
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
@@ -173,6 +172,7 @@ class Bot:
 
     def command(
         self,
+        name: Optional[str] = None,
         **kwargs
     ) -> Callable[[Callback], Command]:
         """
