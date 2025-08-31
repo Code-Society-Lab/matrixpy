@@ -29,7 +29,7 @@ from .group import Group
 from .config import Config
 from .context import Context
 from .command import Command
-from .help import HelpCommand
+from .help import HelpCommand, DefaultHelpCommand
 from .scheduler import Scheduler
 
 from .errors import (
@@ -100,7 +100,7 @@ class Bot:
 
         self.help: HelpCommand = kwargs.get(
             "help",
-            HelpCommand(prefix=self.prefix)
+            DefaultHelpCommand(prefix=self.prefix)
         )
         self.register_command(self.help)
 

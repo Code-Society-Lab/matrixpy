@@ -9,7 +9,6 @@ from .message import Message
 if TYPE_CHECKING:
     from .bot import Bot  # pragma: no cover
     from .command import Command  # pragma: no cover
-    from .group import Group
 
 
 class Context:

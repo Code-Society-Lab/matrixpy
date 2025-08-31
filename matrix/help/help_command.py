@@ -1,109 +1,17 @@
-from typing import Optional, List, TypeVar, Generic, Union
+from typing import Optional, List
+from abc import ABC, abstractmethod
 
-from .context import Context
-from .command import Command
-from .group import Group
+from matrix.context import Context
+from matrix.command import Command
+from matrix.group import Group
 
-
-T = TypeVar('T')
-
-
-class Paginator(Generic[T]):
-    """A generic paginator for any list of items."""
-
-    def __init__(self, items: List[T], per_page: int = 5):
-        """Initialize the paginator.
-
-        :param items: List of items to paginate
-        :param per_page: Number of items per page
-        """
-        self.items = items
-        self.per_page = per_page
-        self.total_items = len(items)
-        self.total_pages = max(1, -(-self.total_items // self.per_page))
-
-    def get_page(self, page_number: int) -> 'Page[T]':
-        """Get a specific page of items.
-
-        :param page_number: Page number to retrieve (1-indexed)
-        :return: Page object containing items and metadata
-        """
-        # Clamp page number to valid range
-        page_number = max(1, min(page_number, self.total_pages))
-
-        start_idx = (page_number - 1) * self.per_page
-        end_idx = start_idx + self.per_page
-
-        return Page(
-            items=self.items[start_idx:end_idx],
-            page_number=page_number,
-            total_pages=self.total_pages,
-            per_page=self.per_page,
-            total_items=self.total_items
-        )
-
-    def get_pages(self) -> List['Page[T]']:
-        """Get all pages.
-
-        :return: List of all pages
-        """
-        return [self.get_page(i) for i in range(1, self.total_pages + 1)]
+from .pagination import Paginator, Page
 
 
-class Page(Generic[T]):
-    """Represents a single page of paginated items."""
+class HelpCommand(Command, ABC):
+    """Abstract base class for help commands with built-in pagination support.
 
-    def __init__(
-        self,
-        items: List[T],
-        page_number: int,
-        total_pages: int,
-        per_page: int,
-        total_items: int
-    ):
-        """Initialize a page.
-
-        :param items: Items on this page
-        :param page_number: Current page number
-        :param total_pages: Total number of pages
-        :param per_page: Items per page
-        :param total_items: Total number of items across all pages
-        """
-        self.items = items
-        self.page_number = page_number
-        self.total_pages = total_pages
-        self.per_page = per_page
-        self.total_items = total_items
-
-    @property
-    def has_previous(self) -> bool:
-        """Check if there's a previous page."""
-        return self.page_number > 1
-
-    @property
-    def has_next(self) -> bool:
-        """Check if there's a next page."""
-        return self.page_number < self.total_pages
-
-    @property
-    def previous_page(self) -> Optional[int]:
-        """Get previous page number."""
-        return self.page_number - 1 if self.has_previous else None
-
-    @property
-    def next_page(self) -> Optional[int]:
-        """Get next page number."""
-        return self.page_number + 1 if self.has_next else None
-
-
-class HelpCommand(Command):
-    """A reusable help command with built-in pagination support.
-
-    Supports both regular commands and group with proper formatting.
-
-    - To customize formatting, override the format_command() or format_group()
-        methods.
-    - To customize pagination display, override the format_page_info() method.
+    Subclasses must implement the formatting methods to customize appearance.
     """
 
     DEFAULT_PER_PAGE = 5
@@ -126,63 +34,41 @@ class HelpCommand(Command):
         )
         self.per_page = per_page
 
+    @abstractmethod
     def format_command(self, cmd: Command) -> str:
         """Format a single command for display.
-
-        Override this method to customize command formatting.
 
         :param cmd: The command to format
         :return: Formatted string representation of the command
         """
-        return (
-            f"**{cmd.name}**\n"
-            f"Usage: `{cmd.usage}`\n"
-            f"Description: {cmd.description or 'None'}"
-        )
+        pass  # pragma: no cover
 
-    def format_group(self, group: Group) -> str:
+    @abstractmethod
+    def format_group(self, group: Group) -> str:  # pragma: no cover
         """Format a group command for display.
-
-        Override this method to customize group formatting.
 
         :param group: The group to format
         :return: Formatted string representation of the group
         """
-        subcommands_text = ""
-        subcommand_count = len(getattr(group, 'commands', {}))
+        pass
 
-        if subcommand_count > 0:
-            subcommands_text = f" ({subcommand_count} subcommands)"
-
-        return (
-            f"**{group.name}** [GROUP]{subcommands_text}\n"
-            f"Usage: `{group.usage}`\n"
-            f"Description: {group.description or 'None'}"
-        )
-
+    @abstractmethod
     def format_subcommand(self, subcommand: Command) -> str:
         """Format a subcommand for display.
-
-        Override this method to customize subcommand formatting.
 
         :param subcommand: The subcommand to format
         :return: Formatted string representation of the subcommand
         """
-        return (
-            f"**{subcommand.name}**\n"
-            f"Usage: `{subcommand.usage}`\n"
-            f"Description: {subcommand.description or 'None'}"
-        )
+        pass  # pragma: no cover
 
+    @abstractmethod
     def format_page_info(self, page: Page[Command]) -> str:
         """Format the page information display.
-
-        Override this method to customize pagination display.
 
         :param page: Page object containing pagination info
         :return: Formatted page information string
         """
-        return f"**Page {page.page_number}/{page.total_pages}**"
+        pass  # pragma: no cover
 
     def format_help_page(
         self,
@@ -287,58 +173,52 @@ class HelpCommand(Command):
     async def show_command_help(
         self,
         ctx: Context,
-        command_name: str,
-        subcommand_name: Optional[str] = None
+        command_name: str
     ) -> None:
-        """Show help for a specific command or subcommand.
-
-        :param ctx: Command context
-        :param command_name: Name of the command to show help for
-        :param subcommand_name: Name of the subcommand
-        """
+        """Show help for a specific command (non-group)."""
         cmd = self.find_command(ctx, command_name)
 
         if not cmd:
             await ctx.reply(f"Command `{command_name}` not found.")
             return
 
-        if not subcommand_name:
-            if isinstance(cmd, Group):
-                group_help = self.format_group(cmd)
-                subcommands = getattr(cmd, 'commands', {})
+        if isinstance(cmd, Group):
+            # If it's a group, redirect to show_group_help
+            await self.show_group_help(ctx, command_name)
+            return
 
-                if subcommands:
-                    paginator = self.get_subcommands_paginator(cmd)
-                    first_page = paginator.get_page(1)
-                    subcommand_list = self.format_subcommand_page(
-                        first_page,
-                        cmd.name
-                    )
-                    help_message = f"{group_help}\n\n{subcommand_list}"
-                else:
-                    help_message = f"{group_help}\n\nNo subcommands available."
+        # Show the help for a regular command
+        await ctx.reply(self.format_command(cmd))
 
-                await ctx.reply(help_message)
+    async def show_group_help(
+        self,
+        ctx: Context,
+        group_name: str,
+        subcommand_name: Optional[str] = None,
+        page_number: int = 1
+    ) -> None:
+        """Show help for a group or its subcommand, with optional pagination."""
+        group = self.find_command(ctx, group_name)
+
+        if subcommand_name:
+            subcmd = self.find_subcommand(group, subcommand_name)
+            if subcmd:
+                await ctx.reply(self.format_subcommand(subcmd))
             else:
-                await ctx.reply(self.format_command(cmd))
+                await ctx.reply(f"Subcommand `{subcommand_name}` not found in group `{group_name}`.")
             return
 
-        if not isinstance(cmd, Group):
-            await ctx.reply(f"Command `{command_name}` is not a group.")
-            return
+        # No subcommand: show paginated group subcommands
+        group_help = self.format_group(group)
+        subcommands = getattr(group, 'commands', {})
 
-        if subcommand := self.find_subcommand(cmd, subcommand_name):
-            await ctx.reply(self.format_subcommand(subcommand))
-
-    async def show_help_page(self, ctx: Context, page_number: int = 1) -> None:
-        """Show a paginated help page for all commands.
-
-        :param ctx: Command context
-        :param page_number: Page number to display
-        """
-        paginator = self.get_commands_paginator(ctx)
-        page = paginator.get_page(page_number)
-        help_message = self.format_help_page(page)
+        if subcommands:
+            paginator = self.get_subcommands_paginator(group)
+            page = paginator.get_page(page_number)
+            subcommand_list = self.format_subcommand_page(page, group.name)
+            help_message = f"{group_help}\n\n{subcommand_list}"
+        else:
+            help_message = f"{group_help}\n\nNo subcommands available."
 
         await ctx.reply(help_message)
 
@@ -367,6 +247,18 @@ class HelpCommand(Command):
         paginator = self.get_subcommands_paginator(group)
         page = paginator.get_page(page_number)
         help_message = self.format_subcommand_page(page, group_name)
+
+        await ctx.reply(help_message)
+
+    async def show_help_page(self, ctx: Context, page_number: int = 1) -> None:
+        """Show a paginated help page for all commands.
+
+        :param ctx: Command context
+        :param page_number: Page number to display
+        """
+        paginator = self.get_commands_paginator(ctx)
+        page = paginator.get_page(page_number)
+        help_message = self.format_help_page(page)
 
         await ctx.reply(help_message)
 
@@ -410,42 +302,83 @@ class HelpCommand(Command):
         cmd_or_page=None,
         subcommand=None
     ) -> None:
-        """Execute the help command.
+        """Execute the help command using show_command_help and show_group_help."""
 
-        Usage patterns:
-        - `help` - Show first page of all commands
-        - `help 2` - Show page 2 of all commands
-        - `help ping` - Show help for specific command
-        - `help group` - Show help for group with first page of subcommands
-        - `help group subcmd` - Show help for specific subcommand
-        - `help group 2` - Show page 2 of group's subcommands
-
-        :param ctx: Command context
-        :param cmd_or_page: Command name or page number
-        :param subcommand: Subcommand name or page number for groups
-        """
-        # Convert arguments to list for parsing
         args = []
+
         if cmd_or_page is not None:
             args.append(cmd_or_page)
+
         if subcommand is not None:
             args.append(subcommand)
 
         command_name, subcommand_name, page = self.parse_help_arguments(args)
 
         if command_name:
-            if subcommand_name and not subcommand_name.isdigit():
-                await self.show_command_help(
-                    ctx,
-                    command_name,
-                    subcommand_name
-                )
-            else:
-                cmd = self.find_command(ctx, command_name)
+            cmd = self.find_command(ctx, command_name)
 
-                if cmd and isinstance(cmd, Group) and subcommand_name is None:
-                    await self.show_subcommand_page(ctx, command_name, page)
-                else:
-                    await self.show_command_help(ctx, command_name)
+            if isinstance(cmd, Group):
+                await self.show_group_help(ctx, command_name, subcommand_name)
+            else:
+                await self.show_command_help(ctx, command_name)
         else:
             await self.show_help_page(ctx, page)
+
+
+class DefaultHelpCommand(HelpCommand):
+    """A default implementation of HelpCommand with basic formatting.
+
+    This provides default formatting for commands, groups, and pagination
+    that works well for most use cases.
+    """
+
+    def format_command(self, cmd: Command) -> str:
+        """Format a single command for display.
+
+        :param cmd: The command to format
+        :return: Formatted string representation of the command
+        """
+        return (
+            f"**{cmd.name}**\n"
+            f"Usage: `{cmd.usage}`\n"
+            f"Description: {cmd.description or 'None'}"
+        )
+
+    def format_group(self, group: Group) -> str:
+        """Format a group command for display.
+
+        :param group: The group to format
+        :return: Formatted string representation of the group
+        """
+        subcommands_text = ""
+        subcommand_count = len(getattr(group, 'commands', {}))
+
+        if subcommand_count > 0:
+            subcommands_text = f" ({subcommand_count} subcommands)"
+
+        return (
+            f"**{group.name}** [GROUP]{subcommands_text}\n"
+            f"Usage: `{group.usage}`\n"
+            f"Description: {group.description or 'None'}"
+        )
+
+    def format_subcommand(self, subcommand: Command) -> str:
+        """Format a subcommand for display.
+
+        :param subcommand: The subcommand to format
+        :return: Formatted string representation of the subcommand
+        """
+        return (
+            f"**{subcommand.name}**\n"
+            f"Usage: `{subcommand.usage}`\n"
+            f"Description: {subcommand.description or 'None'}"
+        )
+
+    def format_page_info(self, page: Page[Command]) -> str:
+        """Format the page information display.
+
+        :param page: Page object containing pagination info
+        :return: Formatted page information string
+        """
+        return f"**Page {page.page_number}/{page.total_pages}**"
+
