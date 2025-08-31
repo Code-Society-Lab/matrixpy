@@ -35,6 +35,22 @@ class HelpCommand(Command, ABC):
         self.per_page = per_page
 
     @abstractmethod
+    def format_help_page(
+        self,
+        page: Page[Command],
+        title: str = "Commands"
+    ) -> str:
+        pass
+
+    @abstractmethod
+    def format_subcommand_page(
+        self,
+        page: Page[Command],
+        group_name: str
+    ) -> str:
+        pass
+
+    @abstractmethod
     def format_command(self, cmd: Command) -> str:
         """Format a single command for display.
 
@@ -70,56 +86,36 @@ class HelpCommand(Command, ABC):
         """
         pass  # pragma: no cover
 
-    def format_help_page(
+    @abstractmethod
+    async def on_command_not_found(
         self,
-        page: Page[Command],
-        title: str = "Commands"
-    ) -> str:
-        """Format a complete help page.
+        ctx: Context,
+        command_name: str
+    ) -> None:
+        """Called when a command is not found."""
+        pass  # pragma: no cover
 
-        :param page: Page object containing commands and pagination info
-        :param title: Title for the help page
-        :return: Complete formatted help page
-        """
-        help_entries = []
-
-        if not page.items:
-            return f"No {title.lower()} available."
-
-        for cmd in page.items:
-            if isinstance(cmd, Group):
-                help_entries.append(self.format_group(cmd))
-            else:
-                help_entries.append(self.format_command(cmd))
-
-        help_text = "\n\n".join(help_entries)
-        page_info = self.format_page_info(page)
-
-        return f"**{title}**\n\n{help_text}\n\n{page_info}"
-
-    def format_subcommand_page(
+    @abstractmethod
+    async def on_subcommand_not_found(
         self,
-        page: Page[Command],
-        group_name: str
-    ) -> str:
-        """Format a complete subcommand help page.
+        ctx: Context,
+        group: Group,
+        subcommand_name: str
+    ) -> None:
+        """Called when a subcommand is not found."""
+        pass  # pragma: no cover
 
-        :param page: Page object containing subcommands and pagination info
-        :param group_name: Name of the parent group
-        :return: Complete formatted subcommand help page
-        """
-        help_entries = []
+    @abstractmethod
+    async def on_page_out_of_range(
+        self,
+        ctx: Context,
+        page_number: int,
+        total_pages: int
+    ) -> None:
+        """Called when a requested page is out of bounds."""
+        pass  # pragma: no cover
 
-        if not page.items:
-            return f"No subcommands available for group `{group_name}`."
-
-        for subcmd in page.items:
-            help_entries.append(self.format_subcommand(subcmd))
-
-        help_text = "\n\n".join(help_entries)
-        page_info = self.format_page_info(page)
-
-        return f"**{group_name} Subcommands**\n\n{help_text}\n\n{page_info}"
+    # =====================================================================
 
     def get_commands_paginator(self, ctx: Context) -> Paginator[Command]:
         """Get a paginator for all commands.
@@ -173,39 +169,32 @@ class HelpCommand(Command, ABC):
     async def show_command_help(
         self,
         ctx: Context,
-        command_name: str
+        command: Command
     ) -> None:
         """Show help for a specific command (non-group)."""
-        cmd = self.find_command(ctx, command_name)
-
-        if not cmd:
-            await ctx.reply(f"Command `{command_name}` not found.")
-            return
-
-        if isinstance(cmd, Group):
-            # If it's a group, redirect to show_group_help
-            await self.show_group_help(ctx, command_name)
-            return
-
-        # Show the help for a regular command
-        await ctx.reply(self.format_command(cmd))
+        await ctx.reply(self.format_command(command))
 
     async def show_group_help(
         self,
         ctx: Context,
-        group_name: str,
+        group: Group,
         subcommand_name: Optional[str] = None,
         page_number: int = 1
     ) -> None:
-        """Show help for a group or its subcommand, with optional pagination."""
-        group = self.find_command(ctx, group_name)
-
+        """
+        Show help for a group or its subcommand, with optional pagination.
+        """
         if subcommand_name:
             subcmd = self.find_subcommand(group, subcommand_name)
+
             if subcmd:
                 await ctx.reply(self.format_subcommand(subcmd))
             else:
-                await ctx.reply(f"Subcommand `{subcommand_name}` not found in group `{group_name}`.")
+                await self.on_subcommand_not_found(
+                    ctx,
+                    group,
+                    subcommand_name
+                )
             return
 
         # No subcommand: show paginated group subcommands
@@ -216,39 +205,10 @@ class HelpCommand(Command, ABC):
             paginator = self.get_subcommands_paginator(group)
             page = paginator.get_page(page_number)
             subcommand_list = self.format_subcommand_page(page, group.name)
-            help_message = f"{group_help}\n\n{subcommand_list}"
+
+            await ctx.reply(f"{group_help}\n\n{subcommand_list}")
         else:
-            help_message = f"{group_help}\n\nNo subcommands available."
-
-        await ctx.reply(help_message)
-
-    async def show_subcommand_page(
-        self,
-        ctx: Context,
-        group_name: str,
-        page_number: int = 1
-    ) -> None:
-        """Show a paginated help page for group subcommands.
-
-        :param ctx: Command context
-        :param group_name: Name of the group
-        :param page_number: Page number to display
-        """
-        group = self.find_command(ctx, group_name)
-
-        if not group:
-            await ctx.reply(f"Group `{group_name}` not found.")
-            return
-
-        if not isinstance(group, Group):
-            await ctx.reply(f"Command `{group_name}` is not a group.")
-            return
-
-        paginator = self.get_subcommands_paginator(group)
-        page = paginator.get_page(page_number)
-        help_message = self.format_subcommand_page(page, group_name)
-
-        await ctx.reply(help_message)
+            await self.on_empty_page(ctx)
 
     async def show_help_page(self, ctx: Context, page_number: int = 1) -> None:
         """Show a paginated help page for all commands.
@@ -302,7 +262,9 @@ class HelpCommand(Command, ABC):
         cmd_or_page=None,
         subcommand=None
     ) -> None:
-        """Execute the help command using show_command_help and show_group_help."""
+        """
+        Execute the help command using show_command_help and show_group_help.
+        """
 
         args = []
 
@@ -317,10 +279,17 @@ class HelpCommand(Command, ABC):
         if command_name:
             cmd = self.find_command(ctx, command_name)
 
+            if not cmd:
+                await self.on_command_not_found(ctx, command_name)
+                return
+
             if isinstance(cmd, Group):
-                await self.show_group_help(ctx, command_name, subcommand_name)
-            else:
-                await self.show_command_help(ctx, command_name)
+                await self.show_group_help(ctx, cmd, subcommand_name)
+                return
+
+            if isinstance(cmd, Command):
+                await self.show_command_help(ctx, cmd)
+                return
         else:
             await self.show_help_page(ctx, page)
 
@@ -331,6 +300,56 @@ class DefaultHelpCommand(HelpCommand):
     This provides default formatting for commands, groups, and pagination
     that works well for most use cases.
     """
+    def format_help_page(
+        self,
+        page: Page[Command],
+        title: str = "Commands"
+    ) -> str:
+        """Format a complete help page.
+
+        :param page: Page object containing commands and pagination info
+        :param title: Title for the help page
+        :return: Complete formatted help page
+        """
+        help_entries = []
+
+        if not page.items:
+            return f"No {title.lower()} available."
+
+        for cmd in page.items:
+            if isinstance(cmd, Group):
+                help_entries.append(self.format_group(cmd))
+            else:
+                help_entries.append(self.format_command(cmd))
+
+        help_text = "\n\n".join(help_entries)
+        page_info = self.format_page_info(page)
+
+        return f"**{title}**\n\n{help_text}\n\n{page_info}"
+
+    def format_subcommand_page(
+        self,
+        page: Page[Command],
+        group_name: str
+    ) -> str:
+        """Format a complete subcommand help page.
+
+        :param page: Page object containing subcommands and pagination info
+        :param group_name: Name of the parent group
+        :return: Complete formatted subcommand help page
+        """
+        help_entries = []
+
+        if not page.items:
+            return f"No subcommands available for group `{group_name}`."
+
+        for subcmd in page.items:
+            help_entries.append(self.format_subcommand(subcmd))
+
+        help_text = "\n\n".join(help_entries)
+        page_info = self.format_page_info(page)
+
+        return f"**{group_name} Subcommands**\n\n{help_text}\n\n{page_info}"
 
     def format_command(self, cmd: Command) -> str:
         """Format a single command for display.
@@ -382,3 +401,30 @@ class DefaultHelpCommand(HelpCommand):
         """
         return f"**Page {page.page_number}/{page.total_pages}**"
 
+    async def on_command_not_found(
+        self,
+        ctx: Context,
+        command_name: str
+    ) -> None:
+        await ctx.reply(f"Command `{command_name}` not found.")
+
+    async def on_subcommand_not_found(
+        self,
+        ctx: Context,
+        subcommand_name: str
+    ) -> None:
+        await ctx.reply(
+            f"Subcommand `{subcommand_name}` not found "
+            f"in group `{ctx.command.name}`."
+        )
+
+    async def on_empty_page(self, ctx: Context) -> None:
+        await ctx.reply("No commands.")
+
+    async def on_page_out_of_range(
+        self,
+        ctx: Context,
+        page_number: int,
+        total_pages: int
+    ) -> None:
+        await ctx.reply(f"Page {page_number} does not exist.")

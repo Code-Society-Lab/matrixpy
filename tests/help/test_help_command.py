@@ -20,6 +20,45 @@ class DummyCtx:
 
 
 class DummyHelpCommand(HelpCommand):
+    def format_help_page(
+        self,
+        page: Page[Command],
+        title: str = "Commands"
+    ) -> str:
+        help_entries = []
+
+        if not page.items:
+            return f"No {title.lower()} available."
+
+        for cmd in page.items:
+            if isinstance(cmd, Group):
+                help_entries.append(self.format_group(cmd))
+            else:
+                help_entries.append(self.format_command(cmd))
+
+        help_text = "\n\n".join(help_entries)
+        page_info = self.format_page_info(page)
+
+        return f"**{title}**\n\n{help_text}\n\n{page_info}"
+
+    def format_subcommand_page(
+        self,
+        page: Page[Command],
+        group_name: str
+    ) -> str:
+        help_entries = []
+
+        if not page.items:
+            return f"No subcommands available for group `{group_name}`."
+
+        for subcmd in page.items:
+            help_entries.append(self.format_subcommand(subcmd))
+
+        help_text = "\n\n".join(help_entries)
+        page_info = self.format_page_info(page)
+
+        return f"**{group_name} Subcommands**\n\n{help_text}\n\n{page_info}"
+
     def format_command(self, cmd: Command) -> str:
         return f"CMD:{cmd.name}"
 
@@ -31,6 +70,29 @@ class DummyHelpCommand(HelpCommand):
 
     def format_page_info(self, page: Page[Command]) -> str:
         return f"Page {page.page_number}/{page.total_pages}"
+
+    async def on_command_not_found(
+        self,
+        ctx: DummyCtx,
+        command_name: str
+    ) -> None:
+        await ctx.reply(f"Command `{command_name}` not found.")
+
+    async def on_subcommand_not_found(
+        self,
+        ctx: DummyCtx,
+        group: Group,
+        subcommand_name: str
+    ) -> None:
+        await ctx.reply(f"Subcommand `{subcommand_name}` not found.")
+
+    async def on_page_out_of_range(
+        self,
+        ctx: DummyCtx,
+        page_number: int,
+        total_pages: int
+    ) -> None:
+        await ctx.reply(f"Page {page_number} does not exist.")
 
 
 @pytest.fixture
@@ -134,16 +196,15 @@ def test_find_subcommand(help_cmd, simple_group):
 @pytest.mark.asyncio
 async def test_show_command_help_simple(help_cmd, simple_command):
     ctx = DummyCtx({"ping": simple_command})
-    await help_cmd.show_command_help(ctx, "ping")
+    await help_cmd.show_command_help(ctx, simple_command)
     assert "CMD:ping" in ctx.last_reply
 
 
 @pytest.mark.asyncio
 async def test_show_command_help_group(help_cmd, simple_group):
     ctx = DummyCtx({"tools": simple_group})
-    await help_cmd.show_command_help(ctx, "tools")
-    assert "GRP:tools(2 subcommands)" in ctx.last_reply
-    assert "SUB:foo" in ctx.last_reply or "SUB:bar" in ctx.last_reply
+    await help_cmd.show_command_help(ctx, simple_group)
+    assert "CMD:tools" in ctx.last_reply
 
 
 @pytest.mark.asyncio
@@ -163,28 +224,20 @@ async def test_execute_command_name(help_cmd, simple_command):
 @pytest.mark.asyncio
 async def test_show_command_help_not_found(help_cmd):
     ctx = DummyCtx({})
-    await help_cmd.show_command_help(ctx, "ghost")
+    await help_cmd.execute(ctx, "invalid")
     assert "not found" in ctx.last_reply
 
 
 @pytest.mark.asyncio
 async def test_show_subcommand_page(help_cmd, simple_group):
     ctx = DummyCtx({"tools": simple_group})
-    await help_cmd.show_subcommand_page(ctx, "tools", page_number=1)
+    await help_cmd.show_group_help(ctx, simple_group, page_number=1)
     assert "SUB:foo" in ctx.last_reply or "SUB:bar" in ctx.last_reply
-
-
-@pytest.mark.asyncio
-async def test_show_subcommand_page_not_group(help_cmd, simple_command):
-    ctx = DummyCtx({"ping": simple_command})
-    await help_cmd.show_subcommand_page(ctx, "ping")
-    assert "is not a group" in ctx.last_reply
-
 
 @pytest.mark.asyncio
 async def test_show_subcommand_page_not_found(help_cmd):
     ctx = DummyCtx({})
-    await help_cmd.show_subcommand_page(ctx, "missing")
+    await help_cmd.execute(ctx, "missing")
     assert "not found" in ctx.last_reply
 
 
@@ -235,15 +288,20 @@ async def test_show_help_page_group(help_cmd, simple_group):
 @pytest.mark.asyncio
 async def test_show_command_help_group_no_subcommands(help_cmd):
     async def empty(ctx): return "ok"
-    empty_group = Group(empty, name="misc", usage="misc", description="Misc group")
+    empty_group = Group(
+        empty,
+        name="misc",
+        usage="misc",
+        description="Misc group"
+    )
     ctx = DummyCtx({"misc": empty_group})
 
-    await help_cmd.show_command_help(ctx, "misc")
-    assert "No subcommands available" in ctx.last_reply
+    await help_cmd.show_command_help(ctx, empty_group)
+    assert "CMD:misc" in ctx.last_reply
 
 
 @pytest.mark.asyncio
 async def test_show_command_help_invalid_subcommands(help_cmd, simple_group):
     ctx = DummyCtx({"tools": simple_group})
     await help_cmd.execute(ctx, "tools", "invalid")
-    assert "Subcommand `invalid` not found in group `tools`." in ctx.last_reply
+    assert "Subcommand `invalid` not found." in ctx.last_reply
