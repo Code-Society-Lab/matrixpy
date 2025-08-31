@@ -25,15 +25,23 @@ from nio import (
 )
 
 from .room import Room
+from .group import Group
 from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
-from .errors import AlreadyRegisteredError, CommandNotFoundError, CheckError
 from .scheduler import Scheduler
+
+from .errors import (
+    AlreadyRegisteredError,
+    CommandNotFoundError,
+    CheckError,
+    GroupAlreadyRegisteredError
+)
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
+GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
 
 
@@ -86,7 +94,7 @@ class Bot:
         self.commands: Dict[str, Command] = {}
         self.checks: List[Callback] = []
         self.scheduler = Scheduler()
-        
+
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
 
@@ -186,7 +194,7 @@ class Bot:
     def command(
         self,
         name: Optional[str] = None,
-        cooldown: Optional[tuple[int, float]] = None
+        **kwargs
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -194,16 +202,13 @@ class Bot:
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function
-                     name is used.
-        :type name: str, optional
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If a command with the same name is registered.
         :return: Decorator that registers the command handler.
         :rtype: Callback
         """
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name, cooldown=cooldown, prefix=self.prefix)
+            cmd = Command(func, name=name, prefix=self.prefix, **kwargs)
             return self.register_command(cmd)
         return wrapper
     
@@ -233,14 +238,31 @@ class Bot:
 
         return wrapper
 
-    def register_command(self, cmd: Command):
+    def register_command(self, cmd: Command) -> Command:
         if cmd in self.commands:
             raise AlreadyRegisteredError(cmd)
 
         self.commands[cmd.name] = cmd
-        self.log.debug("command %s registered", cmd)
+        self.log.debug("command '%s' registered", cmd)
 
         return cmd
+
+    def group(self, **kwargs) -> GroupCallable:
+        """Decorator to register a custom error handler for the command."""
+
+        def wrapper(func: Callback) -> Group:
+            group = Group(func, prefix=self.prefix, **kwargs)
+            return self.register_group(group)
+        return wrapper
+
+    def register_group(self, group: Group) -> Group:
+        if group in self.commands:
+            raise GroupAlreadyRegisteredError(group)
+
+        self.commands[group.name] = group
+        self.log.debug("group '%s' registered", group)
+
+        return group
 
     def error(self):
         """Decorator to register a custom error handler for the command."""
