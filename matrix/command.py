@@ -9,7 +9,8 @@ from typing import (
     Coroutine,
     List,
     get_type_hints,
-    DefaultDict
+    DefaultDict,
+    Dict
 )
 
 from .errors import MissingArgumentError, CheckError, CooldownError
@@ -58,11 +59,12 @@ class Command:
         self._before_invoke: Optional[Callback] = None
         self._after_invoke: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
+        self._error_handlers: Dict[Exception, ErrorCallback] = {}
 
         self.cooldown_rate: Optional[int] = None
         self.cooldown_period: Optional[float] = None
         self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
-        
+
         if cooldown := kwargs.get("cooldown"):
             self.set_cooldown(*cooldown)
 
@@ -202,20 +204,26 @@ class Command:
 
         self._after_invoke = func
 
-    def error(self, func: ErrorCallback) -> None:
+    def error(self, exception: Optional[Exception] = None) -> Callable:
         """
-        Register a custom error handler for the command.
+        Decorator used to register an error handler for this command.
 
-        :param func: The error callback
-        :type func: ErrorCallback
-
-        :raises TypeError: If the function is not a coroutine.
+        :param exception: Exception type to register the handler for.
+        :type exception: Optional[Exception]
+        :return: A decorator that registers the provided coroutine as an
+            error handler and returns the original function.
+        :rtype: Callable
         """
+        def wrapper(func: ErrorCallback) -> Callable:
+            if not asyncio.iscoroutinefunction(func):
+                raise TypeError('The error handler must be a coroutine.')
 
-        if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The error handler must be a coroutine.')
-
-        self._on_error = func
+            if exception:
+                self._error_handlers[exception] = func
+            else:
+                self._on_error = func
+            return func
+        return wrapper
 
     async def on_error(self, ctx: "Context", error: Exception) -> None:
         """
@@ -226,6 +234,13 @@ class Command:
         :param error: The exception that was raised.
         :type error: Exception
         """
+
+        if handler := self._error_handlers.get(type(error)):
+            await handler(ctx, error)
+            return
+
+        await ctx.bot.on_command_error(ctx, error)
+
         if self._on_error:
             await self._on_error(ctx, error)
         else:
