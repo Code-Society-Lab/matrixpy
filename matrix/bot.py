@@ -35,6 +35,7 @@ from .scheduler import Scheduler
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 ErrorCallback = Callable[[Exception], Coroutine]
+CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
 
 
 class Bot:
@@ -89,7 +90,10 @@ class Bot:
 
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
-        self._error_handlers: Dict[Exception, ErrorCallback] = {}
+        self._error_handlers: dict[type[Exception], ErrorCallback] = {}
+        self._command_error_handlers: dict[
+            type[Exception], CommandErrorCallback
+        ] = {}
 
         self.help: HelpCommand = kwargs.get(
             "help",
@@ -243,7 +247,7 @@ class Bot:
 
         return cmd
 
-    def error(self, exception: Optional[Exception] = None) -> Callable:
+    def error(self, exception: Optional[type[Exception]] = None) -> Callable:
         """
         Decorator to register a custom error handler for commands.
 
@@ -385,7 +389,7 @@ class Bot:
         :param error: The exception that was raised during command execution.
         :type error: Exception
         """
-        if handler := self._error_handlers.get(type(error)):
+        if handler := self._command_error_handlers.get(type(error)):
             await handler(ctx, error)
 
     async def run(self) -> None:

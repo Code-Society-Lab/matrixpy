@@ -10,7 +10,6 @@ from typing import (
     List,
     get_type_hints,
     DefaultDict,
-    Dict
 )
 
 from .errors import MissingArgumentError, CheckError, CooldownError
@@ -59,7 +58,7 @@ class Command:
         self._before_invoke: Optional[Callback] = None
         self._after_invoke: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
-        self._error_handlers: Dict[Exception, ErrorCallback] = {}
+        self._error_handlers: dict[type[Exception], ErrorCallback] = {}
 
         self.cooldown_rate: Optional[int] = None
         self.cooldown_period: Optional[float] = None
@@ -204,7 +203,7 @@ class Command:
 
         self._after_invoke = func
 
-    def error(self, exception: Optional[Exception] = None) -> Callable:
+    def error(self, exception: Optional[type[Exception]] = None) -> Callable:
         """
         Decorator used to register an error handler for this command.
 
