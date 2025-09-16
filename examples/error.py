@@ -1,5 +1,6 @@
-from matrix import Bot, Context, cooldown
+from matrix import Bot, Context
 from matrix.errors import CommandNotFoundError, MissingArgumentError
+
 bot = Bot("examples/config.yaml")
 
 
