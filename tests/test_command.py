@@ -123,7 +123,7 @@ async def test_error_handler():
         def invalid_handler(_ctx, _error):
             pass
 
-    @cmd.error
+    @cmd.error()
     async def handler(_ctx, _error):
         nonlocal called
         called = True
