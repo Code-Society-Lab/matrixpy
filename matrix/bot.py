@@ -35,6 +35,7 @@ from .scheduler import Scheduler
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 ErrorCallback = Callable[[Exception], Coroutine]
+CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
 
 
 class Bot:
@@ -86,9 +87,13 @@ class Bot:
         self.commands: Dict[str, Command] = {}
         self.checks: List[Callback] = []
         self.scheduler = Scheduler()
-        
+
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
+        self._error_handlers: dict[type[Exception], ErrorCallback] = {}
+        self._command_error_handlers: dict[
+            type[Exception], CommandErrorCallback
+        ] = {}
 
         self.help: HelpCommand = kwargs.get(
             "help",
@@ -206,7 +211,7 @@ class Bot:
             cmd = Command(func, name=name, cooldown=cooldown, prefix=self.prefix)
             return self.register_command(cmd)
         return wrapper
-    
+
     def schedule(self, cron: str):
         """
         Decorator to register a coroutine function as a scheduled task.
@@ -242,14 +247,26 @@ class Bot:
 
         return cmd
 
-    def error(self):
-        """Decorator to register a custom error handler for the command."""
+    def error(self, exception: Optional[type[Exception]] = None) -> Callable:
+        """
+        Decorator to register a custom error handler for commands.
+
+        :param exception: The specific exception type to handle.
+        :type exception: Optional[Exception]
+
+        :return: A decorator that registers the given coroutine as
+            an error handler.
+        :rtype: Callable
+        """
 
         def wrapper(func: ErrorCallback) -> Callable:
             if not asyncio.iscoroutinefunction(func):
                 raise TypeError('The error handler must be a coroutine.')
 
-            self._on_error = func
+            if exception:
+                self._error_handlers[exception] = func
+            else:
+                self._on_error = func
             return func
         return wrapper
 
@@ -343,10 +360,37 @@ class Bot:
         self.log.info("bot is ready")
 
     async def on_error(self, error: Exception) -> None:
+        """
+        Handle errors by invoking a registered error handler, 
+        a generic error callback, or logging the exception.
+
+        :param error: The exception instance that was raised.
+        :type error: Exceptipon
+        """
+        if handler := self._error_handlers.get(type(error)):
+            await handler(error)
+            return
+
         if self._on_error:
             await self._on_error(error)
             return
         self.log.exception("Unhandled error: '%s'", error)
+
+    async def on_command_error(self, ctx: "Context", error: Exception) -> None:
+        """
+        Handles errors raised during command invocation.
+
+        This method is called automatically when a command error occurs.
+        If a specific error handler is registered for the type of the
+        exception, it will be invoked with the current context and error.
+
+        :param ctx: The context in which the command was invoked.
+        :type ctx: Context
+        :param error: The exception that was raised during command execution.
+        :type error: Exception
+        """
+        if handler := self._command_error_handlers.get(type(error)):
+            await handler(ctx, error)
 
     async def run(self) -> None:
         """
