@@ -1,8 +1,8 @@
 import pytest
 import inspect
-from unittest.mock import MagicMock
 
-from matrix.errors import CheckError, MissingArgumentError
+from unittest.mock import MagicMock
+from matrix.errors import MissingArgumentError
 from matrix.command import Command
 
 

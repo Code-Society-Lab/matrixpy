@@ -9,7 +9,6 @@ from matrix.errors import (
     CheckError,
     CommandNotFoundError,
     AlreadyRegisteredError,
-    ConfigError
 )
 
 
