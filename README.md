@@ -30,7 +30,7 @@ developers to focus on behavior rather than boilerplate.
 - Python 3.10+
 
 ```
-pip install git+ssh://git@github.com:Code-Society-Lab/matrixpy.git
+pip install matrix-python
 ```
 
 If you plan on contributing to matrix.py, we recommend to install the development libraries:

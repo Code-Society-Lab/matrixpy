@@ -1,3 +1,7 @@
+"""A simple, developer-friendly library to create powerful Matrix bots."""
+
+__version__ = "0.1.1-alpha"
+
 from .bot import Bot
 from .config import Config
 from .context import Context
