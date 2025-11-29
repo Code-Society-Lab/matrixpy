@@ -25,21 +25,17 @@ class DummyContext(Context):
 @pytest.fixture
 def commands():
     return [
-        DummyCommand("one"), DummyCommand("two"),
-        DummyCommand("three"), DummyCommand("four"),
-        DummyCommand("five")
+        DummyCommand("one"),
+        DummyCommand("two"),
+        DummyCommand("three"),
+        DummyCommand("four"),
+        DummyCommand("five"),
     ]
 
 
 def test_format_help_page_no_commands():
     hc = HelpCommand()
-    empty_page = Page(
-        items=[],
-        page_number=1,
-        total_pages=1,
-        per_page=5,
-        total_items=0
-    )
+    empty_page = Page(items=[], page_number=1, total_pages=1, per_page=5, total_items=0)
     result = hc.format_help_page(empty_page)
     assert result == "No commands available."
 
@@ -83,7 +79,7 @@ async def test_help_formatting_and_presentation(commands):
     page = hc.get_commands_paginator(ctx).get_page(1)
     help_text = hc.format_help_page(page)
     assert "Page 1/" in help_text
-    
+
     # Because sorting is alphabetical, page 1 will contain "five" and "four"
     assert "**five**" in help_text or "**four**" in help_text
 
