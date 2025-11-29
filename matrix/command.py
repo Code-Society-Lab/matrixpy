@@ -184,7 +184,7 @@ class Command:
         """
 
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The hook must be a coroutine.')
+            raise TypeError("The hook must be a coroutine.")
 
         self._before_invoke = func
 
@@ -199,7 +199,7 @@ class Command:
         """
 
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The hook must be a coroutine.')
+            raise TypeError("The hook must be a coroutine.")
 
         self._after_invoke = func
 
@@ -213,15 +213,17 @@ class Command:
             error handler and returns the original function.
         :rtype: Callable
         """
+
         def wrapper(func: ErrorCallback) -> Callable:
             if not asyncio.iscoroutinefunction(func):
-                raise TypeError('The error handler must be a coroutine.')
+                raise TypeError("The error handler must be a coroutine.")
 
             if exception:
                 self._error_handlers[exception] = func
             else:
                 self._on_error = func
             return func
+
         return wrapper
 
     async def on_error(self, ctx: "Context", error: Exception) -> None:

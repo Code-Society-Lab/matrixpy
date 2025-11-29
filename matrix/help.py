@@ -4,7 +4,7 @@ from .context import Context
 from .command import Command
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Paginator(Generic[T]):
@@ -21,7 +21,7 @@ class Paginator(Generic[T]):
         self.total_items = len(items)
         self.total_pages = max(1, -(-self.total_items // self.per_page))
 
-    def get_page(self, page_number: int) -> 'Page[T]':
+    def get_page(self, page_number: int) -> "Page[T]":
         """Get a specific page of items.
 
         :param page_number: Page number to retrieve (1-indexed)
@@ -38,10 +38,10 @@ class Paginator(Generic[T]):
             page_number=page_number,
             total_pages=self.total_pages,
             per_page=self.per_page,
-            total_items=self.total_items
+            total_items=self.total_items,
         )
 
-    def get_pages(self) -> List['Page[T]']:
+    def get_pages(self) -> List["Page[T]"]:
         """Get all pages.
 
         :return: List of all pages
@@ -58,7 +58,7 @@ class Page(Generic[T]):
         page_number: int,
         total_pages: int,
         per_page: int,
-        total_items: int
+        total_items: int,
     ):
         """Initialize a page.
 
@@ -104,11 +104,7 @@ class HelpCommand(Command):
 
     DEFAULT_PER_PAGE = 5
 
-    def __init__(
-        self,
-        prefix: Optional[str] = None,
-        per_page: int = DEFAULT_PER_PAGE
-    ):
+    def __init__(self, prefix: Optional[str] = None, per_page: int = DEFAULT_PER_PAGE):
         """Initialize the help command.
 
         :param prefix: Command prefix override
@@ -155,9 +151,7 @@ class HelpCommand(Command):
         if not page.items:
             return "No commands available."
 
-        help_entries = "\n\n".join(
-            self.format_command(cmd) for cmd in page.items
-        )
+        help_entries = "\n\n".join(self.format_command(cmd) for cmd in page.items)
         page_info = self.format_page_info(page)
 
         return f"{help_entries}\n\n{page_info}"
@@ -207,11 +201,7 @@ class HelpCommand(Command):
 
         await ctx.reply(help_message)
 
-    async def execute(
-        self,
-        ctx: Context,
-        arg=None  # type: ignore
-    ) -> None:
+    async def execute(self, ctx: Context, arg=None) -> None:  # type: ignore
         """Execute the help command.
 
         Note: For now we ignore the arg type since it's the only way

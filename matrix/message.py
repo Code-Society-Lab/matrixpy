@@ -14,6 +14,7 @@ class Message:
     :param bot: The bot instance to use for messages.
     :type bot: Bot
     """
+
     MESSAGE_TYPE = "m.room.message"
     MATRIX_CUSTOM_HTML = "org.matrix.custom.html"
     TEXT_MESSAGE_TYPE = "m.text"
@@ -22,10 +23,7 @@ class Message:
         self.bot = bot
 
     async def _send_to_room(
-        self,
-        room_id: str,
-        content: Dict,
-        message_type: str = MESSAGE_TYPE
+        self, room_id: str, content: Dict, message_type: str = MESSAGE_TYPE
     ) -> None:
         """
         Send a message to the Matrix room.
@@ -92,10 +90,7 @@ class Message:
         return base
 
     async def send(
-        self,
-        room_id: str,
-        message: str,
-        format_markdown: Optional[bool] = True
+        self, room_id: str, message: str, format_markdown: Optional[bool] = True
     ) -> None:
         """
         Send a message to a Matrix room.
@@ -113,9 +108,7 @@ class Message:
             content=self._make_content(body=str(message), html=format_markdown),
         )
 
-    async def send_reaction(
-        self, room_id: str, event: Event, key: str
-    ) -> None:
+    async def send_reaction(self, room_id: str, event: Event, key: str) -> None:
         """
         Send a reaction to a message from a user in a Matrix room.
 
@@ -133,8 +126,6 @@ class Message:
 
         await self._send_to_room(
             room_id=room_id,
-            content=self._make_content(
-                event_id=event_id, key=key, reaction=True
-            ),
+            content=self._make_content(event_id=event_id, key=key, reaction=True),
             message_type="m.reaction",
         )

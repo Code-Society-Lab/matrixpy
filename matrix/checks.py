@@ -10,7 +10,9 @@ def cooldown(rate: int, period: float) -> Callable:
     :param period: The period in seconds of the cooldown.
     :type period: float
     """
+
     def wrapper(cmd):
         cmd.set_cooldown(rate, period)
         return cmd
+
     return wrapper
