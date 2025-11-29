@@ -6,8 +6,14 @@ from matrix.errors import MissingArgumentError
 from matrix.command import Command
 
 
+class DummyBot:
+    async def on_command_error(self, _ctx, _error):
+        return None
+
+
 class DummyContext:
     def __init__(self, args=None):
+        self.bot = DummyBot()
         self.args = args or []
         self.logger = MagicMock()
 
@@ -113,11 +119,11 @@ async def test_error_handler():
     ctx.logger.exception.assert_called_once()
 
     with pytest.raises(TypeError):
-        @cmd.error
+        @cmd.error(TypeError)
         def invalid_handler(_ctx, _error):
             pass
 
-    @cmd.error
+    @cmd.error()
     async def handler(_ctx, _error):
         nonlocal called
         called = True
