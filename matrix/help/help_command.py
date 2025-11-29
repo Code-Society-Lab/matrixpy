@@ -40,7 +40,7 @@ class HelpCommand(Command, ABC):
         page: Page[Command],
         title: str = "Commands"
     ) -> str:
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def format_subcommand_page(
@@ -48,7 +48,7 @@ class HelpCommand(Command, ABC):
         page: Page[Command],
         group_name: str
     ) -> str:
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def format_command(self, cmd: Command) -> str:

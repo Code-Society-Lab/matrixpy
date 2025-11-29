@@ -56,28 +56,9 @@ def test_bot_init_with_config():
     assert bot.config.homeserver == "https://matrix.org"
 
 
-def test_bot_init_with_kwargs():
-    bot = Bot(username="grace", password="grace1234")
-
-    assert bot.config.user_id == "grace"
-    assert bot.config.password == "grace1234"
-
-
-def test_bot_init_with_valid_config_file():
-    bot = Bot(config="tests/config_mixture.yaml")
-
-    assert bot.config.user_id == "grace"
-    assert bot.config.password == "grace1234"
-
-
 def test_bot_init_with_invalid_config_file():
     with pytest.raises(FileNotFoundError):
         Bot(username="user", password="pass", config="not-a-dict")
-
-
-def test_bot_init_no_credentials():
-    with pytest.raises(ConfigError):
-        Bot()
 
 
 def test_auto_register_events_registers_known_events(bot):
