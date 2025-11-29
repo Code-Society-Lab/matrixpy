@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
 name = "matrix-python"
-version = "0.1.1-alpha"
+version = "0.1.2-alpha"
 authors = [
     { name="Simon Roy" },
     { name=" Chris Dedman Rollet " }
@@ -37,6 +37,7 @@ dev = [
 [project.urls]
 "Homepage" = "https://codesociety.xyz"
 "Source" = "https://github.com/Code-Society-Lab/matrixpy"
+"Issues" = "https://github.com/Code-Society-Lab/matrixpy/issues"
 
 [tool.setuptools]
 packages = ["matrix"]
