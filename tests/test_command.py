@@ -119,6 +119,7 @@ async def test_error_handler():
     ctx.logger.exception.assert_called_once()
 
     with pytest.raises(TypeError):
+
         @cmd.error(TypeError)
         def invalid_handler(_ctx, _error):
             pass
@@ -163,6 +164,7 @@ async def test_invalid_before_invoke():
     cmd = Command(my_command)
 
     with pytest.raises(TypeError):
+
         @cmd.before_invoke
         def invalid_hook(_ctx, _error):
             pass
@@ -176,6 +178,7 @@ async def test_invalid_after_invoke():
     cmd = Command(my_command)
 
     with pytest.raises(TypeError):
+
         @cmd.after_invoke
         def invalid_hook(_ctx, _error):
             pass
@@ -189,6 +192,7 @@ async def test_invalid_command_check():
     cmd = Command(my_command)
 
     with pytest.raises(TypeError):
+
         @cmd.check
         def invalid_check(_ctx, _error):
             pass
