@@ -94,6 +94,9 @@ class DummyHelpCommand(HelpCommand):
     ) -> None:
         await ctx.reply(f"Page {page_number} does not exist.")
 
+    async def on_empty_page(self, ctx: DummyCtx) -> None:
+        await ctx.reply("No Commands.")
+
 
 @pytest.fixture
 def simple_command():

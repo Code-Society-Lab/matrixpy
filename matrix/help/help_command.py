@@ -115,7 +115,9 @@ class HelpCommand(Command, ABC):
         """Called when a requested page is out of bounds."""
         pass  # pragma: no cover
 
-    # =====================================================================
+    @abstractmethod
+    async def on_empty_page(self, ctx: Context) -> None:
+        pass  # pragma: no cover
 
     def get_commands_paginator(self, ctx: Context) -> Paginator[Command]:
         """Get a paginator for all commands.
@@ -411,11 +413,12 @@ class DefaultHelpCommand(HelpCommand):
     async def on_subcommand_not_found(
         self,
         ctx: Context,
+        group: Group,
         subcommand_name: str
     ) -> None:
         await ctx.reply(
             f"Subcommand `{subcommand_name}` not found "
-            f"in group `{ctx.command.name}`."
+            f"in group `{group.name}`."
         )
 
     async def on_empty_page(self, ctx: Context) -> None:

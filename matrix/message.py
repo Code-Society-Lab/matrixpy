@@ -110,7 +110,10 @@ class Message:
         """
         await self._send_to_room(
             room_id=room_id,
-            content=self._make_content(body=str(message), html=format_markdown),
+            content=self._make_content(
+                body=str(message),
+                html=format_markdown
+            ),
         )
 
     async def send_reaction(

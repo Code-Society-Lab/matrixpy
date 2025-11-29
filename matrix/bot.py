@@ -36,14 +36,16 @@ from .errors import (
     AlreadyRegisteredError,
     CommandNotFoundError,
     CheckError,
-    GroupAlreadyRegisteredError
 )
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
-CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
+CommandErrorCallback = Callable[
+    ["Context", Exception],
+    Coroutine[Any, Any, Any]
+]
 
 
 class Bot:
@@ -366,7 +368,7 @@ class Bot:
 
     async def on_error(self, error: Exception) -> None:
         """
-        Handle errors by invoking a registered error handler, 
+        Handle errors by invoking a registered error handler,
         a generic error callback, or logging the exception.
 
         :param error: The exception instance that was raised.

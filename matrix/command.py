@@ -63,7 +63,9 @@ class Command:
 
         self.cooldown_rate: Optional[int] = None
         self.cooldown_period: Optional[float] = None
-        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
+        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(
+            deque
+        )
 
         if cooldown := kwargs.get("cooldown"):
             self.set_cooldown(*cooldown)
