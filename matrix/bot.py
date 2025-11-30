@@ -42,10 +42,7 @@ from .errors import (
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
-CommandErrorCallback = Callable[
-    ["Context", Exception],
-    Coroutine[Any, Any, Any]
-]
+CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
 
 
 class Bot:
@@ -65,22 +62,18 @@ class Bot:
     """
 
     EVENT_MAP: Dict[str, Type[Event]] = {
-        "on_typing":        TypingNoticeEvent,
-        "on_message":       RoomMessageText,
-        "on_react":         ReactionEvent,
-        "on_member_join":   RoomMemberEvent,
-        "on_member_leave":  RoomMemberEvent,
+        "on_typing": TypingNoticeEvent,
+        "on_message": RoomMessageText,
+        "on_react": ReactionEvent,
+        "on_member_join": RoomMemberEvent,
+        "on_member_leave": RoomMemberEvent,
         "on_member_invite": RoomMemberEvent,
-        "on_member_ban":    RoomMemberEvent,
-        "on_member_kick":   RoomMemberEvent,
+        "on_member_ban": RoomMemberEvent,
+        "on_member_kick": RoomMemberEvent,
         "on_member_change": RoomMemberEvent,
     }
 
-    def __init__(
-        self,
-        config: Optional[Union[Config, str]] = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, config: Optional[Union[Config, str]] = None, **kwargs) -> None:
         if isinstance(config, Config):
             self.config = config
         elif isinstance(config, str):
@@ -101,13 +94,10 @@ class Bot:
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
         self._error_handlers: dict[type[Exception], ErrorCallback] = {}
-        self._command_error_handlers: dict[
-            type[Exception], CommandErrorCallback
-        ] = {}
+        self._command_error_handlers: dict[type[Exception], CommandErrorCallback] = {}
 
         self.help: HelpCommand = kwargs.get(
-            "help",
-            DefaultHelpCommand(prefix=self.prefix)
+            "help", DefaultHelpCommand(prefix=self.prefix)
         )
         self.register_command(self.help)
 
@@ -169,6 +159,7 @@ class Bot:
         :rtype: Callable[[Callable[..., Awaitable[None]]],
                 Callable[..., Awaitable[None]]]
         """
+
         def wrapper(f: Callback) -> Callback:
             if not asyncio.iscoroutinefunction(f):
                 raise TypeError("Event handlers must be coroutines")
@@ -187,9 +178,7 @@ class Bot:
 
             self._handlers[event_type].append(f)
             self.log.debug(
-                "registered event %s for %s",
-                f.__name__,
-                event_type.__name__
+                "registered event %s for %s", f.__name__, event_type.__name__
             )
             return f
 
@@ -199,9 +188,7 @@ class Bot:
         return wrapper(func)
 
     def command(
-        self,
-        name: Optional[str] = None,
-        **kwargs
+        self, name: Optional[str] = None, **kwargs
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -214,9 +201,11 @@ class Bot:
         :return: Decorator that registers the command handler.
         :rtype: Callback
         """
+
         def wrapper(func: Callback) -> Command:
             cmd = Command(func, name=name, prefix=self.prefix, **kwargs)
             return self.register_command(cmd)
+
         return wrapper
 
     def schedule(self, cron: str):
@@ -231,16 +220,13 @@ class Bot:
         :return: Decorator that registers the scheduled task.
         :rtype: Callback
         """
+
         def wrapper(f: Callback) -> Callback:
             if not asyncio.iscoroutinefunction(f):
                 raise TypeError("Scheduled tasks must be coroutines")
 
             self.scheduler.schedule(cron, f)
-            self.log.debug(
-                "registered scheduled task %s for cron %s",
-                f.__name__,
-                cron
-            )
+            self.log.debug("registered scheduled task %s for cron %s", f.__name__, cron)
             return f
 
         return wrapper
@@ -268,13 +254,14 @@ class Bot:
 
         def wrapper(func: ErrorCallback) -> Callable:
             if not asyncio.iscoroutinefunction(func):
-                raise TypeError('The error handler must be a coroutine.')
+                raise TypeError("The error handler must be a coroutine.")
 
             if exception:
                 self._error_handlers[exception] = func
             else:
                 self._on_error = func
             return func
+
         return wrapper
 
     def get_room(self, room_id: str) -> Room:
@@ -338,7 +325,7 @@ class Bot:
         if not self.prefix or not ctx.body.startswith(self.prefix):
             return ctx
 
-        if parts := ctx.body[len(self.prefix):].split():
+        if parts := ctx.body[len(self.prefix) :].split():
             cmd_name = parts[0]
             cmd = self.commands.get(cmd_name)
 

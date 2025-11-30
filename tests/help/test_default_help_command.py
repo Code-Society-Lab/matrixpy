@@ -22,38 +22,28 @@ class DummyCtx:
 def simple_command():
     async def cmd(ctx):
         return "ok"
-    return Command(
-        cmd,
-        name="ping",
-        usage="ping",
-        description="Check latency"
-    )
+
+    return Command(cmd, name="ping", usage="ping", description="Check latency")
 
 
 @pytest.fixture
 def simple_group():
-    async def group_cb(ctx): return "group"
-    async def foo(ctx): return "foo"
-    async def bar(ctx): return "bar"
+    async def group_cb(ctx):
+        return "group"
 
-    grp = Group(
-        group_cb,
-        name="tools",
-        usage="tools",
-        description="Tool commands"
+    async def foo(ctx):
+        return "foo"
+
+    async def bar(ctx):
+        return "bar"
+
+    grp = Group(group_cb, name="tools", usage="tools", description="Tool commands")
+    grp.register_command(
+        Command(foo, name="foo", usage="foo", description="Foo command")
     )
-    grp.register_command(Command(
-        foo,
-        name="foo",
-        usage="foo",
-        description="Foo command"
-    ))
-    grp.register_command(Command(
-        bar,
-        name="bar",
-        usage="bar",
-        description="Bar command"
-    ))
+    grp.register_command(
+        Command(bar, name="bar", usage="bar", description="Bar command")
+    )
 
     return grp
 

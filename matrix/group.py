@@ -27,10 +27,7 @@ class Group(Command):
             return cmd
         raise CommandNotFoundError(cmd_name)
 
-    def command(
-        self,
-        name: Optional[str] = None
-    ) -> Callable[[Callback], Command]:
+    def command(self, name: Optional[str] = None) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
 
@@ -45,14 +42,11 @@ class Group(Command):
         :return: Decorator that registers the command handler.
         :rtype: Callback
         """
+
         def wrapper(func: Callback) -> Command:
-            cmd = Command(
-                func,
-                name=name,
-                prefix=self.prefix,
-                parent=self.name
-            )
+            cmd = Command(func, name=name, prefix=self.prefix, parent=self.name)
             return self.register_command(cmd)
+
         return wrapper
 
     def register_command(self, cmd: Command):

@@ -63,9 +63,7 @@ class Command:
 
         self.cooldown_rate: Optional[int] = None
         self.cooldown_period: Optional[float] = None
-        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(
-            deque
-        )
+        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
 
         if cooldown := kwargs.get("cooldown"):
             self.set_cooldown(*cooldown)
@@ -192,7 +190,7 @@ class Command:
         """
 
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The hook must be a coroutine.')
+            raise TypeError("The hook must be a coroutine.")
 
         self._before_invoke_callback = func
 
@@ -207,7 +205,7 @@ class Command:
         """
 
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The hook must be a coroutine.')
+            raise TypeError("The hook must be a coroutine.")
 
         self._after_invoke_callback = func
 
@@ -221,15 +219,17 @@ class Command:
             error handler and returns the original function.
         :rtype: Callable
         """
+
         def wrapper(func: ErrorCallback) -> Callable:
             if not asyncio.iscoroutinefunction(func):
-                raise TypeError('The error handler must be a coroutine.')
+                raise TypeError("The error handler must be a coroutine.")
 
             if exception:
                 self._error_handlers[exception] = func
             else:
                 self._on_error = func
             return func
+
         return wrapper
 
     async def on_error(self, ctx: "Context", error: Exception) -> None:

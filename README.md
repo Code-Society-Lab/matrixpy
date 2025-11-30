@@ -4,7 +4,7 @@
   <em>A simple, developer-friendly library to create powerful <a href="https://matrix.org">Matrix</a> bots.</em>
 </div>
 
-<img width="3016" height="880" alt="image" src="https://github.com/user-attachments/assets/ce8ca0b3-0fb4-4673-b2bc-e0c1307747f7" />
+<img alt="image" src="https://github.com/user-attachments/assets/d9140a9e-27fa-44e4-a5ca-87ee7bbf868f" />
 
 <hr />
 
@@ -30,7 +30,7 @@ developers to focus on behavior rather than boilerplate.
 - Python 3.10+
 
 ```
-pip install git+ssh://git@github.com:Code-Society-Lab/matrixpy.git
+pip install matrix-python
 ```
 
 If you plan on contributing to matrix.py, we recommend to install the development libraries:

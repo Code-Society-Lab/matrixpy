@@ -1,7 +1,7 @@
 from typing import Optional, List, TypeVar, Generic
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Paginator(Generic[T]):
@@ -18,7 +18,7 @@ class Paginator(Generic[T]):
         self.total_items = len(items)
         self.total_pages = max(1, -(-self.total_items // self.per_page))
 
-    def get_page(self, page_number: int) -> 'Page[T]':
+    def get_page(self, page_number: int) -> "Page[T]":
         """Get a specific page of items.
 
         :param page_number: Page number to retrieve (1-indexed)
@@ -35,10 +35,10 @@ class Paginator(Generic[T]):
             page_number=page_number,
             total_pages=self.total_pages,
             per_page=self.per_page,
-            total_items=self.total_items
+            total_items=self.total_items,
         )
 
-    def get_pages(self) -> List['Page[T]']:
+    def get_pages(self) -> List["Page[T]"]:
         """Get all pages.
 
         :return: List of all pages
@@ -55,7 +55,7 @@ class Page(Generic[T]):
         page_number: int,
         total_pages: int,
         per_page: int,
-        total_items: int
+        total_items: int,
     ):
         """Initialize a page.
 

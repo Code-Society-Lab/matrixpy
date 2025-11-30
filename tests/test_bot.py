@@ -33,13 +33,15 @@ def room():
 
 @pytest.fixture
 def event():
-    return RoomMessageText.from_dict({
-        "content": {"body": "!echo hello world", "msgtype": "m.text"},
-        "event_id": "$id",
-        "origin_server_ts": 123456,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
+    return RoomMessageText.from_dict(
+        {
+            "content": {"body": "!echo hello world", "msgtype": "m.text"},
+            "event_id": "$id",
+            "origin_server_ts": 123456,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
 
 
 def test_bot_init_with_config():
@@ -86,13 +88,15 @@ async def test_dispatch_calls_all_handlers(bot):
     bot._handlers[RoomMessageText].append(handler1)
     bot._handlers[RoomMessageText].append(handler2)
 
-    event = RoomMessageText.from_dict({
-        "content": {"body": "test", "msgtype": "m.text"},
-        "event_id": "$id",
-        "origin_server_ts": 123456,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "test", "msgtype": "m.text"},
+            "event_id": "$id",
+            "origin_server_ts": 123456,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
     room = MatrixRoom("!roomid:matrix.org", "room_alias")
 
     await bot._dispatch(room, event)
@@ -145,10 +149,7 @@ async def test_on_event_calls_error_handler(bot):
 
 @pytest.mark.asyncio
 async def test_on_message_calls_process_commands(bot, room, event):
-    with patch.object(
-        bot, "_process_commands",
-        new_callable=AsyncMock
-    ) as mock_proc:
+    with patch.object(bot, "_process_commands", new_callable=AsyncMock) as mock_proc:
         await bot.on_message(room, event)
         mock_proc.assert_awaited_once_with(room, event)
 
@@ -197,9 +198,7 @@ async def test_process_commands_executes_command(bot, event):
 
     # Patch _build_context to return context with command assigned
     with patch.object(
-        bot,
-        "_build_context",
-        new_callable=AsyncMock
+        bot, "_build_context", new_callable=AsyncMock
     ) as mock_build_context:
         ctx = MagicMock()
         ctx.command = bot.commands["greet"]
@@ -212,16 +211,15 @@ async def test_process_commands_executes_command(bot, event):
 
 @pytest.mark.asyncio
 async def test_command_not_found_raises(bot):
-    event = RoomMessageText.from_dict({
-        "content": {
-            "body": "!nonexistent",
-            "msgtype": "m.text"
-        },
-        "event_id": "$ev1",
-        "origin_server_ts": 1234567890,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "!nonexistent", "msgtype": "m.text"},
+            "event_id": "$ev1",
+            "origin_server_ts": 1234567890,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
 
     room = MatrixRoom("!roomid", "alias")
 
@@ -246,21 +244,20 @@ async def test_bot_does_not_execute_when_global_check_fails(bot, event):
     @bot.check
     async def global_check(ctx):
         return False
-    
-    event = RoomMessageText.from_dict({
-        "content": {
-            "body": "!greet",
-            "msgtype": "m.text"
-        },
-        "event_id": "$ev2",
-        "origin_server_ts": 1234567890,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
-    
+
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "!greet", "msgtype": "m.text"},
+            "event_id": "$ev2",
+            "origin_server_ts": 1234567890,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
+
     room = MatrixRoom("!roomid", "alias")
 
-    with patch("matrix.context.Context", autospec=True) as MockContext: 
+    with patch("matrix.context.Context", autospec=True) as MockContext:
         mock_ctx = MagicMock()
         mock_ctx.body = "!greet"
         mock_ctx.command = bot.commands["greet"]
@@ -271,6 +268,7 @@ async def test_bot_does_not_execute_when_global_check_fails(bot, event):
 
     assert not called, "Expected command handler not to be called"
 
+
 @pytest.mark.asyncio
 async def test_command_executes(bot):
     called = False
@@ -280,16 +278,15 @@ async def test_command_executes(bot):
         nonlocal called
         called = True
 
-    event = RoomMessageText.from_dict({
-        "content": {
-            "body": "!ping",
-            "msgtype": "m.text"
-        },
-        "event_id": "$ev2",
-        "origin_server_ts": 1234567890,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "!ping", "msgtype": "m.text"},
+            "event_id": "$ev2",
+            "origin_server_ts": 1234567890,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
 
     room = MatrixRoom("!roomid", "alias")
 
@@ -307,6 +304,7 @@ async def test_command_executes(bot):
 @pytest.mark.asyncio
 async def test_error_decorator_requires_coroutine(bot):
     with pytest.raises(TypeError):
+
         @bot.error()
         def sync_handler(error):
             pass
@@ -314,6 +312,7 @@ async def test_error_decorator_requires_coroutine(bot):
 
 def test_event_decorator_with_unknown_name_raises(bot):
     with pytest.raises(ValueError):
+
         @bot.event
         async def on_something_unknown(_r, _e):
             pass
@@ -321,6 +320,7 @@ def test_event_decorator_with_unknown_name_raises(bot):
 
 def test_event_decorator_requires_coroutine(bot):
     with pytest.raises(TypeError):
+
         @bot.event
         def not_a_coro(_r, _e):
             pass
@@ -338,6 +338,7 @@ def test_event_decorator_event_spec(bot):
 
 def test_event_decorator_invalid_event_spec(bot):
     with pytest.raises(ValueError):
+
         @bot.event(event_spec="invalid_event")
         async def message_event(_r, _e):
             pass
@@ -345,6 +346,7 @@ def test_event_decorator_invalid_event_spec(bot):
 
 def test_command_decorator_requires_coroutine(bot):
     with pytest.raises(TypeError):
+
         @bot.command()
         def not_async(ctx):
             pass
@@ -356,6 +358,7 @@ def test_command_duplicate_raises(bot):
         pass
 
     with pytest.raises(AlreadyRegisteredError):
+
         @bot.command("dup")
         async def cmd2(ctx):
             pass

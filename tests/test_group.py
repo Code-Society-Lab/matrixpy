@@ -21,10 +21,14 @@ class DummyCtx:
 
 @pytest.fixture
 def command_group():
-    async def cb(ctx): return "ok"
+    async def cb(ctx):
+        return "ok"
+
     group = Group(cb, name="tools", usage="tools", description="Tool commands")
 
-    async def foo(ctx): return "foo"
+    async def foo(ctx):
+        return "foo"
+
     group.register_command(
         Command(foo, name="foo", usage="foo", description="Foo command")
     )
@@ -32,41 +36,40 @@ def command_group():
     return group
 
 
-def test_register_command__expect_command(
-    command_group: Group
-):
-    async def bar(ctx): return "bar"
+def test_register_command__expect_command(command_group: Group):
+    async def bar(ctx):
+        return "bar"
+
     cmd = Command(bar, name="bar", usage="bar", description="Bar command")
     assert command_group.register_command(cmd) == cmd
 
 
 def test_register_command_with_already_register__expect_already_registered_error(
-    command_group: Group
+    command_group: Group,
 ):
-    async def foo(ctx): return "foo"
+    async def foo(ctx):
+        return "foo"
+
     cmd = Command(foo, name="foo", usage="foo", description="Foo command")
 
     with pytest.raises(AlreadyRegisteredError):
         command_group.register_command(cmd)
 
 
-def test_get_command_with_valid_command__expect_command(
-    command_group: Group
-):
+def test_get_command_with_valid_command__expect_command(command_group: Group):
     cmd = command_group.get_command("foo")
     assert cmd.name == "foo"
 
 
 def test_get_command_with_invalid_command__expect_command_not_found(
-    command_group: Group
+    command_group: Group,
 ):
     with pytest.raises(CommandNotFoundError):
         command_group.get_command("invalid")
 
 
 def test_command_with_decorator__registers_command(
-    command_group: Group,
-    monkeypatch: pytest.MonkeyPatch
+    command_group: Group, monkeypatch: pytest.MonkeyPatch
 ):
     calls = []
     original = command_group.register_command
@@ -75,11 +78,7 @@ def test_command_with_decorator__registers_command(
         calls.append(cmd)
         return original(cmd)
 
-    monkeypatch.setattr(
-        command_group,
-        "register_command",
-        wrapped
-    )
+    monkeypatch.setattr(command_group, "register_command", wrapped)
 
     @command_group.command(name="baz")
     async def baz(ctx):

@@ -16,11 +16,7 @@ class HelpCommand(Command, ABC):
 
     DEFAULT_PER_PAGE = 5
 
-    def __init__(
-        self,
-        prefix: Optional[str] = None,
-        per_page: int = DEFAULT_PER_PAGE
-    ):
+    def __init__(self, prefix: Optional[str] = None, per_page: int = DEFAULT_PER_PAGE):
         """Initialize the help command.
 
         :param prefix: Command prefix override
@@ -35,19 +31,11 @@ class HelpCommand(Command, ABC):
         self.per_page = per_page
 
     @abstractmethod
-    def format_help_page(
-        self,
-        page: Page[Command],
-        title: str = "Commands"
-    ) -> str:
+    def format_help_page(self, page: Page[Command], title: str = "Commands") -> str:
         pass  # pragma: no cover
 
     @abstractmethod
-    def format_subcommand_page(
-        self,
-        page: Page[Command],
-        group_name: str
-    ) -> str:
+    def format_subcommand_page(self, page: Page[Command], group_name: str) -> str:
         pass  # pragma: no cover
 
     @abstractmethod
@@ -87,30 +75,20 @@ class HelpCommand(Command, ABC):
         pass  # pragma: no cover
 
     @abstractmethod
-    async def on_command_not_found(
-        self,
-        ctx: Context,
-        command_name: str
-    ) -> None:
+    async def on_command_not_found(self, ctx: Context, command_name: str) -> None:
         """Called when a command is not found."""
         pass  # pragma: no cover
 
     @abstractmethod
     async def on_subcommand_not_found(
-        self,
-        ctx: Context,
-        group: Group,
-        subcommand_name: str
+        self, ctx: Context, group: Group, subcommand_name: str
     ) -> None:
         """Called when a subcommand is not found."""
         pass  # pragma: no cover
 
     @abstractmethod
     async def on_page_out_of_range(
-        self,
-        ctx: Context,
-        page_number: int,
-        total_pages: int
+        self, ctx: Context, page_number: int, total_pages: int
     ) -> None:
         """Called when a requested page is out of bounds."""
         pass  # pragma: no cover
@@ -136,16 +114,12 @@ class HelpCommand(Command, ABC):
         :param group: The group to get subcommands from
         :return: Paginator configured with all subcommands
         """
-        subcommands = list(getattr(group, 'commands', {}).values())
+        subcommands = list(getattr(group, "commands", {}).values())
         sorted_subcommands = sorted(subcommands, key=lambda c: c.name.lower())
 
         return Paginator(sorted_subcommands, self.per_page)
 
-    def find_command(
-        self,
-        ctx: Context,
-        command_name: str
-    ) -> Optional[Command]:
+    def find_command(self, ctx: Context, command_name: str) -> Optional[Command]:
         """Find a command by name.
 
         :param ctx: Command context
@@ -154,25 +128,17 @@ class HelpCommand(Command, ABC):
         """
         return ctx.bot.commands.get(command_name)
 
-    def find_subcommand(
-        self,
-        group: Group,
-        subcommand_name: str
-    ) -> Optional[Command]:
+    def find_subcommand(self, group: Group, subcommand_name: str) -> Optional[Command]:
         """Find a subcommand within a group.
 
         :param group: The group to search in
         :param subcommand_name: Name of the subcommand to find
         :return: Subcommand if found, None otherwise
         """
-        group_commands = getattr(group, 'commands', {})
+        group_commands = getattr(group, "commands", {})
         return group_commands.get(subcommand_name)
 
-    async def show_command_help(
-        self,
-        ctx: Context,
-        command: Command
-    ) -> None:
+    async def show_command_help(self, ctx: Context, command: Command) -> None:
         """Show help for a specific command (non-group)."""
         await ctx.reply(self.format_command(command))
 
@@ -181,7 +147,7 @@ class HelpCommand(Command, ABC):
         ctx: Context,
         group: Group,
         subcommand_name: Optional[str] = None,
-        page_number: int = 1
+        page_number: int = 1,
     ) -> None:
         """
         Show help for a group or its subcommand, with optional pagination.
@@ -192,16 +158,12 @@ class HelpCommand(Command, ABC):
             if subcmd:
                 await ctx.reply(self.format_subcommand(subcmd))
             else:
-                await self.on_subcommand_not_found(
-                    ctx,
-                    group,
-                    subcommand_name
-                )
+                await self.on_subcommand_not_found(ctx, group, subcommand_name)
             return
 
         # No subcommand: show paginated group subcommands
         group_help = self.format_group(group)
-        subcommands = getattr(group, 'commands', {})
+        subcommands = getattr(group, "commands", {})
 
         if subcommands:
             paginator = self.get_subcommands_paginator(group)
@@ -225,8 +187,7 @@ class HelpCommand(Command, ABC):
         await ctx.reply(help_message)
 
     def parse_help_arguments(
-        self,
-        args: List[str]
+        self, args: List[str]
     ) -> tuple[Optional[str], Optional[str], int]:
         """Parse help command arguments to determine what to show.
 
@@ -258,12 +219,7 @@ class HelpCommand(Command, ABC):
 
         return command_name, subcommand_name, page_number
 
-    async def execute(
-        self,
-        ctx: Context,
-        cmd_or_page=None,
-        subcommand=None
-    ) -> None:
+    async def execute(self, ctx: Context, cmd_or_page=None, subcommand=None) -> None:
         """
         Execute the help command using show_command_help and show_group_help.
         """
@@ -302,11 +258,8 @@ class DefaultHelpCommand(HelpCommand):
     This provides default formatting for commands, groups, and pagination
     that works well for most use cases.
     """
-    def format_help_page(
-        self,
-        page: Page[Command],
-        title: str = "Commands"
-    ) -> str:
+
+    def format_help_page(self, page: Page[Command], title: str = "Commands") -> str:
         """Format a complete help page.
 
         :param page: Page object containing commands and pagination info
@@ -329,11 +282,7 @@ class DefaultHelpCommand(HelpCommand):
 
         return f"**{title}**\n\n{help_text}\n\n{page_info}"
 
-    def format_subcommand_page(
-        self,
-        page: Page[Command],
-        group_name: str
-    ) -> str:
+    def format_subcommand_page(self, page: Page[Command], group_name: str) -> str:
         """Format a complete subcommand help page.
 
         :param page: Page object containing subcommands and pagination info
@@ -372,7 +321,7 @@ class DefaultHelpCommand(HelpCommand):
         :return: Formatted string representation of the group
         """
         subcommands_text = ""
-        subcommand_count = len(getattr(group, 'commands', {}))
+        subcommand_count = len(getattr(group, "commands", {}))
 
         if subcommand_count > 0:
             subcommands_text = f" ({subcommand_count} subcommands)"
@@ -403,31 +352,20 @@ class DefaultHelpCommand(HelpCommand):
         """
         return f"**Page {page.page_number}/{page.total_pages}**"
 
-    async def on_command_not_found(
-        self,
-        ctx: Context,
-        command_name: str
-    ) -> None:
+    async def on_command_not_found(self, ctx: Context, command_name: str) -> None:
         await ctx.reply(f"Command `{command_name}` not found.")
 
     async def on_subcommand_not_found(
-        self,
-        ctx: Context,
-        group: Group,
-        subcommand_name: str
+        self, ctx: Context, group: Group, subcommand_name: str
     ) -> None:
         await ctx.reply(
-            f"Subcommand `{subcommand_name}` not found "
-            f"in group `{group.name}`."
+            f"Subcommand `{subcommand_name}` not found " f"in group `{group.name}`."
         )
 
     async def on_empty_page(self, ctx: Context) -> None:
         await ctx.reply("No commands.")
 
     async def on_page_out_of_range(
-        self,
-        ctx: Context,
-        page_number: int,
-        total_pages: int
+        self, ctx: Context, page_number: int, total_pages: int
     ) -> None:
         await ctx.reply(f"Page {page_number} does not exist.")

@@ -20,11 +20,7 @@ class DummyCtx:
 
 
 class DummyHelpCommand(HelpCommand):
-    def format_help_page(
-        self,
-        page: Page[Command],
-        title: str = "Commands"
-    ) -> str:
+    def format_help_page(self, page: Page[Command], title: str = "Commands") -> str:
         help_entries = []
 
         if not page.items:
@@ -41,11 +37,7 @@ class DummyHelpCommand(HelpCommand):
 
         return f"**{title}**\n\n{help_text}\n\n{page_info}"
 
-    def format_subcommand_page(
-        self,
-        page: Page[Command],
-        group_name: str
-    ) -> str:
+    def format_subcommand_page(self, page: Page[Command], group_name: str) -> str:
         help_entries = []
 
         if not page.items:
@@ -71,26 +63,16 @@ class DummyHelpCommand(HelpCommand):
     def format_page_info(self, page: Page[Command]) -> str:
         return f"Page {page.page_number}/{page.total_pages}"
 
-    async def on_command_not_found(
-        self,
-        ctx: DummyCtx,
-        command_name: str
-    ) -> None:
+    async def on_command_not_found(self, ctx: DummyCtx, command_name: str) -> None:
         await ctx.reply(f"Command `{command_name}` not found.")
 
     async def on_subcommand_not_found(
-        self,
-        ctx: DummyCtx,
-        group: Group,
-        subcommand_name: str
+        self, ctx: DummyCtx, group: Group, subcommand_name: str
     ) -> None:
         await ctx.reply(f"Subcommand `{subcommand_name}` not found.")
 
     async def on_page_out_of_range(
-        self,
-        ctx: DummyCtx,
-        page_number: int,
-        total_pages: int
+        self, ctx: DummyCtx, page_number: int, total_pages: int
     ) -> None:
         await ctx.reply(f"Page {page_number} does not exist.")
 
@@ -100,21 +82,29 @@ class DummyHelpCommand(HelpCommand):
 
 @pytest.fixture
 def simple_command():
-    async def cb(ctx): return "ok"
+    async def cb(ctx):
+        return "ok"
+
     return Command(cb, name="ping", usage="ping", description="Check latency")
 
 
 @pytest.fixture
 def simple_group():
-    async def cb(ctx): return "ok"
+    async def cb(ctx):
+        return "ok"
+
     group = Group(cb, name="tools", usage="tools", description="Tool commands")
 
-    async def foo(ctx): return "foo"
+    async def foo(ctx):
+        return "foo"
+
     group.register_command(
         Command(foo, name="foo", usage="foo", description="Foo command")
     )
 
-    async def bar(ctx): return "bar"
+    async def bar(ctx):
+        return "bar"
+
     group.register_command(
         Command(bar, name="bar", usage="bar", description="Bar command")
     )
