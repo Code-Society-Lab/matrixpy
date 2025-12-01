@@ -52,11 +52,12 @@ class Command:
 
         self.description: str = kwargs.get("description", "")
         self.prefix: str = kwargs.get("prefix", "")
+        self.parent: str = kwargs.get("parent", "")
         self.usage: str = kwargs.get("usage", self._build_usage())
         self.help: str = self._build_help()
 
-        self._before_invoke: Optional[Callback] = None
-        self._after_invoke: Optional[Callback] = None
+        self._before_invoke_callback: Optional[Callback] = None
+        self._after_invoke_callback: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
         self._error_handlers: dict[type[Exception], ErrorCallback] = {}
 
@@ -115,7 +116,12 @@ class Command:
         :rtype: str
         """
         params = " ".join(f"[{p.name}]" for p in self.params)
-        return f"{self.prefix}{self.name} {params}"
+        command_name = self.name
+
+        if self.parent:
+            command_name = f"{self.parent} {self.name}"
+
+        return f"{self.prefix}{command_name} {params}"
 
     def _parse_arguments(self, ctx: "Context") -> list[Any]:
         parsed_args = []
@@ -186,7 +192,7 @@ class Command:
         if not asyncio.iscoroutinefunction(func):
             raise TypeError("The hook must be a coroutine.")
 
-        self._before_invoke = func
+        self._before_invoke_callback = func
 
     def after_invoke(self, func: Callback) -> None:
         """
@@ -201,7 +207,7 @@ class Command:
         if not asyncio.iscoroutinefunction(func):
             raise TypeError("The hook must be a coroutine.")
 
-        self._after_invoke = func
+        self._after_invoke_callback = func
 
     def error(self, exception: Optional[type[Exception]] = None) -> Callable:
         """
@@ -250,17 +256,25 @@ class Command:
         ctx.logger.exception("error while executing command '%s'", self)
         raise error
 
-    async def __before_invoke(self, ctx: "Context") -> None:
-        for check in self.checks:
-            if not await check(ctx):
-                raise CheckError(self, check)
+    async def invoke(self, ctx: "Context") -> None:
+        parsed_args = self._parse_arguments(ctx)
+        await self.callback(ctx, *parsed_args)
 
-        if self._before_invoke:
-            await self._before_invoke(ctx)
+    async def _invoke(self, ctx: "Context") -> None:
+        try:
+            for check in self.checks:
+                if not await check(ctx):
+                    raise CheckError(self, check)
 
-    async def __after_invoke(self, ctx: "Context") -> None:
-        if self._after_invoke:
-            await self._after_invoke(ctx)
+            if self._before_invoke_callback:
+                await self._before_invoke_callback(ctx)
+
+            await self.invoke(ctx)
+
+            if self._after_invoke_callback:
+                await self._after_invoke_callback(ctx)
+        except Exception as error:
+            await self.on_error(ctx, error)
 
     async def __call__(self, ctx: "Context") -> None:
         """
@@ -269,15 +283,7 @@ class Command:
         :param ctx: The command execution context.
         :type ctx: Context
         """
-        try:
-            await self.__before_invoke(ctx)
-
-            parsed_args = self._parse_arguments(ctx)
-            await self.callback(ctx, *parsed_args)
-
-            await self.__after_invoke(ctx)
-        except Exception as error:
-            await self.on_error(ctx, error)
+        await self._invoke(ctx)
 
     def __eq__(self, other) -> bool:
         return self.name == other

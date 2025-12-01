@@ -42,6 +42,7 @@ class Context:
         # Command metdata
         self.prefix: str = bot.prefix
         self.command: Optional[Command] = None
+        self.subcommand: Optional[Command] = None
         self._args: List[str] = shlex.split(self.body)
 
     @property
@@ -54,8 +55,12 @@ class Context:
         :return: The list of arguments.
         :rtype: List[str]
         """
+        if self.subcommand:
+            return self._args[2:]
+
         if self.command:
             return self._args[1:]
+
         return self._args
 
     @property
@@ -80,6 +85,12 @@ class Context:
             raise MatrixError(f"Failed to send message: {e}")
 
     async def send_help(self) -> None:
-        if not self.command:
-            return await self.bot.help.execute(self)
-        await self.reply(self.command.help)
+        if self.subcommand:
+            await self.reply(self.subcommand.help)
+            return
+
+        if self.command:
+            await self.reply(self.command.help)
+            return
+
+        await self.bot.help.execute(self)
