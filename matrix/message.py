@@ -1,7 +1,10 @@
 from matrix.errors import MatrixError
 import markdown
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 from nio import Event
+
+if TYPE_CHECKING:
+    from .bot import Bot  # pragma: no cover
 
 
 class Message:
@@ -19,7 +22,7 @@ class Message:
     MATRIX_CUSTOM_HTML = "org.matrix.custom.html"
     TEXT_MESSAGE_TYPE = "m.text"
 
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: "Bot") -> None:
         self.bot = bot
 
     async def _send_to_room(

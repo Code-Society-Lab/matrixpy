@@ -73,7 +73,9 @@ class Bot:
         "on_member_change": RoomMemberEvent,
     }
 
-    def __init__(self, config: Optional[Union[Config, str]] = None, **kwargs) -> None:
+    def __init__(
+        self, config: Optional[Union[Config, str]] = None, **kwargs: Any
+    ) -> None:
         if isinstance(config, Config):
             self.config = config
         elif isinstance(config, str):
@@ -188,7 +190,7 @@ class Bot:
         return wrapper(func)
 
     def command(
-        self, name: Optional[str] = None, **kwargs
+        self, name: Optional[str] = None, **kwargs: Any
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -210,7 +212,7 @@ class Bot:
 
         return wrapper
 
-    def schedule(self, cron: str):
+    def schedule(self, cron: str) -> Callable[..., Callback]:
         """
         Decorator to register a coroutine function as a scheduled task.
 
@@ -320,7 +322,7 @@ class Bot:
 
             await ctx.command(ctx)
 
-    async def _build_context(self, room: MatrixRoom, event: Event):
+    async def _build_context(self, room: MatrixRoom, event: Event) -> Context:
         """Builds the base context and extracts the command from the event"""
         ctx = Context(bot=self, room=room, event=event)
 

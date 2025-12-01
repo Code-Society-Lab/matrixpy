@@ -1,6 +1,6 @@
 import yaml
 from .errors import ConfigError
-from typing import Optional
+from typing import Optional, Any
 
 
 class Config:
@@ -24,7 +24,7 @@ class Config:
     :raises ConfigError: If neither password or token has been provided.
     """
 
-    def __init__(self, config_path: Optional[str] = None, **kwargs):
+    def __init__(self, config_path: Optional[str] = None, **kwargs: Any) -> None:
         self.homeserver: str = kwargs.get("homeserver", "https://matrix.org")
         self.user_id: Optional[str] = kwargs.get("username")
         self.password: Optional[str] = kwargs.get("password", None)
@@ -36,7 +36,7 @@ class Config:
         elif not (self.password or self.token):
             raise ConfigError("username and password or token")
 
-    def load_from_file(self, config_path: str):
+    def load_from_file(self, config_path: str) -> None:
         """Load Matrix client settings via YAML config file."""
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)

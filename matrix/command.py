@@ -159,8 +159,11 @@ class Command:
         self.cooldown_rate = rate
         self.cooldown_period = period
 
-        async def cooldown_function(ctx):
+        async def cooldown_function(ctx: "Context") -> bool:
             if ctx is None or not hasattr(ctx, "sender"):
+                return False
+
+            if self.cooldown_period is None or self.cooldown_rate is None:
                 return False
 
             now = monotonic()
@@ -285,7 +288,7 @@ class Command:
         """
         await self._invoke(ctx)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return self.name == other
 
     def __hash__(self) -> int:
