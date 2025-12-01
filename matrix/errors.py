@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from .error import Error  # pragam: no cover
     from .group import Group  # pragma: no cover
 
-    Callback = Callable[..., Coroutine[Any, Any, Any]]
+Callback = Callable[..., Coroutine[Any, Any, Any]]
 
 
 class MatrixError(Exception):
@@ -23,7 +23,7 @@ class CommandNotFoundError(CommandError):
 
 
 class AlreadyRegisteredError(CommandError):
-    def __init__(self, cmd: Command):
+    def __init__(self, cmd: "Command"):
         super().__init__(f"Command '{cmd}' is already registered")
 
 
@@ -33,7 +33,7 @@ class MissingArgumentError(CommandError):
 
 
 class CheckError(CommandError):
-    def __init__(self, cmd: Command, check: Callback):
+    def __init__(self, cmd: "Command", check: Callback):
         super().__init__(f"'{check.__name__}' has failed for '{cmd.name}'")
 
 
@@ -42,7 +42,7 @@ class GroupError(CommandError):
 
 
 class GroupAlreadyRegisteredError(GroupError):
-    def __init__(self, group: Group):
+    def __init__(self, group: "Group"):
         super().__init__(f"Group '{group}' is already registered")
 
 
@@ -52,6 +52,6 @@ class ConfigError(MatrixError):
 
 
 class CooldownError(CheckError):
-    def __init__(self, cmd: Command, check: Callback, retry: float):
+    def __init__(self, cmd: "Command", check: Callback, retry: float):
         self.retry = retry
         super().__init__(cmd, check)
