@@ -8,7 +8,7 @@ from nio import RoomMessageText
 
 @pytest.fixture
 def message_default():
-    bot = Bot("tests/config_fixture.yaml")
+    bot = Bot(config="tests/config_fixture.yaml")
 
     bot.client = MagicMock()
     bot.client.room_send = AsyncMock()
