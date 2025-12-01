@@ -196,6 +196,8 @@ class Bot:
         The command name defaults to the function name unless
         explicitly provided.
 
+        :param name: The name of the command. If omitted, the function name is used.
+        :type name: str, optional
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If a command with the same name is registered.
         :return: Decorator that registers the command handler.

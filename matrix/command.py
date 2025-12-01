@@ -256,11 +256,11 @@ class Command:
         ctx.logger.exception("error while executing command '%s'", self)
         raise error
 
-    async def invoke(self, ctx):
+    async def invoke(self, ctx: "Context") -> None:
         parsed_args = self._parse_arguments(ctx)
         await self.callback(ctx, *parsed_args)
 
-    async def _invoke(self, ctx: "Context"):
+    async def _invoke(self, ctx: "Context") -> None:
         try:
             for check in self.checks:
                 if not await check(ctx):

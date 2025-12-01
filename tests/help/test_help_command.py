@@ -145,19 +145,19 @@ async def test_show_subcommand_page(help_cmd, simple_group):
     assert "SUB:foo" in ctx.last_reply or "SUB:bar" in ctx.last_reply
 
 
-def test_parse_help_arguments(help_cmd):
-    # no args
-    assert help_cmd.parse_help_arguments([]) == (None, None, 1)
-    # only page
-    assert help_cmd.parse_help_arguments(["2"]) == (None, None, 2)
-    # command only
-    assert help_cmd.parse_help_arguments(["ping"]) == ("ping", None, 1)
-    # command + subcommand
-    assert help_cmd.parse_help_arguments(["tools", "foo"]) == ("tools", "foo", 1)
-    # command + page
-    assert help_cmd.parse_help_arguments(["tools", "2"]) == ("tools", None, 2)
-    # command + subcommand + page
-    assert help_cmd.parse_help_arguments(["tools", "foo", "2"]) == ("tools", "foo", 2)
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        ([], (None, None, 1)),  # no args
+        (["2"], (None, None, 2)),  # only page
+        (["ping"], ("ping", None, 1)),  # command only
+        (["tools", "foo"], ("tools", "foo", 1)),  # command + subcommand
+        (["tools", "2"], ("tools", None, 2)),  # command + page
+        (["tools", "foo", "2"], ("tools", "foo", 2)),  # command + subcommand + page
+    ],
+)
+def test_parse_help_arguments(help_cmd, args, expected):
+    assert help_cmd.parse_help_arguments(args) == expected
 
 
 @pytest.mark.asyncio
