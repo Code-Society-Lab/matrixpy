@@ -28,6 +28,7 @@ class Config:
     def __init__(
         self,
         config_path: Optional[str] = None,
+        *,
         homeserver: Optional[str] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,

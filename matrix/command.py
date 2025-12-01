@@ -45,6 +45,7 @@ class Command:
     def __init__(
         self,
         func: Callback,
+        *,
         name: Optional[str] = None,
         description: Optional[str] = None,
         prefix: Optional[str] = None,

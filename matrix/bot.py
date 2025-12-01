@@ -74,7 +74,7 @@ class Bot:
     }
 
     def __init__(
-        self, config: Union[Config, str], help: Optional[HelpCommand] = None
+        self, *, config: Union[Config, str], help: Optional[HelpCommand] = None
     ) -> None:
         if isinstance(config, Config):
             self.config = config
@@ -190,6 +190,7 @@ class Bot:
     def command(
         self,
         name: Optional[str] = None,
+        *,
         description: Optional[str] = None,
         prefix: Optional[str] = None,
         parent: Optional[str] = None,
