@@ -14,7 +14,7 @@ from matrix.errors import (
 
 @pytest.fixture
 def bot():
-    bot = Bot(username="grace", password="grace1234")
+    bot = Bot("tests/config_fixture.yaml")
 
     bot.client = MagicMock()
     bot.client.room_send = AsyncMock()
@@ -59,7 +59,7 @@ def test_bot_init_with_config():
 
 def test_bot_init_with_invalid_config_file():
     with pytest.raises(FileNotFoundError):
-        Bot(username="user", password="pass", config="not-a-dict")
+        Bot("not-a-dict")
 
 
 def test_auto_register_events_registers_known_events(bot):
@@ -366,7 +366,7 @@ def test_command_duplicate_raises(bot):
 
 @pytest.mark.asyncio
 async def test_run_uses_token():
-    bot = Bot(token="abc123")
+    bot = Bot("tests/config_fixture_token.yaml")
 
     bot.client.sync_forever = AsyncMock()
     bot.on_ready = AsyncMock()
@@ -392,7 +392,7 @@ async def test_run_with_username_and_password(bot):
 
 
 def test_start_handles_keyboard_interrupt(caplog):
-    bot = Bot(username="grace", password="grace1234")
+    bot = Bot("tests/config_fixture.yaml")
 
     bot.run = AsyncMock(side_effect=KeyboardInterrupt)
     bot.client.close = AsyncMock()
