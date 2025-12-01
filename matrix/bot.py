@@ -74,14 +74,14 @@ class Bot:
     }
 
     def __init__(
-        self, config: Optional[Union[Config, str]] = None, **kwargs: Any
+        self, config: Union[Config, str], help: Optional[HelpCommand] = None
     ) -> None:
         if isinstance(config, Config):
             self.config = config
         elif isinstance(config, str):
             self.config = Config(config_path=config)
         else:
-            self.config = Config(**kwargs)
+            raise TypeError("config must be a Config instance or a config file path")
 
         self.client: AsyncClient = AsyncClient(self.config.homeserver)
         self.log: logging.Logger = logging.getLogger(__name__)
@@ -98,9 +98,7 @@ class Bot:
         self._error_handlers: dict[type[Exception], ErrorCallback] = {}
         self._command_error_handlers: dict[type[Exception], CommandErrorCallback] = {}
 
-        self.help: HelpCommand = kwargs.get(
-            "help", DefaultHelpCommand(prefix=self.prefix)
-        )
+        self.help: HelpCommand = help or DefaultHelpCommand(prefix=self.prefix)
         self.register_command(self.help)
 
         self.client.add_event_callback(self._on_event, Event)
@@ -190,7 +188,13 @@ class Bot:
         return wrapper(func)
 
     def command(
-        self, name: Optional[str] = None, **kwargs: Any
+        self,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        prefix: Optional[str] = None,
+        parent: Optional[str] = None,
+        usage: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None,
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -199,7 +203,11 @@ class Bot:
         explicitly provided.
 
         :param name: The name of the command. If omitted, the function name is used.
-        :type name: str, optional
+        :param description: A brief description of the command.
+        :param prefix: The command prefix. If omitted, the bot's default prefix is used.
+        :param parent: The parent command name for subcommands.
+        :param usage: A usage string describing command arguments.
+        :param cooldown: A tuple defining (max_calls, per_seconds) for rate limiting.
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If a command with the same name is registered.
         :return: Decorator that registers the command handler.
@@ -207,7 +215,15 @@ class Bot:
         """
 
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name, prefix=self.prefix, **kwargs)
+            cmd = Command(
+                func,
+                name=name,
+                description=description,
+                prefix=prefix,
+                parent=parent,
+                usage=usage,
+                cooldown=cooldown,
+            )
             return self.register_command(cmd)
 
         return wrapper
