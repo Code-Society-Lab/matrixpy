@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
 name = "matrix-python"
-version = "0.1.2-alpha"
+version = "1.0.3-alpha"
 authors = [
     { name="Simon Roy" },
     { name=" Chris Dedman Rollet " }
