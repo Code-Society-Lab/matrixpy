@@ -8,7 +8,7 @@ from matrix.context import Context
 
 @pytest.fixture
 def bot():
-    bot = Bot(username="grace", password="grace1234")
+    bot = Bot(config="tests/config_fixture.yaml")
 
     bot.client = MagicMock()
     bot.client.room_send = AsyncMock()

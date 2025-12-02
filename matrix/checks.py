@@ -1,4 +1,7 @@
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
+
+if TYPE_CHECKING:
+    from .command import Command
 
 
 def cooldown(rate: int, period: float) -> Callable:
@@ -11,7 +14,7 @@ def cooldown(rate: int, period: float) -> Callable:
     :type period: float
     """
 
-    def wrapper(cmd):
+    def wrapper(cmd: Command) -> Command:
         cmd.set_cooldown(rate, period)
         return cmd
 

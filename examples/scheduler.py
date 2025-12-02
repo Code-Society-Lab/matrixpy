@@ -1,7 +1,6 @@
 from matrix import Bot, Context
-from matrix.message import Message
 
-bot = Bot("config.yaml")
+bot = Bot("examples/config.yaml")
 
 room_id = "!your_room_id:matrix.org"  # Replace with your room ID
 

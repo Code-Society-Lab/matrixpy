@@ -19,10 +19,10 @@ class Group(Command):
 
         super().__init__(callback, **kwargs)
 
-    def _build_usage(self):
+    def _build_usage(self) -> str:
         return f"{self.prefix}{self.name} [subcommand]"
 
-    def get_command(self, cmd_name: str):
+    def get_command(self, cmd_name: str) -> Command:
         if cmd := self.commands.get(cmd_name):
             return cmd
         raise CommandNotFoundError(cmd_name)
@@ -49,7 +49,7 @@ class Group(Command):
 
         return wrapper
 
-    def register_command(self, cmd: Command):
+    def register_command(self, cmd: Command) -> Command:
         if cmd in self.commands:
             raise AlreadyRegisteredError(cmd)
 
@@ -58,7 +58,7 @@ class Group(Command):
 
         return cmd
 
-    async def invoke(self, ctx: "Context"):
+    async def invoke(self, ctx: "Context") -> None:
         if subcommand := ctx.args.pop(0):
             ctx.subcommand = self.get_command(subcommand)
             await ctx.subcommand(ctx)

@@ -31,29 +31,39 @@ class Command:
     :param func: The coroutine that is executed when the command is invoked.
     :type func: Callable[..., Coroutine[Any, Any, Any]]
 
-    :keyword str name: Optional name. Defaults to the function's name.
-    :keyword str help: Optional help text displayed to users.
-    :keyword str usage: Optional usage string for the command.
-    :keyword str description: Optional description of what the command does.
+    :param name: Optional name. Defaults to the function's name.
+    :param description: Optional description of what the command does.
+    :param prefix: Optional prefix for the command.
+    :param parent: Optional parent command name for subcommands.
+    :param usage: Optional usage string for the command.
+    :param cooldown: Optional cooldown settings as a tuple of (rate, period).
 
     :raises TypeError: If the provided name is not a string.
     :raises TypeError: If the provided callback is not a coroutine.
     """
 
-    def __init__(self, func: Callback, **kwargs: Any):
-        name: str = kwargs.get("name") or func.__name__
-
-        if not isinstance(name, str):
+    def __init__(
+        self,
+        func: Callback,
+        *,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        prefix: Optional[str] = None,
+        parent: Optional[str] = None,
+        usage: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None,
+    ):
+        if name is not None and not isinstance(name, str):
             raise TypeError("Name must be a string.")
 
-        self.name: str = name
+        self.name: str = name or func.__name__
         self.callback = func
         self.checks: List[Callback] = []
 
-        self.description: str = kwargs.get("description", "")
-        self.prefix: str = kwargs.get("prefix", "")
-        self.parent: str = kwargs.get("parent", "")
-        self.usage: str = kwargs.get("usage", self._build_usage())
+        self.description: str = description or ""
+        self.prefix: str = prefix or ""
+        self.parent: str = parent or ""
+        self.usage: str = usage or self._build_usage()
         self.help: str = self._build_help()
 
         self._before_invoke_callback: Optional[Callback] = None
@@ -65,7 +75,7 @@ class Command:
         self.cooldown_period: Optional[float] = None
         self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
 
-        if cooldown := kwargs.get("cooldown"):
+        if cooldown:
             self.set_cooldown(*cooldown)
 
     @property
@@ -159,8 +169,11 @@ class Command:
         self.cooldown_rate = rate
         self.cooldown_period = period
 
-        async def cooldown_function(ctx):
+        async def cooldown_function(ctx: "Context") -> bool:
             if ctx is None or not hasattr(ctx, "sender"):
+                return False
+
+            if self.cooldown_period is None or self.cooldown_rate is None:
                 return False
 
             now = monotonic()
@@ -285,7 +298,7 @@ class Command:
         """
         await self._invoke(ctx)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return self.name == other
 
     def __hash__(self) -> int:

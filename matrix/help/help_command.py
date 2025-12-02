@@ -219,7 +219,12 @@ class HelpCommand(Command, ABC):
 
         return command_name, subcommand_name, page_number
 
-    async def execute(self, ctx: Context, cmd_or_page=None, subcommand=None) -> None:
+    async def execute(
+        self,
+        ctx: Context,
+        cmd_or_page: str | None = None,
+        subcommand: str | None = None,
+    ) -> None:
         """
         Execute the help command using show_command_help and show_group_help.
         """
