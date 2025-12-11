@@ -6,13 +6,13 @@ bot = Bot(config="examples/config.yaml")
 
 @bot.error(CommandNotFoundError)
 async def global_error(error: CommandNotFoundError) -> None:
-    print(f"Glable error handler {error}.")
+    print(f"Global error handler {error}.")
 
 
 @bot.command("div")
 async def division(ctx: Context, a: int, b: int) -> None:
     c = a / b
-    await ctx.reply(str(c))
+    await ctx.reply(f"{a} / {b} = {c}")
 
 
 @division.error(ZeroDivisionError)
@@ -29,8 +29,7 @@ async def val_error(ctx: Context, error: ValueError) -> None:
 
 @division.error(MissingArgumentError)
 async def command_error(ctx: Context, error: MissingArgumentError) -> None:
-    print(error)
-    await ctx.reply(str(error))
+    await ctx.reply(f"{error}")
 
 
 bot.start()
