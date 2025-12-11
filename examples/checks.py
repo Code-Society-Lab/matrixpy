@@ -1,12 +1,12 @@
 from matrix import Bot, Context
 
-bot = Bot("examples/config.yaml")
+bot = Bot(config="examples/config.yaml")
 
 allowed_users = {"@alice:matrix.org", "@bob:matrix.org"}
 
 
 @bot.command("secret")
-async def secret_command(ctx: Context):
+async def secret_command(ctx: Context) -> None:
     await ctx.reply("🎉 Welcome to the secret club!")
 
 
