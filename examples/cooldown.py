@@ -1,7 +1,7 @@
 from matrix import Bot, Context, cooldown
 from matrix.errors import CooldownError
 
-bot = Bot(config="examples/config.yaml")
+bot = Bot(config="config.yaml")
 
 
 # Invoke by using !hello

@@ -1,7 +1,7 @@
 from matrix import Bot, Context
 from matrix.errors import CommandNotFoundError, MissingArgumentError
 
-bot = Bot(config="examples/config.yaml")
+bot = Bot(config="config.yaml")
 
 
 @bot.error(CommandNotFoundError)

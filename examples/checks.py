@@ -1,6 +1,6 @@
 from matrix import Bot, Context
 
-bot = Bot(config="examples/config.yaml")
+bot = Bot(config="config.yaml")
 
 allowed_users = {"@alice:matrix.org", "@bob:matrix.org"}
 

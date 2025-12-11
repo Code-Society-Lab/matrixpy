@@ -1,7 +1,7 @@
 from asyncio import Event
 from matrix import Bot, Room
 
-bot = Bot(config="examples/config.yaml")
+bot = Bot(config="config.yaml")
 
 
 @bot.event
