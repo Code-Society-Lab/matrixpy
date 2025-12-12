@@ -9,6 +9,7 @@ from .context import Context
 from .command import Command
 from .help import HelpCommand
 from .checks import cooldown
+from .room import Room
 
 __all__ = [
     "Bot",
@@ -18,4 +19,5 @@ __all__ = [
     "Context",
     "HelpCommand",
     "cooldown",
+    "Room",
 ]
