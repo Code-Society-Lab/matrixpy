@@ -1,11 +1,10 @@
 from matrix import Bot, Context
 
-bot = Bot("examples/config.yaml")
+bot = Bot(config="config.yaml")
 
 
 @bot.command("ping")
-async def ping(ctx: Context):
-    print(f"{ctx.sender} invoked {ctx.body} in room {ctx.room_name}.")
+async def ping(ctx: Context) -> None:
     await ctx.reply("Pong!")
 
 

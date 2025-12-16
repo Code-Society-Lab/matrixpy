@@ -3,7 +3,6 @@ import inspect
 
 if TYPE_CHECKING:
     from .command import Command  # pragma: no cover
-    from .error import Error  # pragam: no cover
     from .group import Group  # pragma: no cover
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
