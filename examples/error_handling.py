@@ -17,13 +17,11 @@ async def division(ctx: Context, a: int, b: int) -> None:
 
 @division.error(ZeroDivisionError)
 async def div_error(ctx: Context, error: ZeroDivisionError) -> None:
-    print(f"Operation Not Allowed: {error}")
     await ctx.reply(f"Operation not allowed: {error}")
 
 
 @division.error(ValueError)
 async def val_error(ctx: Context, error: ValueError) -> None:
-    print(f"ValueError: {error}")
     await ctx.reply(f"ValueError: {error}")
 
 
