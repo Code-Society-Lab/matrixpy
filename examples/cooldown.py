@@ -13,7 +13,6 @@ async def hello_command(ctx: Context) -> None:
 
 @hello_command.error(CooldownError)
 async def hello_command_error_handler(ctx: Context, error: CooldownError) -> None:
-    print(f"CooldownError invoked: Try again in {error.retry:.1f} seconds.")
     await ctx.reply(f"⏳ Try again in {error.retry:.1f}s")
 
 
@@ -25,7 +24,6 @@ async def cooldown_command(ctx: Context) -> None:
 
 @cooldown_command.error(CooldownError)
 async def cooldown_function(ctx: Context, error: CooldownError) -> None:
-    print(f"CooldownError invoked: Try again in {error.retry:.1f} seconds.")
     await ctx.reply(f"⏳ Try again in {error.retry:.1f}s")
 
 
