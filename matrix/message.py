@@ -124,7 +124,7 @@ class Message:
         )
 
     @staticmethod
-    def from_event(bot: "Bot", event: Optional[Event] = None) -> Message:
+    def from_event(bot: "Bot", event: Optional[Event] = None) -> "Message":
         """
         Method to construct a Message instance from event.
         Support regular message events and reaction events.
