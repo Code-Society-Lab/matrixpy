@@ -1,11 +1,10 @@
 from matrix.errors import MatrixError
 import markdown
 from typing import TYPE_CHECKING, Dict, Optional
-from nio import ReactionEvent
+from nio import Event
 
 if TYPE_CHECKING:
     from matrix.bot import Bot  # pragma: no cover
-    from nio import Event  # pragma: no cover
 
 
 class Message:
@@ -138,7 +137,7 @@ class Message:
         if event is None:
             return Message(bot=bot)
 
-        if isinstance(event, ReactionEvent):
+        if isinstance(event, Event) and event.source["type"] == "m.reaction":
             event_id = event.source["content"]["m.relates_to"]["event_id"]
             body = event.source["content"]
         else:
