@@ -12,9 +12,7 @@ class Room:
     Represents a Matrix room and provides methods to interact with it.
 
     :param room_id: The unique identifier of the room.
-    :type room_id: str
     :param bot: The bot instance used to send messages.
-    :type bot: Bot
     """
 
     def __init__(self, room_id: str, bot: "Bot") -> None:
@@ -32,13 +30,9 @@ class Room:
         Send a message to the room.
 
         :param message: The message to send.
-        :type message: str
         :param markdown: Whether to format the message as Markdown.
-        :type markdown: Optional[bool]
         :param event: An event object to react to.
-        :type event: Optional[Event]
         :param key: The reaction to the message.
-        :type key: Optional[str]
 
         :raises MatrixError: If sending the message fails.
         """
@@ -96,9 +90,7 @@ class Room:
         Ban a user from a room.
 
         :param user_id: The ID of the user to ban of the room.
-        :type user_id: str
         :param reason: The reason to ban the user.
-        :type reason: Optional[str]
 
         :raises MatrixError: If banning the user fails.
         """
@@ -115,7 +107,6 @@ class Room:
         Unban a user from a room.
 
         :param user_id: The ID of the user to unban of the room.
-        :type user_id: str
 
         :raises MatrixError: If unbanning the user fails.
         """
@@ -130,9 +121,7 @@ class Room:
         Kick a user from a room.
 
         :param user_id: The ID of the user to kick of the room.
-        :type user_id: str
         :param reason: The reason to kick the user.
-        :type reason: Optional[str]
 
         :raises MatrixError: If kicking the user fails.
         """
