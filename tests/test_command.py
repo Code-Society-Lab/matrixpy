@@ -1,13 +1,19 @@
 import pytest
 import inspect
-from unittest.mock import MagicMock
 
-from matrix.errors import CheckError, MissingArgumentError
+from unittest.mock import MagicMock
+from matrix.errors import MissingArgumentError
 from matrix.command import Command
+
+
+class DummyBot:
+    async def on_command_error(self, _ctx, _error):
+        return None
 
 
 class DummyContext:
     def __init__(self, args=None):
+        self.bot = DummyBot()
         self.args = args or []
         self.logger = MagicMock()
 
@@ -108,20 +114,23 @@ async def test_error_handler():
     ctx = DummyContext(args=[])
     called = False
 
-    await cmd(ctx)
+    with pytest.raises(MissingArgumentError):
+        await cmd(ctx)
     ctx.logger.exception.assert_called_once()
 
     with pytest.raises(TypeError):
-        @cmd.error
+
+        @cmd.error(TypeError)
         def invalid_handler(_ctx, _error):
             pass
 
-    @cmd.error
+    @cmd.error()
     async def handler(_ctx, _error):
         nonlocal called
         called = True
 
-    await cmd(ctx)
+    with pytest.raises(MissingArgumentError):
+        await cmd(ctx)
     assert called
 
 
@@ -155,6 +164,7 @@ async def test_invalid_before_invoke():
     cmd = Command(my_command)
 
     with pytest.raises(TypeError):
+
         @cmd.before_invoke
         def invalid_hook(_ctx, _error):
             pass
@@ -168,6 +178,7 @@ async def test_invalid_after_invoke():
     cmd = Command(my_command)
 
     with pytest.raises(TypeError):
+
         @cmd.after_invoke
         def invalid_hook(_ctx, _error):
             pass
@@ -181,6 +192,7 @@ async def test_invalid_command_check():
     cmd = Command(my_command)
 
     with pytest.raises(TypeError):
+
         @cmd.check
         def invalid_check(_ctx, _error):
             pass
@@ -220,5 +232,6 @@ async def test_command_does_not_execute_when_a_check_fails():
     async def always_fails(ctx):
         return False
 
-    await cmd(ctx)
+    with pytest.raises(Exception):
+        await cmd(ctx)
     assert called is False

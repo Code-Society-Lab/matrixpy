@@ -8,7 +8,7 @@ from matrix.context import Context
 
 @pytest.fixture
 def bot():
-    bot = Bot(username="grace", password="grace1234")
+    bot = Bot(config="tests/config_fixture.yaml")
 
     bot.client = MagicMock()
     bot.client.room_send = AsyncMock()
@@ -27,13 +27,15 @@ def room():
 
 @pytest.fixture
 def event():
-    return RoomMessageText.from_dict({
-        "content": {"body": "!echo hello world", "msgtype": "m.text"},
-        "event_id": "$id",
-        "origin_server_ts": 123456,
-        "sender": "@user:matrix.org",
-        "type": "m.room.message",
-    })
+    return RoomMessageText.from_dict(
+        {
+            "content": {"body": "!echo hello world", "msgtype": "m.text"},
+            "event_id": "$id",
+            "origin_server_ts": 123456,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
 
 
 def test_context_initialization(bot, room, event):

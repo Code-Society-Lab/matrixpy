@@ -2,8 +2,8 @@
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 
 [project]
-name = "matrix.py"
-version = "0.0.1-alpha"
+name = "matrix-python"
+version = "1.0.3-alpha"
 authors = [
     { name="Simon Roy" },
     { name=" Chris Dedman Rollet " }
@@ -21,13 +21,14 @@ dependencies = [
     "logger",
     'PyYAML',
     'markdown',
+    'APScheduler',
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "pytest-asyncio",
-    "flake8",
+    "black",
     "mypy",
     "types-PyYAML",
     'types-Markdown',
@@ -36,6 +37,7 @@ dev = [
 [project.urls]
 "Homepage" = "https://codesociety.xyz"
 "Source" = "https://github.com/Code-Society-Lab/matrixpy"
+"Issues" = "https://github.com/Code-Society-Lab/matrixpy/issues"
 
 [tool.setuptools]
 packages = ["matrix"]

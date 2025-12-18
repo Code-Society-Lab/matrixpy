@@ -8,10 +8,13 @@ from typing import (
     Callable,
     Coroutine,
     List,
-    get_type_hints
+    get_type_hints,
+    DefaultDict,
 )
 
-from .errors import MissingArgumentError, CheckError
+from .errors import MissingArgumentError, CheckError, CooldownError
+from time import monotonic
+from collections import defaultdict, deque
 
 if TYPE_CHECKING:
     from .context import Context  # pragma: no cover
@@ -28,33 +31,52 @@ class Command:
     :param func: The coroutine that is executed when the command is invoked.
     :type func: Callable[..., Coroutine[Any, Any, Any]]
 
-    :keyword str name: Optional name. Defaults to the function's name.
-    :keyword str help: Optional help text displayed to users.
-    :keyword str usage: Optional usage string for the command.
-    :keyword str description: Optional description of what the command does.
+    :param name: Optional name. Defaults to the function's name.
+    :param description: Optional description of what the command does.
+    :param prefix: Optional prefix for the command.
+    :param parent: Optional parent command name for subcommands.
+    :param usage: Optional usage string for the command.
+    :param cooldown: Optional cooldown settings as a tuple of (rate, period).
 
     :raises TypeError: If the provided name is not a string.
     :raises TypeError: If the provided callback is not a coroutine.
     """
 
-    def __init__(self, func: Callback, **kwargs: Any):
-        name: str = kwargs.get("name") or func.__name__
-
-        if not isinstance(name, str):
+    def __init__(
+        self,
+        func: Callback,
+        *,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        prefix: Optional[str] = None,
+        parent: Optional[str] = None,
+        usage: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None,
+    ):
+        if name is not None and not isinstance(name, str):
             raise TypeError("Name must be a string.")
 
-        self.name: str = name
+        self.name: str = name or func.__name__
         self.callback = func
         self.checks: List[Callback] = []
 
-        self.description: str = kwargs.get("description", "")
-        self.prefix: str = kwargs.get("prefix", "")
-        self.usage: str = kwargs.get("usage", self._build_usage())
+        self.description: str = description or ""
+        self.prefix: str = prefix or ""
+        self.parent: str = parent or ""
+        self.usage: str = usage or self._build_usage()
         self.help: str = self._build_help()
 
-        self._before_invoke: Optional[Callback] = None
-        self._after_invoke: Optional[Callback] = None
+        self._before_invoke_callback: Optional[Callback] = None
+        self._after_invoke_callback: Optional[Callback] = None
         self._on_error: Optional[ErrorCallback] = None
+        self._error_handlers: dict[type[Exception], ErrorCallback] = {}
+
+        self.cooldown_rate: Optional[int] = None
+        self.cooldown_period: Optional[float] = None
+        self.cooldown_calls: DefaultDict[str, deque[float]] = defaultdict(deque)
+
+        if cooldown:
+            self.set_cooldown(*cooldown)
 
     @property
     def callback(self) -> Callback:
@@ -104,7 +126,12 @@ class Command:
         :rtype: str
         """
         params = " ".join(f"[{p.name}]" for p in self.params)
-        return f"{self.prefix}{self.name} {params}"
+        command_name = self.name
+
+        if self.parent:
+            command_name = f"{self.parent} {self.name}"
+
+        return f"{self.prefix}{command_name} {params}"
 
     def _parse_arguments(self, ctx: "Context") -> list[Any]:
         parsed_args = []
@@ -138,6 +165,33 @@ class Command:
 
         self.checks.append(func)
 
+    def set_cooldown(self, rate: int, period: float) -> None:
+        self.cooldown_rate = rate
+        self.cooldown_period = period
+
+        async def cooldown_function(ctx: "Context") -> bool:
+            if ctx is None or not hasattr(ctx, "sender"):
+                return False
+
+            if self.cooldown_period is None or self.cooldown_rate is None:
+                return False
+
+            now = monotonic()
+            user_id = ctx.sender
+            calls = self.cooldown_calls[user_id]
+
+            while calls and now - calls[0] >= self.cooldown_period:
+                calls.popleft()
+
+            if len(calls) >= self.cooldown_rate:
+                retry = self.cooldown_period - (now - calls[0])
+                raise CooldownError(self, cooldown_function, retry)
+
+            calls.append(now)
+            return True
+
+        self.checks.append(cooldown_function)
+
     def before_invoke(self, func: Callback) -> None:
         """
         Registers a coroutine to be called before the command is invoked.
@@ -149,9 +203,9 @@ class Command:
         """
 
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The hook must be a coroutine.')
+            raise TypeError("The hook must be a coroutine.")
 
-        self._before_invoke = func
+        self._before_invoke_callback = func
 
     def after_invoke(self, func: Callback) -> None:
         """
@@ -164,24 +218,32 @@ class Command:
         """
 
         if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The hook must be a coroutine.')
+            raise TypeError("The hook must be a coroutine.")
 
-        self._after_invoke = func
+        self._after_invoke_callback = func
 
-    def error(self, func: ErrorCallback) -> None:
+    def error(self, exception: Optional[type[Exception]] = None) -> Callable:
         """
-        Register a custom error handler for the command.
+        Decorator used to register an error handler for this command.
 
-        :param func: The error callback
-        :type func: ErrorCallback
-
-        :raises TypeError: If the function is not a coroutine.
+        :param exception: Exception type to register the handler for.
+        :type exception: Optional[Exception]
+        :return: A decorator that registers the provided coroutine as an
+            error handler and returns the original function.
+        :rtype: Callable
         """
 
-        if not asyncio.iscoroutinefunction(func):
-            raise TypeError('The error handler must be a coroutine.')
+        def wrapper(func: ErrorCallback) -> Callable:
+            if not asyncio.iscoroutinefunction(func):
+                raise TypeError("The error handler must be a coroutine.")
 
-        self._on_error = func
+            if exception:
+                self._error_handlers[exception] = func
+            else:
+                self._on_error = func
+            return func
+
+        return wrapper
 
     async def on_error(self, ctx: "Context", error: Exception) -> None:
         """
@@ -192,24 +254,40 @@ class Command:
         :param error: The exception that was raised.
         :type error: Exception
         """
+
+        if handler := self._error_handlers.get(type(error)):
+            await handler(ctx, error)
+            return
+
+        await ctx.bot.on_command_error(ctx, error)
+
         if self._on_error:
             await self._on_error(ctx, error)
-            return
         else:
             await ctx.send_help()
+
         ctx.logger.exception("error while executing command '%s'", self)
+        raise error
 
-    async def __before_invoke(self, ctx: "Context") -> None:
-        for check in self.checks:
-            if not await check(ctx):
-                raise CheckError(self, check)
+    async def invoke(self, ctx: "Context") -> None:
+        parsed_args = self._parse_arguments(ctx)
+        await self.callback(ctx, *parsed_args)
 
-        if self._before_invoke:
-            await self._before_invoke(ctx)
+    async def _invoke(self, ctx: "Context") -> None:
+        try:
+            for check in self.checks:
+                if not await check(ctx):
+                    raise CheckError(self, check)
 
-    async def __after_invoke(self, ctx: "Context") -> None:
-        if self._after_invoke:
-            await self._after_invoke(ctx)
+            if self._before_invoke_callback:
+                await self._before_invoke_callback(ctx)
+
+            await self.invoke(ctx)
+
+            if self._after_invoke_callback:
+                await self._after_invoke_callback(ctx)
+        except Exception as error:
+            await self.on_error(ctx, error)
 
     async def __call__(self, ctx: "Context") -> None:
         """
@@ -218,17 +296,9 @@ class Command:
         :param ctx: The command execution context.
         :type ctx: Context
         """
-        try:
-            await self.__before_invoke(ctx)
+        await self._invoke(ctx)
 
-            parsed_args = self._parse_arguments(ctx)
-            await self.callback(ctx, *parsed_args)
-
-            await self.__after_invoke(ctx)
-        except Exception as error:
-            await self.on_error(ctx, error)
-
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return self.name == other
 
     def __hash__(self) -> int:

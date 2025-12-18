@@ -1,13 +1,23 @@
+"""A simple, developer-friendly library to create powerful Matrix bots."""
+
+__version__ = "1.0.3-alpha"
+
 from .bot import Bot
+from .group import Group
 from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
+from .checks import cooldown
+from .room import Room
 
 __all__ = [
     "Bot",
+    "Group",
     "Config",
     "Command",
     "Context",
     "HelpCommand",
+    "cooldown",
+    "Room",
 ]

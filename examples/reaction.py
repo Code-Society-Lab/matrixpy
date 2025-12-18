@@ -1,10 +1,11 @@
-from matrix import Bot
+from asyncio import Event
+from matrix import Bot, Room
 
-bot = Bot("examples/config.yaml")
+bot = Bot(config="config.yaml")
 
 
 @bot.event
-async def on_message(room, event):
+async def on_message(room: Room, event: Event) -> None:
     """
     This function listens for new messages in a room and reacts based
     on the message content.
@@ -23,7 +24,7 @@ async def on_message(room, event):
 
 
 @bot.event
-async def on_react(room, event):
+async def on_react(room: Room, event: Event) -> None:
     """
     This function listens for new member reaction to messages in a room,
     and reacts based on the reaction emoji.

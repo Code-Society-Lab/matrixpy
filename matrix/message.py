@@ -17,7 +17,6 @@ class Message:
     :param bot: The bot instance to use for messages.
     :type bot: Bot
     """
-
     MESSAGE_TYPE = "m.room.message"
     MATRIX_CUSTOM_HTML = "org.matrix.custom.html"
     TEXT_MESSAGE_TYPE = "m.text"
@@ -29,7 +28,10 @@ class Message:
         self.sender = kwargs.get("sender", None)
 
     async def _send_to_room(
-        self, room_id: str, content: Dict, message_type: str = MESSAGE_TYPE
+        self,
+        room_id: str,
+        content: Dict,
+        message_type: str = MESSAGE_TYPE
     ) -> None:
         """
         Send a message to the Matrix room.
@@ -111,7 +113,7 @@ class Message:
         """
         await self._send_to_room(
             room_id=room_id,
-            content=self._make_content(body=message, html=format_markdown),
+            content=self._make_content(body=str(message), html=format_markdown),
         )
 
     async def send_reaction(self, room_id: str, key: str) -> None:

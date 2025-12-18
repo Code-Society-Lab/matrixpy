@@ -25,15 +25,24 @@ from nio import (
 )
 
 from .room import Room
+from .group import Group
 from .config import Config
 from .context import Context
 from .command import Command
-from .help import HelpCommand
-from .errors import AlreadyRegisteredError, CommandNotFoundError
+from .help import HelpCommand, DefaultHelpCommand
+from .scheduler import Scheduler
+
+from .errors import (
+    AlreadyRegisteredError,
+    CommandNotFoundError,
+    CheckError,
+)
 
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
+GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
+CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
 
 
 class Bot:
@@ -53,28 +62,26 @@ class Bot:
     """
 
     EVENT_MAP: Dict[str, Type[Event]] = {
-        "on_typing":        TypingNoticeEvent,
-        "on_message":       RoomMessageText,
-        "on_react":         ReactionEvent,
-        "on_member_join":   RoomMemberEvent,
-        "on_member_leave":  RoomMemberEvent,
+        "on_typing": TypingNoticeEvent,
+        "on_message": RoomMessageText,
+        "on_react": ReactionEvent,
+        "on_member_join": RoomMemberEvent,
+        "on_member_leave": RoomMemberEvent,
         "on_member_invite": RoomMemberEvent,
-        "on_member_ban":    RoomMemberEvent,
-        "on_member_kick":   RoomMemberEvent,
+        "on_member_ban": RoomMemberEvent,
+        "on_member_kick": RoomMemberEvent,
         "on_member_change": RoomMemberEvent,
     }
 
     def __init__(
-        self,
-        config: Optional[Union[Config, str]] = None,
-        **kwargs
+        self, *, config: Union[Config, str], help: Optional[HelpCommand] = None
     ) -> None:
         if isinstance(config, Config):
             self.config = config
         elif isinstance(config, str):
             self.config = Config(config_path=config)
         else:
-            self.config = Config(**kwargs)
+            raise TypeError("config must be a Config instance or a config file path")
 
         self.client: AsyncClient = AsyncClient(self.config.homeserver)
         self.log: logging.Logger = logging.getLogger(__name__)
@@ -83,17 +90,33 @@ class Bot:
         self.start_at: float | None = None  # unix timestamp
 
         self.commands: Dict[str, Command] = {}
+        self.checks: List[Callback] = []
+        self.scheduler = Scheduler()
+
         self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
+        self._error_handlers: dict[type[Exception], ErrorCallback] = {}
+        self._command_error_handlers: dict[type[Exception], CommandErrorCallback] = {}
 
-        self.help: HelpCommand = kwargs.get(
-            "help",
-            HelpCommand(prefix=self.prefix)
-        )
+        self.help: HelpCommand = help or DefaultHelpCommand(prefix=self.prefix)
         self.register_command(self.help)
 
         self.client.add_event_callback(self._on_event, Event)
         self._auto_register_events()
+
+    def check(self, func: Callback) -> None:
+        """
+        Register a check callback
+
+        :param func: The check callback
+        :type func: Callback
+
+        :raises TypeError: If the function is not a coroutine.
+        """
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("Checks must be coroutine")
+
+        self.checks.append(func)
 
     def event(
         self,
@@ -136,6 +159,7 @@ class Bot:
         :rtype: Callable[[Callable[..., Awaitable[None]]],
                 Callable[..., Awaitable[None]]]
         """
+
         def wrapper(f: Callback) -> Callback:
             if not asyncio.iscoroutinefunction(f):
                 raise TypeError("Event handlers must be coroutines")
@@ -154,9 +178,7 @@ class Bot:
 
             self._handlers[event_type].append(f)
             self.log.debug(
-                "registered event %s for %s",
-                f.__name__,
-                event_type.__name__
+                "registered event %s for %s", f.__name__, event_type.__name__
             )
             return f
 
@@ -167,7 +189,13 @@ class Bot:
 
     def command(
         self,
-        name: Optional[str] = None
+        name: Optional[str] = None,
+        *,
+        description: Optional[str] = None,
+        prefix: Optional[str] = None,
+        parent: Optional[str] = None,
+        usage: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None,
     ) -> Callable[[Callback], Command]:
         """
         Decorator to register a coroutine function as a command handler.
@@ -175,37 +203,86 @@ class Bot:
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function
-                     name is used.
-        :type name: str, optional
+        :param name: The name of the command. If omitted, the function name is used.
+        :param description: A brief description of the command.
+        :param prefix: The command prefix. If omitted, the bot's default prefix is used.
+        :param parent: The parent command name for subcommands.
+        :param usage: A usage string describing command arguments.
+        :param cooldown: A tuple defining (max_calls, per_seconds) for rate limiting.
         :raises TypeError: If the decorated function is not a coroutine.
         :raises ValueError: If a command with the same name is registered.
         :return: Decorator that registers the command handler.
         :rtype: Callback
         """
+
         def wrapper(func: Callback) -> Command:
-            cmd = Command(func, name=name, prefix=self.prefix)
+            cmd = Command(
+                func,
+                name=name,
+                description=description,
+                prefix=prefix,
+                parent=parent,
+                usage=usage,
+                cooldown=cooldown,
+            )
             return self.register_command(cmd)
+
         return wrapper
 
-    def register_command(self, cmd: Command):
+    def schedule(self, cron: str) -> Callable[..., Callback]:
+        """
+        Decorator to register a coroutine function as a scheduled task.
+
+        The cron string defines the schedule for the task.
+
+        :param cron: The cron string defining the schedule.
+        :type cron: str
+        :raises TypeError: If the decorated function is not a coroutine.
+        :return: Decorator that registers the scheduled task.
+        :rtype: Callback
+        """
+
+        def wrapper(f: Callback) -> Callback:
+            if not asyncio.iscoroutinefunction(f):
+                raise TypeError("Scheduled tasks must be coroutines")
+
+            self.scheduler.schedule(cron, f)
+            self.log.debug("registered scheduled task %s for cron %s", f.__name__, cron)
+            return f
+
+        return wrapper
+
+    def register_command(self, cmd: Command) -> Command:
         if cmd in self.commands:
             raise AlreadyRegisteredError(cmd)
 
         self.commands[cmd.name] = cmd
-        self.log.debug("command %s registered", cmd)
+        self.log.debug("command '%s' registered", cmd)
 
         return cmd
 
-    def error(self):
-        """Decorator to register a custom error handler for the command."""
+    def error(self, exception: Optional[type[Exception]] = None) -> Callable:
+        """
+        Decorator to register a custom error handler for commands.
+
+        :param exception: The specific exception type to handle.
+        :type exception: Optional[Exception]
+
+        :return: A decorator that registers the given coroutine as
+            an error handler.
+        :rtype: Callable
+        """
 
         def wrapper(func: ErrorCallback) -> Callable:
             if not asyncio.iscoroutinefunction(func):
-                raise TypeError('The error handler must be a coroutine.')
+                raise TypeError("The error handler must be a coroutine.")
 
-            self._on_error = func
+            if exception:
+                self._error_handlers[exception] = func
+            else:
+                self._on_error = func
             return func
+
         return wrapper
 
     def get_room(self, room_id: str) -> Room:
@@ -256,16 +333,20 @@ class Bot:
         ctx = await self._build_context(room, event)
 
         if ctx.command:
+            for check in self.checks:
+                if not await check(ctx):
+                    raise CheckError(ctx.command, check)
+
             await ctx.command(ctx)
 
-    async def _build_context(self, room: MatrixRoom, event: Event):
+    async def _build_context(self, room: MatrixRoom, event: Event) -> Context:
         """Builds the base context and extracts the command from the event"""
         ctx = Context(bot=self, room=room, event=event)
 
         if not self.prefix or not ctx.body.startswith(self.prefix):
             return ctx
 
-        if parts := ctx.body[len(self.prefix):].split():
+        if parts := ctx.body[len(self.prefix) :].split():
             cmd_name = parts[0]
             cmd = self.commands.get(cmd_name)
 
@@ -294,10 +375,37 @@ class Bot:
         self.log.info("bot is ready")
 
     async def on_error(self, error: Exception) -> None:
+        """
+        Handle errors by invoking a registered error handler,
+        a generic error callback, or logging the exception.
+
+        :param error: The exception instance that was raised.
+        :type error: Exceptipon
+        """
+        if handler := self._error_handlers.get(type(error)):
+            await handler(error)
+            return
+
         if self._on_error:
             await self._on_error(error)
             return
         self.log.exception("Unhandled error: '%s'", error)
+
+    async def on_command_error(self, ctx: "Context", error: Exception) -> None:
+        """
+        Handles errors raised during command invocation.
+
+        This method is called automatically when a command error occurs.
+        If a specific error handler is registered for the type of the
+        exception, it will be invoked with the current context and error.
+
+        :param ctx: The context in which the command was invoked.
+        :type ctx: Context
+        :param error: The exception that was raised during command execution.
+        :type error: Exception
+        """
+        if handler := self._command_error_handlers.get(type(error)):
+            await handler(ctx, error)
 
     async def run(self) -> None:
         """
@@ -318,6 +426,8 @@ class Bot:
         else:
             login_resp = await self.client.login(self.config.password)
             self.log.info("logged in: %s", login_resp)
+
+        self.scheduler.start()
 
         await self.on_ready()
         await self.client.sync_forever(timeout=30_000)
