@@ -52,13 +52,26 @@ class Room:
             raise MatrixError(f"Failed to send message: {e}")
 
     @staticmethod
-    def get_message(bot: "Bot", event: Event):
+    def get_message(bot: "Bot", event: Event) -> Message:
+        """
+        Get a Message instance from an event.
+        :param bot: The bot instance to use for messages.
+        :param event: The event object to construct the message from.
+
+        :return: The constructed Message instance.
+        """
         if not event and not bot:
             raise MatrixError("Failed to get message.")
 
         return Message.from_event(bot, event)
 
     async def react(self, event: Event, key: str) -> None:
+        """
+        Send a reaction to a message in the room.
+
+        :param event: The event to react to.
+        :param key: The reaction to the message.
+        """
         try:
             await self.send(event=event, key=key)
         except Exception as e:
