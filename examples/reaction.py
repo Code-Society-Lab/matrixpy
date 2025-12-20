@@ -20,7 +20,7 @@ async def on_message(room: Room, event: Event) -> None:
 
     if event.body.lower().startswith("❤️"):
         # Or directly reply as a message instead of a reaction
-        await room.send(message="❤️")
+        await room.send(message="❤️", event=event)
 
 
 @bot.event
