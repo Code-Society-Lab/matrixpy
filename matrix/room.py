@@ -22,8 +22,9 @@ class Room:
     async def send(
         self,
         message: str = "",
+        *,
+        event: Event,
         markdown: Optional[bool] = True,
-        event: Optional[Event] = None,
         key: Optional[str] = None,
     ) -> None:
         """
