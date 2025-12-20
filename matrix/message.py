@@ -1,4 +1,4 @@
-from matrix.errors import MatrixError
+from matrix.errors import MatrixError, MissingArgumentError
 import markdown
 from typing import TYPE_CHECKING, Dict, Optional
 from nio import Event
@@ -29,11 +29,14 @@ class Message:
         bot: "Bot",
         *,
         id: Optional[str] = None,
+        event: Optinal[str] = None,
         content: Optional[str] = None,
         sender: Optional[str] = None,
     ) -> None:
         self.bot = bot
         self.id = id
+        if not self.id and event:
+            self.id = event.event_id
         self.content = content
         self.sender = sender
 
@@ -75,6 +78,8 @@ class Message:
 
         :return: The content of the dictionary.
         """
+        if self.id is None:
+            raise ValueError("id cannot be None")
 
         base: Dict = {
             "msgtype": self.TEXT_MESSAGE_TYPE,
@@ -124,7 +129,7 @@ class Message:
         )
 
     @staticmethod
-    def from_event(bot: "Bot", event: Optional[Event] = None) -> "Message":
+    def from_event(bot: "Bot", event: Event) -> "Message":
         """
         Method to construct a Message instance from event.
         Support regular message events and reaction events.
@@ -133,9 +138,10 @@ class Message:
         :param event: The event object to construct the message from.
 
         :return: The constructed Message instance.
+        :raise MissingArgumentError: If event is None.
         """
         if event is None:
-            return Message(bot=bot)
+            raise MissingArgumentError("event cannot be None")
 
         if isinstance(event, Event) and event.source["type"] == "m.reaction":
             event_id = event.source["content"]["m.relates_to"]["event_id"]
