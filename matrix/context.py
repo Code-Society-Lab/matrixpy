@@ -79,6 +79,12 @@ class Context:
         """
 
         try:
+            # @todo When Message instance is refactored, refactor this to pass
+            # the room_id to the message and remove it from `send_message` method.
+            """example:
+            c = Message(self.bot, self.room_id)
+            await c.send_message(message=message)
+            """
             c = Message(self.bot)
             await c.send_message(room_id=self.room_id, message=message)
         except Exception as e:
