@@ -1,4 +1,4 @@
-from matrix.errors import MatrixError, MissingArgumentError
+from matrix.errors import MatrixError
 import markdown
 from typing import TYPE_CHECKING, Dict, Optional
 from nio import Event
@@ -29,7 +29,7 @@ class Message:
         bot: "Bot",
         *,
         id: Optional[str] = None,
-        event: Optinal[str] = None,
+        event: Optional[Event] = None,
         content: Optional[str] = None,
         sender: Optional[str] = None,
     ) -> None:
@@ -141,7 +141,7 @@ class Message:
         :raise MissingArgumentError: If event is None.
         """
         if event is None:
-            raise MissingArgumentError("event cannot be None")
+            raise ValueError("event cannot be None")
 
         if isinstance(event, Event) and event.source["type"] == "m.reaction":
             event_id = event.source["content"]["m.relates_to"]["event_id"]
