@@ -33,6 +33,7 @@ from .help import HelpCommand, DefaultHelpCommand
 from .scheduler import Scheduler
 
 from .errors import (
+    GroupAlreadyRegisteredError,
     AlreadyRegisteredError,
     CommandNotFoundError,
     CheckError,
@@ -192,7 +193,6 @@ class Bot:
         name: Optional[str] = None,
         *,
         description: Optional[str] = None,
-        prefix: Optional[str] = None,
         parent: Optional[str] = None,
         usage: Optional[str] = None,
         cooldown: Optional[tuple[int, float]] = None,
@@ -203,16 +203,13 @@ class Bot:
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function name is used.
-        :param description: A brief description of the command.
-        :param prefix: The command prefix. If omitted, the bot's default prefix is used.
-        :param parent: The parent command name for subcommands.
-        :param usage: A usage string describing command arguments.
-        :param cooldown: A tuple defining (max_calls, per_seconds) for rate limiting.
-        :raises TypeError: If the decorated function is not a coroutine.
-        :raises ValueError: If a command with the same name is registered.
-        :return: Decorator that registers the command handler.
-        :rtype: Callback
+        ## Example
+
+        ```python
+        @bot.command(description="Returns pong!")
+        async def ping(ctx):
+            await ctx.reply("Pong!")
+        ```
         """
 
         def wrapper(func: Callback) -> Command:
@@ -220,12 +217,58 @@ class Bot:
                 func,
                 name=name,
                 description=description,
-                prefix=prefix,
+                prefix=self.prefix,
                 parent=parent,
                 usage=usage,
                 cooldown=cooldown,
             )
             return self.register_command(cmd)
+
+        return wrapper
+
+    def group(
+        self,
+        name: Optional[str] = None,
+        *,
+        description: Optional[str] = None,
+        parent: Optional[str] = None,
+        usage: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None,
+    ) -> GroupCallable:
+        """Decorator to register a coroutine function as a group handler.
+
+        The group name defaults to the function name unless
+        explicitly provided.
+
+        ## Example
+
+        ```python
+        @bot.group(description="Group of mathematical commands")
+        async def math(ctx):
+            await ctx.reply("You called !math")
+
+
+        @math.command()
+        async def add(ctx, a: int, b: int):
+            await ctx.reply(f"{a} + {b} = {a + b}")
+
+
+        @math.command()
+        async def subtract(ctx, a: int, b: int):
+            await ctx.reply(f"{a} - {b} = {a - b}")
+        """
+
+        def wrapper(func: Callback) -> Group:
+            group = Group(
+                func,
+                name=name,
+                description=description,
+                prefix=self.prefix,
+                parent=parent,
+                usage=usage,
+                cooldown=cooldown,
+            )
+            return self.register_group(group)
 
         return wrapper
 
@@ -260,6 +303,14 @@ class Bot:
         self.log.debug("command '%s' registered", cmd)
 
         return cmd
+
+    def register_group(self, group: Group) -> Group:
+        if group in self.commands:
+            raise GroupAlreadyRegisteredError(group)
+
+        self.commands[group.name] = group
+        self.log.debug("group '%s' registered", group)
+        return group
 
     def error(self, exception: Optional[type[Exception]] = None) -> Callable:
         """
