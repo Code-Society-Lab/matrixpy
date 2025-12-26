@@ -23,7 +23,7 @@ class Room:
 
     async def send(
         self,
-        message: str = "",
+        content: str = "",
         markdown: Optional[bool] = True,
         event: Optional[Event] = None,
         key: Optional[str] = None,
@@ -31,25 +31,28 @@ class Room:
         """
         Send a message to the room.
 
-        :param message: The message to send.
-        :type message: str
-        :param markdown: Whether to format the message as Markdown.
-        :type markdown: Optional[bool]
-        :param event: An event object to react to.
-        :type event: Optional[Event]
-        :param key: The reaction to the message.
-        :type key: Optional[str]
-
         :raises MatrixError: If sending the message fails.
         """
+
         try:
-            msg = Message(self.bot)
-            if key:
-                await msg.send_reaction(self.room_id, event, key)
-            else:
-                await msg.send(self.room_id, message, markdown)
+            message = Message(content, room=self, event=event)
+
+            await self.bot.client.room_send(
+                room_id=self.room_id,
+                message_type=message.message_type,
+                content=message.content,
+            )
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
+
+        # try:
+        #     msg = Message(self.bot)
+        #     if key:
+        #         await msg.send_reaction(self.room_id, event, key)
+        #     else:
+        #         await msg.send(self.room_id, message, markdown)
+        # except Exception as e:
+        #     raise MatrixError(f"Failed to send message: {e}")
 
     async def invite_user(self, user_id: str) -> None:
         """

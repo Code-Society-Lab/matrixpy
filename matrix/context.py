@@ -39,7 +39,7 @@ class Context:
         self.room_id: str = room.room_id
         self.room_name: str = room.name
 
-        # Command metdata
+        # Command metadata
         self.prefix: str = bot.prefix
         self.command: Optional[Command] = None
         self.subcommand: Optional[Command] = None

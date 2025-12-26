@@ -33,6 +33,7 @@ from .help import HelpCommand, DefaultHelpCommand
 from .scheduler import Scheduler
 
 from .errors import (
+    GroupAlreadyRegisteredError,
     AlreadyRegisteredError,
     CommandNotFoundError,
     CheckError,
@@ -260,6 +261,22 @@ class Bot:
         self.log.debug("command '%s' registered", cmd)
 
         return cmd
+
+    def group(self, **kwargs) -> GroupCallable:
+        """Decorator to register a custom error handler for the command."""
+
+        def wrapper(func: Callback) -> Group:
+            group = Group(func, prefix=self.prefix, **kwargs)
+            return self.register_group(group)
+        return wrapper
+
+    def register_group(self, group: Group) -> Group:
+        if group in self.commands:
+            raise GroupAlreadyRegisteredError(group)
+
+        self.commands[group.name] = group
+        self.log.debug("group '%s' registered", group)
+        return group
 
     def error(self, exception: Optional[type[Exception]] = None) -> Callable:
         """
