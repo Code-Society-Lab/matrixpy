@@ -14,10 +14,28 @@ ErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
 
 
 class Group(Command):
-    def __init__(self, callback: Callback, **kwargs: Any):
+    def __init__(
+        self,
+        callback: Callback,
+        *,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        prefix: Optional[str] = None,
+        parent: Optional[str] = None,
+        usage: Optional[str] = None,
+        cooldown: Optional[tuple[int, float]] = None,
+    ):
         self.commands: Dict[str, Command] = {}
 
-        super().__init__(callback, **kwargs)
+        super().__init__(
+            callback,
+            name=name,
+            description=description,
+            prefix=prefix,
+            parent=parent,
+            usage=usage,
+            cooldown=cooldown,
+        )
 
     def _build_usage(self) -> str:
         return f"{self.prefix}{self.name} [subcommand]"
