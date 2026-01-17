@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional, Any, List
 
 from .errors import MatrixError
 from .message import Message
+from .room import Room
 
 if TYPE_CHECKING:
     from .bot import Bot  # pragma: no cover
@@ -20,14 +21,14 @@ class Context:
     :param bot: The bot instance executing the command.
     :type bot: Bot
     :param room: The Matrix room where the event occurred.
-    :type room: MatrixRoom
+    :type room: Room
     :param event: The event that triggered the command or message.
     :type event: Event
 
     :raises MatrixError: If a Matrix operation fails.
     """
 
-    def __init__(self, bot: "Bot", room: MatrixRoom, event: Event):
+    def __init__(self, bot: "Bot", room: Room, event: Event):
         self.bot = bot
         self.room = room
         self.event = event
@@ -68,19 +69,17 @@ class Context:
         """Logger for instance specific to the current room or event."""
         return self.bot.log.getChild(self.room_id)
 
-    async def reply(self, message: str) -> None:
-        """
-        Send a message to the Matrix room.
-
-        :param message: The message to send.
-        :type message: str
-
-        :return: None
-        """
+    async def reply(
+        self,
+        content: str | None,
+        *,
+        raw: bool = False,
+        notice: bool = False,
+    ) -> Message:
+        """Send a message to the Matrix room."""
 
         try:
-            c = Message(self.bot)
-            await c.send(room_id=self.room_id, message=message)
+            return await self.room.send(content, raw=raw, notice=notice)
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
