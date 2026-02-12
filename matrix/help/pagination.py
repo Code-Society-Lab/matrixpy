@@ -1,6 +1,5 @@
 from typing import Optional, List, TypeVar, Generic
 
-
 T = TypeVar("T")
 
 
