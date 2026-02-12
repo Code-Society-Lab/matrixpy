@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, Optional
-from nio import AsyncClient, Event
+from nio import AsyncClient
 from matrix.content import ReactionContent, ReplyContent
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ class Message:
         self.body = body
         self.client = client
 
-    async def reply(self, body: str):
+    async def reply(self, body: str) -> "Message":
         content = ReplyContent(body, reply_to_event_id=self.id)
 
         resp = await self.client.room_send(

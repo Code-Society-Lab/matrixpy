@@ -39,7 +39,6 @@ from .errors import (
     CheckError,
 )
 
-
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]

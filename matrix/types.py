@@ -13,3 +13,5 @@ class Image:
     path: str
     filename: str
     mimetype: str
+    height: int
+    width: int
