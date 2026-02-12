@@ -1,6 +1,6 @@
 """A simple, developer-friendly library to create powerful Matrix bots."""
 
-__version__ = "1.0.3-alpha"
+__version__ = "1.0.4-alpha"
 
 from .bot import Bot
 from .group import Group
