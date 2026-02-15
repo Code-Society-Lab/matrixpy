@@ -98,7 +98,7 @@ class Command:
         :type func: Callback
         :raises TypeError: If the provided function is not a coroutine.
         """
-        if not asyncio.iscoroutinefunction(func):
+        if not inspect.iscoroutinefunction(func):
             raise TypeError("Commands must be coroutines")
 
         self._callback = func
@@ -134,19 +134,22 @@ class Command:
         return f"{self.prefix}{command_name} {params}"
 
     def _parse_arguments(self, ctx: "Context") -> list[Any]:
+        args = ctx.args
         parsed_args = []
 
         for i, param in enumerate(self.params):
             param_type = self.type_hints.get(param.name, str)
-
-            if i >= len(ctx.args):
+            if i >= len(args):
                 if param.default is not inspect.Parameter.empty:
                     parsed_args.append(param.default)
-                else:
-                    raise MissingArgumentError(param)
-                continue
+                    continue
+                raise MissingArgumentError(param)
 
-            converted_arg = param_type(ctx.args[i])
+            if param.kind is inspect.Parameter.VAR_POSITIONAL:
+                parsed_args.extend(param_type(arg) for arg in args[i:])
+                return parsed_args
+
+            converted_arg = param_type(args[i])
             parsed_args.append(converted_arg)
 
         return parsed_args
@@ -160,7 +163,7 @@ class Command:
 
         :raises TypeError: If the function is not a coroutine.
         """
-        if not asyncio.iscoroutinefunction(func):
+        if not inspect.iscoroutinefunction(func):
             raise TypeError("Checks must be coroutine")
 
         self.checks.append(func)
@@ -202,7 +205,7 @@ class Command:
         :raises TypeError: If the function is not a coroutine.
         """
 
-        if not asyncio.iscoroutinefunction(func):
+        if not inspect.iscoroutinefunction(func):
             raise TypeError("The hook must be a coroutine.")
 
         self._before_invoke_callback = func
@@ -217,7 +220,7 @@ class Command:
         :raises TypeError: If the function is not a coroutine.
         """
 
-        if not asyncio.iscoroutinefunction(func):
+        if not inspect.iscoroutinefunction(func):
             raise TypeError("The hook must be a coroutine.")
 
         self._after_invoke_callback = func
@@ -234,7 +237,7 @@ class Command:
         """
 
         def wrapper(func: ErrorCallback) -> Callable:
-            if not asyncio.iscoroutinefunction(func):
+            if not inspect.iscoroutinefunction(func):
                 raise TypeError("The error handler must be a coroutine.")
 
             if exception:
