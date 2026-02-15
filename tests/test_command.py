@@ -88,6 +88,22 @@ def test_parse_arguments():
         cmd._parse_arguments(ctx3)
 
 
+def test_parse_var_positional_arguments():
+    async def my_command(ctx, *words: str):
+        pass
+
+    cmd = Command(my_command)
+    ctx = DummyContext(args=["hello", "matrix", "world"])
+
+    args = cmd._parse_arguments(ctx)
+
+    assert args == ["hello", "matrix", "world"]
+
+    ctx2 = DummyContext(args=[])
+    with pytest.raises(MissingArgumentError):
+        cmd._parse_arguments(ctx2)
+
+
 @pytest.mark.asyncio
 async def test_command_call():
     called = False
