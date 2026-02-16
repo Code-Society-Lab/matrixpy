@@ -197,23 +197,31 @@ class HelpCommand(Command, ABC):
         if not args:
             return command_name, subcommand_name, page_number
 
-        if len(args) == 1 and isinstance(args[0], int):
-            page_number = args[0]
+        first_arg = args[0]
+        if len(args) == 1 and (
+            isinstance(first_arg, int)
+            or (isinstance(first_arg, str) and first_arg.isdigit())
+        ):
+            page_number = int(first_arg)
             return command_name, subcommand_name, page_number
 
-        if isinstance(args[0], str):
-            command_name = args[0]
-        else:
-            command_name = str(args[0])
+        command_name = str(first_arg)
 
         if len(args) >= 2:
-            if isinstance(args[1], int):
-                page_number = args[1]
+            second_arg = args[1]
+            if isinstance(second_arg, int) or (
+                isinstance(second_arg, str) and second_arg.isdigit()
+            ):
+                page_number = int(second_arg)
             else:
-                subcommand_name = args[1]
+                subcommand_name = str(second_arg)
 
-                if len(args) >= 3 and isinstance(args[2], int):
-                    page_number = args[2]
+                if len(args) >= 3:
+                    third_arg = args[2]
+                    if isinstance(third_arg, int) or (
+                        isinstance(third_arg, str) and third_arg.isdigit()
+                    ):
+                        page_number = int(third_arg)
 
         return command_name, subcommand_name, page_number
 
