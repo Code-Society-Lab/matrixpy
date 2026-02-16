@@ -1,4 +1,5 @@
 import time
+import inspect
 import asyncio
 import logging
 
@@ -113,7 +114,7 @@ class Bot:
 
         :raises TypeError: If the function is not a coroutine.
         """
-        if not asyncio.iscoroutinefunction(func):
+        if not inspect.iscoroutinefunction(func):
             raise TypeError("Checks must be coroutine")
 
         self.checks.append(func)
@@ -161,7 +162,7 @@ class Bot:
         """
 
         def wrapper(f: Callback) -> Callback:
-            if not asyncio.iscoroutinefunction(f):
+            if not inspect.iscoroutinefunction(f):
                 raise TypeError("Event handlers must be coroutines")
 
             if event_spec:
@@ -285,7 +286,7 @@ class Bot:
         """
 
         def wrapper(f: Callback) -> Callback:
-            if not asyncio.iscoroutinefunction(f):
+            if not inspect.iscoroutinefunction(f):
                 raise TypeError("Scheduled tasks must be coroutines")
 
             self.scheduler.schedule(cron, f)
@@ -324,7 +325,7 @@ class Bot:
         """
 
         def wrapper(func: ErrorCallback) -> Callable:
-            if not asyncio.iscoroutinefunction(func):
+            if not inspect.iscoroutinefunction(func):
                 raise TypeError("The error handler must be a coroutine.")
 
             if exception:
@@ -345,7 +346,7 @@ class Bot:
             if not attr.startswith("on_"):
                 continue
             coro = getattr(self, attr, None)
-            if asyncio.iscoroutinefunction(coro):
+            if inspect.iscoroutinefunction(coro):
                 try:
                     self.event(coro)
                 except ValueError:  # ignore unknown name
