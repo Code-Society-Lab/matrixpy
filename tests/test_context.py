@@ -146,9 +146,7 @@ async def test_reply_with_file__expect_file_message_sent(context, client):
     client.room_send = AsyncMock(return_value=mock_response)
 
     file = File(
-        filename="doc.pdf",
-        path="mxc://example.com/abc",
-        mimetype="application/pdf"
+        filename="doc.pdf", path="mxc://example.com/abc", mimetype="application/pdf"
     )
 
     await context.reply(file=file)
@@ -172,7 +170,7 @@ async def test_reply_with_image__expect_image_message_sent(context, client):
         path="mxc://example.com/xyz",
         mimetype="image/jpeg",
         width=800,
-        height=600
+        height=600,
     )
 
     await context.reply(image=image)

@@ -31,12 +31,7 @@ def room(matrix_room, client):
 
 @pytest.fixture
 def message(room, client):
-    return Message(
-        room=room,
-        event_id="$event123",
-        body="Hello world!",
-        client=client
-    )
+    return Message(room=room, event_id="$event123", body="Hello world!", client=client)
 
 
 @pytest.mark.asyncio
@@ -119,8 +114,7 @@ async def test_delete__expect_message_redacted(message, client):
     await message.delete()
 
     client.room_redact.assert_awaited_once_with(
-        room_id="!room:example.com",
-        event_id="$event123"
+        room_id="!room:example.com", event_id="$event123"
     )
 
 

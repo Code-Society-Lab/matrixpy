@@ -112,7 +112,7 @@ async def test_send_file__expect_file_message(room, client):
     file = File(
         filename="document.pdf",
         path="mxc://example.com/abc123",
-        mimetype="application/pdf"
+        mimetype="application/pdf",
     )
 
     await room.send(file=file)
@@ -139,7 +139,7 @@ async def test_send_image__expect_image_message_with_dimensions(room, client):
         path="mxc://example.com/xyz789",
         mimetype="image/jpeg",
         width=800,
-        height=600
+        height=600,
     )
 
     await room.send(image=image)
@@ -177,8 +177,7 @@ async def test_invite_user__expect_successful_invitation(room, client):
     await room.invite_user("@alice:example.com")
 
     client.room_invite.assert_awaited_once_with(
-        room_id="!room:example.com",
-        user_id="@alice:example.com"
+        room_id="!room:example.com", user_id="@alice:example.com"
     )
 
 
@@ -199,9 +198,7 @@ async def test_ban_user_without_reason__expect_successful_ban(room, client):
     await room.ban_user("@spammer:example.com")
 
     client.room_ban.assert_awaited_once_with(
-        room_id="!room:example.com",
-        user_id="@spammer:example.com",
-        reason=None
+        room_id="!room:example.com", user_id="@spammer:example.com", reason=None
     )
 
 
@@ -215,7 +212,7 @@ async def test_ban_user_with_reason__expect_successful_ban_with_reason(room, cli
     client.room_ban.assert_awaited_once_with(
         room_id="!room:example.com",
         user_id="@spammer:example.com",
-        reason="Spam and harassment"
+        reason="Spam and harassment",
     )
 
 
@@ -236,8 +233,7 @@ async def test_unban_user__expect_successful_unban(room, client):
     await room.unban_user("@alice:example.com")
 
     client.room_unban.assert_awaited_once_with(
-        room_id="!room:example.com",
-        user_id="@alice:example.com"
+        room_id="!room:example.com", user_id="@alice:example.com"
     )
 
 
@@ -258,9 +254,7 @@ async def test_kick_user_without_reason__expect_successful_kick(room, client):
     await room.kick_user("@troublemaker:example.com")
 
     client.room_kick.assert_awaited_once_with(
-        room_id="!room:example.com",
-        user_id="@troublemaker:example.com",
-        reason=None
+        room_id="!room:example.com", user_id="@troublemaker:example.com", reason=None
     )
 
 
@@ -274,7 +268,7 @@ async def test_kick_user_with_reason__expect_successful_kick_with_reason(room, c
     client.room_kick.assert_awaited_once_with(
         room_id="!room:example.com",
         user_id="@troublemaker:example.com",
-        reason="Violating rules"
+        reason="Violating rules",
     )
 
 
