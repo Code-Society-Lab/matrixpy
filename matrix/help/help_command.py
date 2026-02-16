@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Union, Optional, List
 from abc import ABC, abstractmethod
 
 from matrix.context import Context
@@ -222,8 +222,8 @@ class HelpCommand(Command, ABC):
     async def execute(
         self,
         ctx: Context,
-        cmd_or_page: str | None = None,
-        subcommand: str | None = None,
+        cmd_or_page: Union[str, int, None] = None,
+        subcommand: Union[str | None] = None,
     ) -> None:
         """
         Execute the help command using show_command_help and show_group_help.
