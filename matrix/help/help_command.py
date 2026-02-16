@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Union, Optional, List
 from abc import ABC, abstractmethod
 
 from matrix.context import Context
@@ -187,13 +187,9 @@ class HelpCommand(Command, ABC):
         await ctx.reply(help_message)
 
     def parse_help_arguments(
-        self, args: List[str]
+        self, args: List[str | int]
     ) -> tuple[Optional[str], Optional[str], int]:
-        """Parse help command arguments to determine what to show.
-
-        :param args: List of arguments passed to help command
-        :return: Tuple of (command_name, subcommand_name, page_number)
-        """
+        """Parse help command arguments to determine what to show."""
         command_name = None
         subcommand_name = None
         page_number = 1
@@ -201,29 +197,39 @@ class HelpCommand(Command, ABC):
         if not args:
             return command_name, subcommand_name, page_number
 
-        # Check if first argument is a page number
-        if len(args) == 1 and args[0].isdigit():
-            page_number = int(args[0])
+        first_arg = args[0]
+        if len(args) == 1 and (
+            isinstance(first_arg, int)
+            or (isinstance(first_arg, str) and first_arg.isdigit())
+        ):
+            page_number = int(first_arg)
             return command_name, subcommand_name, page_number
 
-        command_name = args[0]
+        command_name = str(first_arg)
 
         if len(args) >= 2:
-            if args[1].isdigit():
-                page_number = int(args[1])
+            second_arg = args[1]
+            if isinstance(second_arg, int) or (
+                isinstance(second_arg, str) and second_arg.isdigit()
+            ):
+                page_number = int(second_arg)
             else:
-                subcommand_name = args[1]
+                subcommand_name = str(second_arg)
 
-                if len(args) >= 3 and args[2].isdigit():
-                    page_number = int(args[2])
+                if len(args) >= 3:
+                    third_arg = args[2]
+                    if isinstance(third_arg, int) or (
+                        isinstance(third_arg, str) and third_arg.isdigit()
+                    ):
+                        page_number = int(third_arg)
 
         return command_name, subcommand_name, page_number
 
     async def execute(
         self,
         ctx: Context,
-        cmd_or_page: str | None = None,
-        subcommand: str | None = None,
+        cmd_or_page: Union[str, int, None] = None,
+        subcommand: Union[str | None] = None,
     ) -> None:
         """
         Execute the help command using show_command_help and show_group_help.

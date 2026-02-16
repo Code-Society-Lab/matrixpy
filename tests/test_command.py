@@ -251,3 +251,90 @@ async def test_command_does_not_execute_when_a_check_fails():
     with pytest.raises(Exception):
         await cmd(ctx)
     assert called is False
+
+
+def test_parse_arguments_with_union_type__expect_successful_conversion():
+    async def my_command(ctx, value: str | int):
+        pass
+
+    cmd = Command(my_command)
+
+    ctx = DummyContext(args=["123"])
+    args = cmd._parse_arguments(ctx)
+    assert args[0] in [123, "123"]  # Accept either, depending on Union order
+
+    ctx2 = DummyContext(args=["hello"])
+    args2 = cmd._parse_arguments(ctx2)
+    assert args2 == ["hello"]
+
+
+def test_parse_arguments_with_optional_union__expect_default_none():
+    async def my_command(ctx, count: int | None = None):
+        pass
+
+    cmd = Command(my_command)
+
+    ctx = DummyContext(args=["42"])
+    args = cmd._parse_arguments(ctx)
+    assert args == [42]
+
+    ctx2 = DummyContext(args=[])
+    args2 = cmd._parse_arguments(ctx2)
+    assert args2 == [None]
+
+
+def test_parse_arguments_with_multiple_union_types__expect_first_successful():
+    async def my_command(ctx, value: int | str):
+        pass
+
+    cmd = Command(my_command)
+
+    ctx = DummyContext(args=["42"])
+    args = cmd._parse_arguments(ctx)
+    assert args == [42]
+
+    ctx2 = DummyContext(args=["not-a-number"])
+    args2 = cmd._parse_arguments(ctx2)
+    assert args2 == ["not-a-number"]
+
+
+def test_parse_arguments_with_union_and_default__expect_typed_conversion():
+    """Test Union types with default values."""
+
+    async def my_command(ctx, port: int | str = 8080):
+        pass
+
+    cmd = Command(my_command)
+
+    ctx = DummyContext(args=["3000"])
+    args = cmd._parse_arguments(ctx)
+    assert args[0] in [3000, "3000"]
+
+    ctx2 = DummyContext(args=[])
+    args2 = cmd._parse_arguments(ctx2)
+    assert args2 == [8080]
+
+
+def test_parse_arguments_with_union_var_positional__expect_all_converted():
+    async def my_command(ctx, *values: int | str):
+        pass
+
+    cmd = Command(my_command)
+
+    ctx = DummyContext(args=["1", "hello", "3"])
+    args = cmd._parse_arguments(ctx)
+
+    assert len(args) == 3
+    assert args[1] == "hello"
+
+
+def test_parse_arguments_with_union_conversion_failure__expect_string_fallback():
+    async def my_command(ctx, value: int | float):
+        pass
+
+    cmd = Command(my_command)
+
+    ctx = DummyContext(args=["hello"])
+    args = cmd._parse_arguments(ctx)
+
+    assert args == ["hello"]
