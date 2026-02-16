@@ -14,19 +14,9 @@ if TYPE_CHECKING:
 
 
 class Context:
-    """
-    Represents the context in which a command is executed. Provides
+    """Represents the context in which a command is executed. Provides
     access to the bot instance, room and event metadata, parsed arguments,
     and other utilities.
-
-    :param bot: The bot instance executing the command.
-    :type bot: Bot
-    :param room: The Matrix room where the event occurred.
-    :type room: Room
-    :param event: The event that triggered the command or message.
-    :type event: Event
-
-    :raises MatrixError: If a Matrix operation fails.
     """
 
     def __init__(self, bot: "Bot", room: Room, event: Event):
@@ -137,6 +127,21 @@ class Context:
             raise MatrixError(f"Failed to send message: {e}")
 
     async def send_help(self) -> None:
+        """Send help from the current command context.
+
+        Displays help text for the current subcommand, command, or the bot's
+        general help menu depending on what's available in the context. The help
+        hierarchy is: subcommand help > command help > bot help.
+
+        ## Example
+
+        ```python
+        @bot.group()
+        async def config(ctx: Context):
+            # If user runs just "!config" with no subcommand
+            await ctx.send_help()
+        ```
+        """
         if self.subcommand:
             await self.reply(self.subcommand.help)
             return
