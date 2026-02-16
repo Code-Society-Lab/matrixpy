@@ -52,6 +52,25 @@ class ReplyContent(TextContent):
 
 
 @dataclass
+class EditContent(TextContent):
+    original_event_id: str
+
+    def build(self) -> dict:
+        return {
+            "msgtype": self.msgtype,
+            "body": f"* {self.body}",
+            "m.new_content": {
+                "msgtype": "m.text",
+                "body": self.body,
+            },
+            "m.relates_to": {
+                "rel_type": "m.replace",
+                "event_id": self.original_event_id,
+            },
+        }
+
+
+@dataclass
 class FileContent(BaseMessageContent):
     msgtype = "m.file"
     filename: str

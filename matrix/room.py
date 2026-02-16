@@ -1,16 +1,17 @@
-from typing import Optional, Any
+from typing import Any
 
-from aiohttp import payload_type
 from nio import AsyncClient, MatrixRoom
-from .errors import MatrixError
-from .message import Message
-from .content import (
+
+from matrix.errors import MatrixError
+from matrix.message import Message
+from matrix.content import (
     TextContent,
     MarkdownMessage,
     NoticeContent,
     FileContent,
     ImageContent,
     BaseMessageContent,
+    ReplyContent,
 )
 from matrix.types import File, Image
 
@@ -125,7 +126,12 @@ class Room:
         raise ValueError("You must provide content, file, or image to send.")
 
     async def send_text(
-        self, content: str, *, raw: bool = False, notice: bool = False
+        self,
+        content: str,
+        *,
+        raw: bool = False,
+        notice: bool = False,
+        reply_to: str | None = None,
     ) -> Message:
         """Send a text message to the room.
 
@@ -144,11 +150,16 @@ class Room:
 
         # Send a notice message
         await room.send_text("Bot restarted successfully", notice=True)
+
+        # Reply to another message
+        await room.send_text("Bot restarted successfully", replay_to=message.id)
         ```
         """
-        payload: NoticeContent | TextContent | MarkdownMessage
+        payload: TextContent
 
-        if notice:
+        if reply_to:
+            payload = ReplyContent(content, reply_to_event_id=reply_to)
+        elif notice:
             payload = NoticeContent(content)
         elif raw:
             payload = TextContent(content)
