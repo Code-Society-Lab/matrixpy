@@ -93,7 +93,10 @@ class Room:
 
         This is a convenience method that automatically routes to the appropriate
         send method based on the provided arguments. Supports text messages (with
-        optional markdown formatting), file uploads, and image uploads.
+        optional markdown formatting) and file uploads (including images, videos, and audio).
+
+        For detailed text message examples, see `Room.send_text()`.
+        For detailed file upload examples, see `Room.send_file()`.
 
         ## Example
 
@@ -101,18 +104,12 @@ class Room:
         # Send a markdown-formatted text message
         await room.send("Hello **world**!")
 
-        # Send raw text without markdown
-        await room.send("Hello world!", raw=True)
-
-        # Send a notice message
-        await room.send("Bot is starting up...", notice=True)
-
         # Send a file
-        file = File(filename="document.pdf", path="mxc://...", mimetype="application/pdf")
+        file = File(path="mxc://...", filename="document.pdf", mimetype="application/pdf")
         await room.send(file=file)
 
         # Send an image
-        image = Image(filename="photo.jpg", path="mxc://...", mimetype="image/jpeg", width=800, height=600)
+        image = Image(path="mxc://...", filename="photo.jpg", mimetype="image/jpeg", width=800, height=600)
         await room.send(file=image)
         ```
         """
@@ -121,7 +118,7 @@ class Room:
 
         if file:
             return await self.send_file(file)
-        raise ValueError("You must provide content, file, or image to send.")
+        raise ValueError("You must provide content or file.")
 
     async def send_text(
         self,
@@ -133,9 +130,9 @@ class Room:
     ) -> Message:
         """Send a text message to the room.
 
-        By default, messages are formatted using Markdown. You can send raw unformatted
-        text with `raw=True`, or send a notice message (typically used for bot status
-        updates) with `notice=True`.
+            By default, messages are formatted using Markdown. You can send raw unformatted
+            text with `raw=True`, or send a notice message (typically used for bot status
+            updates) with `notice=True`. Use `reply_to` to create a threaded reply.
 
         ## Example
 
@@ -150,7 +147,7 @@ class Room:
         await room.send_text("Bot restarted successfully", notice=True)
 
         # Reply to another message
-        await room.send_text("Bot restarted successfully", replay_to=message.id)
+        await room.send_text("Replying to you!", reply_to="$event_id")
         ```
         """
         payload: TextContent
@@ -167,24 +164,117 @@ class Room:
         return await self._send_payload(payload)
 
     async def send_file(self, file: File) -> Message:
-        """Send a file to the room.
+        """Send a file, image, video, or audio to the room.
 
-        The file must be uploaded to the Matrix content repository before sending.
-        Use the room's client upload method to get the MXC URI for the file.
+        Accepts any File object or its subclasses (Image, Video, Audio). The file must
+        be uploaded to the Matrix content repository before sending. Use the room's
+        client upload method to get the MXC URI.
+
+        The method automatically detects the file type and sends it with the appropriate
+        Matrix message type (m.file, m.image, m.video, or m.audio).
+
+        For more information on the upload method, see the matrix-nio documentation:
+        https://matrix-nio.readthedocs.io/en/latest/nio.html#nio.AsyncClient.upload
 
         ## Example
 
         ```python
-        # Upload file first, then send
-        with open("document.pdf", "rb") as f:
-            resp, _ = await room.client.upload(f, content_type="application/pdf")
+        import os
+
+        # Send a document
+        file_path = "document.pdf"
+        file_size = os.path.getsize(file_path)
+
+        with open(file_path, "rb") as f:
+            resp, _ = await room.client.upload(
+                f,
+                content_type="application/pdf",
+                filesize=file_size
+            )
 
         file = File(
-            filename="document.pdf",
             path=resp.content_uri,
+            filename="document.pdf",
             mimetype="application/pdf"
         )
         await room.send_file(file)
+
+        # Send an image
+        from PIL import Image as PILImage
+
+        image_path = "photo.jpg"
+
+        with PILImage.open(image_path) as img:
+            width, height = img.size
+
+        file_size = os.path.getsize(image_path)
+
+        with open(image_path, "rb") as f:
+            resp, _ = await room.client.upload(
+                f,
+                content_type="image/jpeg",
+                filesize=file_size
+            )
+
+        image = Image(
+            path=resp.content_uri,
+            filename="photo.jpg",
+            mimetype="image/jpeg",
+            width=width,
+            height=height
+        )
+        await room.send_file(image)
+
+        # Send a video
+        import cv2
+
+        video_path = "video.mp4"
+
+        cap = cv2.VideoCapture(video_path)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = int((frame_count / fps) * 1000)
+        cap.release()
+
+        file_size = os.path.getsize(video_path)
+
+        with open(video_path, "rb") as f:
+            resp, _ = await room.client.upload(
+                f,
+                content_type="video/mp4",
+                filesize=file_size
+            )
+
+        video = Video(
+            path=resp.content_uri,
+            filename="video.mp4",
+            mimetype="video/mp4",
+            width=width,
+            height=height,
+            duration=duration
+        )
+        await room.send_file(video)
+
+        # Send audio
+        audio_path = "audio.mp3"
+        file_size = os.path.getsize(audio_path)
+
+        with open(audio_path, "rb") as f:
+            resp, _ = await room.client.upload(
+                f,
+                content_type="audio/mpeg",
+                filesize=file_size
+            )
+
+        audio = Audio(
+            path=resp.content_uri,
+            filename="audio.mp3",
+            mimetype="audio/mpeg",
+            duration=180000  # 3 minutes in milliseconds
+        )
+        await room.send_file(audio)
         ```
         """
         payload: FileContent
