@@ -1,6 +1,11 @@
 """A simple, developer-friendly library to create powerful Matrix bots."""
 
-__version__ = "1.0.4-alpha"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("matrix-python")
+except PackageNotFoundError:
+    from matrix._version import version as __version__
 
 from .bot import Bot
 from .group import Group
