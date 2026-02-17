@@ -1,15 +1,18 @@
-import asyncio
 import inspect
+import types
 
 from typing import (
     TYPE_CHECKING,
     Any,
+    Union,
     Optional,
     Callable,
     Coroutine,
     List,
     get_type_hints,
     DefaultDict,
+    get_args,
+    get_origin,
 )
 
 from .errors import MissingArgumentError, CheckError, CooldownError
@@ -139,6 +142,7 @@ class Command:
 
         for i, param in enumerate(self.params):
             param_type = self.type_hints.get(param.name, str)
+
             if i >= len(args):
                 if param.default is not inspect.Parameter.empty:
                     parsed_args.append(param.default)
@@ -146,13 +150,37 @@ class Command:
                 raise MissingArgumentError(param)
 
             if param.kind is inspect.Parameter.VAR_POSITIONAL:
-                parsed_args.extend(param_type(arg) for arg in args[i:])
+                parsed_args.extend(
+                    self._convert_type(param_type, arg) for arg in args[i:]
+                )
                 return parsed_args
 
-            converted_arg = param_type(args[i])
+            converted_arg = self._convert_type(param_type, args[i])
             parsed_args.append(converted_arg)
 
         return parsed_args
+
+    def _convert_type(self, param_type: type, value: str) -> Any:
+        origin = get_origin(param_type)
+
+        if origin is Union or isinstance(param_type, types.UnionType):
+            union_types = get_args(param_type)
+
+            for union_type in union_types:
+                if union_type is type(None):
+                    continue
+
+                try:
+                    return union_type(value)
+                except (ValueError, TypeError):
+                    continue
+
+            return value
+
+        try:
+            return param_type(value)
+        except (ValueError, TypeError):
+            return value
 
     def check(self, func: Callback) -> None:
         """
