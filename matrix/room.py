@@ -5,15 +5,17 @@ from nio import AsyncClient, MatrixRoom
 from matrix.errors import MatrixError
 from matrix.message import Message
 from matrix.content import (
+    BaseMessageContent,
     TextContent,
     MarkdownMessage,
     NoticeContent,
+    ReplyContent,
     FileContent,
     ImageContent,
-    BaseMessageContent,
-    ReplyContent,
+    AudioContent,
+    VideoContent,
 )
-from matrix.types import File, Image
+from matrix.types import File, Image, Audio, Video
 
 
 class Room:
@@ -86,7 +88,6 @@ class Room:
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
-        image: Image | None = None,
     ) -> Message:
         """Send a message to the room.
 
@@ -112,7 +113,7 @@ class Room:
 
         # Send an image
         image = Image(filename="photo.jpg", path="mxc://...", mimetype="image/jpeg", width=800, height=600)
-        await room.send(image=image)
+        await room.send(file=image)
         ```
         """
         if content:
@@ -120,9 +121,6 @@ class Room:
 
         if file:
             return await self.send_file(file)
-
-        if image:
-            return await self.send_image(image)
         raise ValueError("You must provide content, file, or image to send.")
 
     async def send_text(
@@ -189,47 +187,38 @@ class Room:
         await room.send_file(file)
         ```
         """
-        payload = FileContent(
-            filename=file.filename, url=file.path, mimetype=file.mimetype
-        )
-        return await self._send_payload(payload)
+        payload: FileContent
 
-    async def send_image(self, image: Image) -> Message:
-        """Send an image to the room.
+        match file:
+            case Image():
+                payload = ImageContent(
+                    filename=file.filename,
+                    url=file.path,
+                    mimetype=file.mimetype,
+                    height=file.height,
+                    width=file.width,
+                )
+            case Audio():
+                payload = AudioContent(
+                    filename=file.filename,
+                    url=file.path,
+                    mimetype=file.mimetype,
+                    duration=file.duration,
+                )
+            case Video():
+                payload = VideoContent(
+                    filename=file.filename,
+                    url=file.path,
+                    mimetype=file.mimetype,
+                    height=file.height,
+                    width=file.width,
+                    duration=file.duration,
+                )
+            case _:
+                payload = FileContent(
+                    filename=file.filename, url=file.path, mimetype=file.mimetype
+                )
 
-        The image must be uploaded to the Matrix content repository before sending.
-        Use the room's client upload method to get the MXC URI for the image.
-
-        ## Example
-
-        ```python
-        from PIL import Image as PILImage
-
-        # Get image dimensions
-        with PILImage.open("photo.jpg") as img:
-            width, height = img.size
-
-        # Upload image first
-        with open("photo.jpg", "rb") as f:
-            resp, _ = await room.client.upload(f, content_type="image/jpeg")
-
-        image = Image(
-            filename="photo.jpg",
-            path=resp.content_uri,
-            mimetype="image/jpeg",
-            width=width,
-            height=height
-        )
-        await room.send_image(image)
-        ```
-        """
-        payload = ImageContent(
-            filename=image.filename,
-            url=image.path,
-            mimetype=image.mimetype,
-            height=image.height,
-            width=image.width,
-        )
         return await self._send_payload(payload)
 
     async def _send_payload(self, payload: BaseMessageContent) -> Message:

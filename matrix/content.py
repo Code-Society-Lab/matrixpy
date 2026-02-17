@@ -87,11 +87,8 @@ class FileContent(BaseMessageContent):
 
 
 @dataclass
-class ImageContent(BaseMessageContent):
+class ImageContent(FileContent):
     msgtype = "m.image"
-    filename: str
-    url: str
-    mimetype: str
     height: int = 0
     width: int = 0
 
@@ -109,11 +106,8 @@ class ImageContent(BaseMessageContent):
 
 
 @dataclass
-class AudioContent(BaseMessageContent):
+class AudioContent(FileContent):
     msgtype = "m.audio"
-    filename: str
-    url: str
-    mimetype: str
     duration: int = 0
 
     def build(self) -> dict:
@@ -129,11 +123,8 @@ class AudioContent(BaseMessageContent):
 
 
 @dataclass
-class VideoContent(BaseMessageContent):
+class VideoContent(FileContent):
     msgtype = "m.video"
-    filename: str
-    url: str
-    mimetype: str
     height: int = 0
     width: int = 0
     duration: int = 0
