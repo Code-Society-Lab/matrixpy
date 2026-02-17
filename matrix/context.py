@@ -63,35 +63,25 @@ class Context:
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
-        image: Image | None = None,
     ) -> Message:
         """Reply to the command with a message.
+
+        This is a convenience method that sends a message to the room where the
+        command was invoked. Supports text messages (with optional markdown
+        formatting) and file uploads (including images, videos, and audio).
+
+        See `Room.send()` for detailed usage examples and documentation.
 
         ## Example
 
         ```python
         @bot.command()
         async def hello(ctx: Context):
-            # Send a markdown-formatted reply
             await ctx.reply("Hello **world**!")
 
         @bot.command()
         async def status(ctx: Context):
-            # Send a notice message
             await ctx.reply("Bot is online!", notice=True)
-
-        @bot.command()
-        async def document(ctx: Context):
-            # Upload and send a file
-            with open("report.pdf", "rb") as f:
-                resp, _ = await ctx.room.client.upload(f, content_type="application/pdf")
-
-            file = File(
-                filename="report.pdf",
-                path=resp.content_uri,
-                mimetype="application/pdf"
-            )
-            await ctx.reply(file=file)
 
         @bot.command()
         async def cat(ctx: Context):
@@ -105,13 +95,13 @@ class Context:
                 resp, _ = await ctx.room.client.upload(f, content_type="image/jpeg")
 
             image = Image(
-                filename="cat.jpg",
                 path=resp.content_uri,
+                filename="cat.jpg",
                 mimetype="image/jpeg",
                 width=width,
                 height=height
             )
-            await ctx.reply(image=image)
+            await ctx.reply(file=image)
         ```
         """
 
@@ -121,7 +111,6 @@ class Context:
                 raw=raw,
                 notice=notice,
                 file=file,
-                image=image,
             )
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
