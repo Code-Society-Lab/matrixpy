@@ -337,15 +337,9 @@ class Bot:
         return wrapper
 
     def get_room(self, room_id: str) -> Room:
-        """
-        Retrieve a Room instance based on the room_id.
-
-        :param room_id: The ID of the room to retrieve.
-        :type room_id: str
-        :return: An instance of the Room class.
-        :rtype: Room
-        """
-        return Room(room_id=room_id, bot=self)
+        """Retrieve a Room instance based on the room_id."""
+        matrix_room = self.client.rooms[room_id]
+        return Room(matrix_room=matrix_room, client=self.client)
 
     def _auto_register_events(self) -> None:
         for attr in dir(self):
@@ -390,8 +384,9 @@ class Bot:
 
             await ctx.command(ctx)
 
-    async def _build_context(self, room: MatrixRoom, event: Event) -> Context:
+    async def _build_context(self, matrix_room: MatrixRoom, event: Event) -> Context:
         """Builds the base context and extracts the command from the event"""
+        room = self.get_room(matrix_room.room_id)
         ctx = Context(bot=self, room=room, event=event)
 
         if not self.prefix or not ctx.body.startswith(self.prefix):

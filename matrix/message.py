@@ -1,134 +1,131 @@
+from typing import TYPE_CHECKING
+from nio import AsyncClient
+from matrix.content import ReactionContent, EditContent
 from matrix.errors import MatrixError
-import markdown
-from typing import TYPE_CHECKING, Dict, Optional
-from nio import Event
 
 if TYPE_CHECKING:
-    from .bot import Bot  # pragma: no cover
+    from .room import Room  # pragma: no cover
 
 
 class Message:
-    """
-    Handle sending messages in a Matrix room.
+    """Represents a Matrix message with methods to interact with it."""
 
-    This class provides methods to send messages to a Matrix room, including
-    formatting the message content as either plain text or HTML.
-
-    :param bot: The bot instance to use for messages.
-    :type bot: Bot
-    """
-
-    MESSAGE_TYPE = "m.room.message"
-    MATRIX_CUSTOM_HTML = "org.matrix.custom.html"
-    TEXT_MESSAGE_TYPE = "m.text"
-
-    def __init__(self, bot: "Bot") -> None:
-        self.bot = bot
-
-    async def _send_to_room(
-        self, room_id: str, content: Dict, message_type: str = MESSAGE_TYPE
+    def __init__(
+        self, *, room: "Room", event_id: str, body: str | None, client: AsyncClient
     ) -> None:
-        """
-        Send a message to the Matrix room.
+        self._room = room
+        self._event_id = event_id
+        self._body = body
+        self._client = client
 
-        :param room_id: The ID of the room to send the message to.
-        :type room_id: str
-        :param content: The matrix JSON payload.
-        :type content: Dict
-        :param message_type: The type of the message.
-        :type message_type: str
+    @property
+    def room(self) -> "Room":
+        """The room this message was sent in."""
+        return self._room
 
-        :raise MatrixError: If sending the message fails.
+    @property
+    def id(self) -> str:
+        """The event ID of this message."""
+        return self._event_id
+
+    @property
+    def event_id(self) -> str:
+        """The event ID of this message (alias for id)."""
+        return self._event_id
+
+    @property
+    def body(self) -> str | None:
+        """The text content of this message."""
+        return self._body
+
+    @property
+    def client(self) -> AsyncClient:
+        """The Matrix client."""
+        return self._client
+
+    async def reply(self, body: str) -> "Message":
+        """Reply to this message.
+
+        Creates a threaded reply to this message in the same room.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def echo(ctx: Context):
+            msg = await ctx.reply("Echo!")
+            await msg.reply("Replying to my own message")
+        ```
         """
         try:
-            await self.bot.client.room_send(
-                room_id=room_id,
-                message_type=message_type,
-                content=content,
+            return await self.room.send_text(content=body, reply_to=self.id)
+        except Exception as e:
+            raise MatrixError(f"Failed to send reply: {e}")
+
+    async def react(self, emoji: str) -> None:
+        """Add a reaction emoji to this message.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def thumbsup(ctx: Context):
+            msg = await ctx.reply("React to this!")
+            await msg.react("👍")
+        ```
+        """
+        content = ReactionContent(event_id=self.id, emoji=emoji)
+
+        try:
+            await self.client.room_send(
+                room_id=self.room.room_id,
+                message_type="m.reaction",
+                content=content.build(),
             )
         except Exception as e:
-            raise MatrixError(f"Failed to send message: {e}")
+            raise MatrixError(f"Failed to add reaction: {e}")
 
-    def _make_content(
-        self,
-        body: str = "",
-        html: Optional[bool] = None,
-        reaction: Optional[bool] = None,
-        event_id: Optional[str] = None,
-        key: Optional[str] = None,
-    ) -> Dict:
+    async def edit(self, new_body: str) -> None:
+        """Updates the message content to the new text.
+
+        ## Example
+
+        ```python
+        @bot.command()
+        async def typo(ctx: Context):
+            msg = await ctx.reply("Helo world!")
+            await msg.edit("Hello world!")
+        ```
         """
-        Create the content dictionary for a message.
+        content = EditContent(new_body, original_event_id=self.id)
 
-        :param body: The body of the message.
-        :type body: str
-        :param html: Wheter to format the message as HTML.
-        :type html: Optional[bool]
-        :param reaction: Wheter to format the context with a reaction event.
-        :type reaction: Optional[bool]
-        :param event_id: The ID of the event to react to.
-        :type event_id: Optional[str]
-        :param key: The reaction to the message.
-        :type key: Optional[str]
+        try:
+            await self.client.room_send(
+                room_id=self.room.room_id,
+                message_type="m.room.message",
+                content=content.build(),
+            )
+            self._body = new_body
+        except Exception as e:
+            raise MatrixError(f"Failed to edit message: {e}")
 
-        :return: The content of the dictionary.
+    async def delete(self) -> None:
+        """Removes the message content from the room. This action cannot be undone.
+
+        ## Example
+
+        ```python
+        @bot.command()
+        async def oops(ctx: Context):
+            msg = await ctx.reply("Secret info!")
+            await msg.delete()
+        ```
         """
+        try:
+            await self.client.room_redact(
+                room_id=self.room.room_id,
+                event_id=self.id,
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to delete message: {e}")
 
-        base: Dict = {
-            "msgtype": self.TEXT_MESSAGE_TYPE,
-            "body": body,
-        }
-        if html:
-            html_body = markdown.markdown(body, extensions=["nl2br"])
-            base["format"] = self.MATRIX_CUSTOM_HTML
-            base["formatted_body"] = html_body
-
-        if reaction:
-            base["m.relates_to"] = {
-                "event_id": event_id,
-                "key": key,
-                "rel_type": "m.annotation",
-            }
-
-        return base
-
-    async def send(
-        self, room_id: str, message: str, format_markdown: Optional[bool] = True
-    ) -> None:
-        """
-        Send a message to a Matrix room.
-
-        :param room_id: The ID of the room to send the message to.
-        :type room_id: str
-        :param message: The message to send.
-        :type message: str
-        :param format_markdown: Whether to format the message as Markdown
-            (default to True).
-        :type format_markdown: Optional[bool]
-        """
-        await self._send_to_room(
-            room_id=room_id,
-            content=self._make_content(body=str(message), html=format_markdown),
-        )
-
-    async def send_reaction(self, room_id: str, event: Event, key: str) -> None:
-        """
-        Send a reaction to a message from a user in a Matrix room.
-
-        :param room_id: The ID of the room to send the message to.
-        :type room_id: str
-        :param event: The event object to react to.
-        :type event: Event
-        :param key: The reaction to the message.
-        :type key: str
-        """
-        if isinstance(event, Event):
-            event_id = event.event_id
-        else:
-            event_id = event
-
-        await self._send_to_room(
-            room_id=room_id,
-            content=self._make_content(event_id=event_id, key=key, reaction=True),
-            message_type="m.reaction",
-        )
+    def __repr__(self) -> str:
+        return f"<Message id={self.id!r} body={self.body!r}>"

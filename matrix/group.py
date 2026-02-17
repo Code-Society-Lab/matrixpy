@@ -77,7 +77,7 @@ class Group(Command):
         return cmd
 
     async def invoke(self, ctx: "Context") -> None:
-        if subcommand := ctx.args.pop(0):
+        if ctx.args and (subcommand := ctx.args.pop(0)):
             ctx.subcommand = self.get_command(subcommand)
             await ctx.subcommand(ctx)
         else:
