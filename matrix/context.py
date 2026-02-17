@@ -63,7 +63,6 @@ class Context:
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
-        image: Image | None = None,
     ) -> Message:
         """Reply to the command with a message.
 
@@ -121,7 +120,6 @@ class Context:
                 raw=raw,
                 notice=notice,
                 file=file,
-                image=image,
             )
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")

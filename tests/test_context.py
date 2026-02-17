@@ -173,7 +173,7 @@ async def test_reply_with_image__expect_image_message_sent(context, client):
         height=600,
     )
 
-    await context.reply(image=image)
+    await context.reply(file=image)
 
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]

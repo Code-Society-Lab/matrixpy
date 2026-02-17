@@ -110,8 +110,8 @@ async def test_send_file__expect_file_message(room, client):
     client.room_send.return_value = mock_response
 
     file = File(
-        filename="document.pdf",
         path="mxc://example.com/abc123",
+        filename="document.pdf",
         mimetype="application/pdf",
     )
 
@@ -135,14 +135,14 @@ async def test_send_image__expect_image_message_with_dimensions(room, client):
     client.room_send.return_value = mock_response
 
     image = Image(
-        filename="photo.jpg",
         path="mxc://example.com/xyz789",
+        filename="photo.jpg",
         mimetype="image/jpeg",
         width=800,
         height=600,
     )
 
-    await room.send(image=image)
+    await room.send(file=image)
 
     client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
@@ -155,8 +155,66 @@ async def test_send_image__expect_image_message_with_dimensions(room, client):
 
 
 @pytest.mark.asyncio
+async def test_send_video__expect_video_message_with_metadata(room, client):
+    from matrix.types import Video
+
+    client.room_send = AsyncMock()
+    mock_response = Mock()
+    mock_response.event_id = "$event123"
+    client.room_send.return_value = mock_response
+
+    video = Video(
+        path="mxc://example.com/video123",
+        filename="clip.mp4",
+        mimetype="video/mp4",
+        width=1920,
+        height=1080,
+        duration=30000,
+    )
+
+    await room.send(file=video)
+
+    client.room_send.assert_awaited_once()
+    call_args = client.room_send.call_args
+    content = call_args.kwargs["content"]
+    assert content["msgtype"] == "m.video"
+    assert content["body"] == "clip.mp4"
+    assert content["url"] == "mxc://example.com/video123"
+    assert content["info"]["w"] == 1920
+    assert content["info"]["h"] == 1080
+    assert content["info"]["duration"] == 30000
+
+
+@pytest.mark.asyncio
+async def test_send_audio__expect_audio_message_with_duration(room, client):
+    from matrix.types import Audio
+
+    client.room_send = AsyncMock()
+    mock_response = Mock()
+    mock_response.event_id = "$event123"
+    client.room_send.return_value = mock_response
+
+    audio = Audio(
+        path="mxc://example.com/audio123",
+        filename="song.mp3",
+        mimetype="audio/mpeg",
+        duration=180000,
+    )
+
+    await room.send(file=audio)
+
+    client.room_send.assert_awaited_once()
+    call_args = client.room_send.call_args
+    content = call_args.kwargs["content"]
+    assert content["msgtype"] == "m.audio"
+    assert content["body"] == "song.mp3"
+    assert content["url"] == "mxc://example.com/audio123"
+    assert content["info"]["duration"] == 180000
+
+
+@pytest.mark.asyncio
 async def test_send_no_content__expect_value_error(room):
-    with pytest.raises(ValueError, match="You must provide content, file, or image"):
+    with pytest.raises(ValueError, match="You must provide content or file."):
         await room.send()
 
 
