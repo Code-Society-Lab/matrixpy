@@ -256,6 +256,7 @@ class Bot:
         @math.command()
         async def subtract(ctx, a: int, b: int):
             await ctx.reply(f"{a} - {b} = {a - b}")
+        ```
         """
 
         def wrapper(func: Callback) -> Group:

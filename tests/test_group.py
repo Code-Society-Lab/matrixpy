@@ -1,8 +1,7 @@
 import pytest
 
-from unittest.mock import MagicMock
 from matrix.command import Command
-from matrix.group import Group
+from matrix.group import Group, group
 from matrix.errors import AlreadyRegisteredError, CommandNotFoundError
 
 
@@ -125,3 +124,36 @@ async def test_invoke_with_subcommand__invokes_subcommand():
     assert called == ["sub"]
     assert ctx.subcommand.name == "foo"
     assert ctx.args == []
+
+
+@pytest.mark.asyncio
+async def test_group_factory__expect_group():
+    """Test that @group decorator creates a Group with the decorated function as callback"""
+    called = []
+
+    @group("math", description="Math operations")
+    async def math_callback(ctx):
+        called.append("math_callback")
+
+    # Should return a Group instance
+    assert isinstance(math_callback, Group)
+    assert math_callback.name == "math"
+    assert math_callback.description == "Math operations"
+
+    # Test command registration
+    @math_callback.command()
+    async def add(ctx, a: int, b: int):
+        called.append("add_called")
+
+    assert "add" in math_callback.commands
+    assert math_callback.commands["add"].name == "add"
+    assert math_callback.commands["add"].parent == "math"
+
+    # Test the callback is set correctly
+    class DummyCtx:
+        def __init__(self):
+            self.args = []
+
+    ctx = DummyCtx()
+    await math_callback.invoke(ctx)
+    assert called == ["math_callback"]

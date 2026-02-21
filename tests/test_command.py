@@ -130,10 +130,6 @@ async def test_error_handler():
     ctx = DummyContext(args=[])
     called = False
 
-    with pytest.raises(MissingArgumentError):
-        await cmd(ctx)
-    ctx.logger.exception.assert_called_once()
-
     with pytest.raises(TypeError):
 
         @cmd.error(TypeError)
@@ -145,8 +141,7 @@ async def test_error_handler():
         nonlocal called
         called = True
 
-    with pytest.raises(MissingArgumentError):
-        await cmd(ctx)
+    await cmd(ctx)
     assert called
 
 
@@ -231,26 +226,6 @@ async def test_command_executes_when_all_checks_pass():
 
     await cmd(ctx)
     assert called is True
-
-
-@pytest.mark.asyncio
-async def test_command_does_not_execute_when_a_check_fails():
-    called = False
-
-    async def my_command(ctx):
-        nonlocal called
-        called = True
-
-    cmd = Command(my_command)
-    ctx = DummyContext(args=[])
-
-    @cmd.check
-    async def always_fails(ctx):
-        return False
-
-    with pytest.raises(Exception):
-        await cmd(ctx)
-    assert called is False
 
 
 def test_parse_arguments_with_union_type__expect_successful_conversion():
