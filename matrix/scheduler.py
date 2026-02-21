@@ -13,6 +13,10 @@ class Scheduler:
         """
         self.scheduler = AsyncIOScheduler()
 
+    @property
+    def jobs(self):
+        return self.scheduler.get_jobs()
+
     def _parse_cron(self, cron: str) -> dict:
         """
         Parse a cron string into a dictionary suitable for CronTrigger.

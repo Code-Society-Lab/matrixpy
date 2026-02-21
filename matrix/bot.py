@@ -3,76 +3,29 @@ import inspect
 import asyncio
 import logging
 
-from collections import defaultdict
-from typing import (
-    Any,
-    Dict,
-    List,
-    Type,
-    Union,
-    Optional,
-    Callable,
-    Coroutine,
-)
+from typing import Union, Optional
 
-from nio import (
-    AsyncClient,
-    Event,
-    MatrixRoom,
-    RoomMessageText,
-    RoomMemberEvent,
-    TypingNoticeEvent,
-    ReactionEvent,
-)
+from nio import AsyncClient, Event, MatrixRoom
 
 from .room import Room
 from .group import Group
 from .config import Config
 from .context import Context
-from .command import Command
+from .extension import Extension
+from .registry import Registry
 from .help import HelpCommand, DefaultHelpCommand
 from .scheduler import Scheduler
-
-from .errors import (
-    GroupAlreadyRegisteredError,
-    AlreadyRegisteredError,
-    CommandNotFoundError,
-    CheckError,
-)
-
-Callback = Callable[..., Coroutine[Any, Any, Any]]
-GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
-ErrorCallback = Callable[[Exception], Coroutine]
-CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
+from .errors import AlreadyRegisteredError, CommandNotFoundError, CheckError
 
 
-class Bot:
+class Bot(Registry):
     """
     The base class defining a Matrix bot.
 
     This class manages the connection to a Matrix homeserver, listens
     for events, and dispatches them to registered handlers. It also supports
     a command system with decorators for easy registration.
-
-    :param config: Configuration for Matrix client settings
-    :type config: Config
-
-    :raises TypeError: If an event or command handler is not a coroutine.
-    :raises ValueError: If an unknown event name
-    :raises AlreadyRegisteredError: If a new command is already registered.
     """
-
-    EVENT_MAP: Dict[str, Type[Event]] = {
-        "on_typing": TypingNoticeEvent,
-        "on_message": RoomMessageText,
-        "on_react": ReactionEvent,
-        "on_member_join": RoomMemberEvent,
-        "on_member_leave": RoomMemberEvent,
-        "on_member_invite": RoomMemberEvent,
-        "on_member_ban": RoomMemberEvent,
-        "on_member_kick": RoomMemberEvent,
-        "on_member_change": RoomMemberEvent,
-    }
 
     def __init__(
         self, *, config: Union[Config, str], help: Optional[HelpCommand] = None
@@ -84,20 +37,14 @@ class Bot:
         else:
             raise TypeError("config must be a Config instance or a config file path")
 
+        super().__init__(prefix=self.config.prefix)
+
         self.client: AsyncClient = AsyncClient(self.config.homeserver)
+        self.extensions: dict[str, Extension] = {}
+        self.scheduler: Scheduler = Scheduler()
         self.log: logging.Logger = logging.getLogger(__name__)
 
-        self.prefix: str = self.config.prefix
         self.start_at: float | None = None  # unix timestamp
-
-        self.commands: Dict[str, Command] = {}
-        self.checks: List[Callback] = []
-        self.scheduler = Scheduler()
-
-        self._handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
-        self._on_error: Optional[ErrorCallback] = None
-        self._error_handlers: dict[type[Exception], ErrorCallback] = {}
-        self._command_error_handlers: dict[type[Exception], CommandErrorCallback] = {}
 
         self.help: HelpCommand = help or DefaultHelpCommand(prefix=self.prefix)
         self.register_command(self.help)
@@ -105,241 +52,36 @@ class Bot:
         self.client.add_event_callback(self._on_event, Event)
         self._auto_register_events()
 
-    def check(self, func: Callback) -> None:
-        """
-        Register a check callback
-
-        :param func: The check callback
-        :type func: Callback
-
-        :raises TypeError: If the function is not a coroutine.
-        """
-        if not inspect.iscoroutinefunction(func):
-            raise TypeError("Checks must be coroutine")
-
-        self.checks.append(func)
-
-    def event(
-        self,
-        func: Optional[Callback] = None,
-        *,
-        event_spec: Union[str, Type[Event], None] = None,
-    ) -> Union[Callback, Callable[[Callback], Callback]]:
-        """
-        Decorator to register a coroutine as an event handler.
-
-        Can be used with or without arguments:
-
-        - Without arguments, registers based on coroutine name
-          lookup in ``EVENT_MAP``::
-
-            @bot.event
-            async def on_message(room, event):
-                ...
-
-        - With an explicit event type or event name::
-
-            @bot.event(event_spec=RoomMemberEvent)
-            async def handle_member(room, event):
-                ...
-
-            @bot.event(event_spec="on_member_join")
-            async def welcome(room, event):
-                ...
-
-        :param func: The coroutine function to register (used when decorator
-            is applied without parentheses).
-        :type func: coroutine function, optional
-        :param event_spec: The event to register for, either as a string key
-            matching ``EVENT_MAP`` or a specific event class. If omitted,
-            the event type is inferred from the coroutine function's name.
-        :type event_spec: str or type or None, optional
-        :raises TypeError: If the decorated function is not a coroutine.
-        :raises ValueError: If the event name or string is unknown.
-        :return: Decorator that registers the event handler.
-        :rtype: Callable[[Callable[..., Awaitable[None]]],
-                Callable[..., Awaitable[None]]]
-        """
-
-        def wrapper(f: Callback) -> Callback:
-            if not inspect.iscoroutinefunction(f):
-                raise TypeError("Event handlers must be coroutines")
-
-            if event_spec:
-                if isinstance(event_spec, str):
-                    event_type = self.EVENT_MAP.get(event_spec)
-                    if event_type is None:
-                        raise ValueError(f"Unknown event string: {event_spec}")
-                else:
-                    event_type = event_spec
-            else:
-                event_type = self.EVENT_MAP.get(f.__name__)
-                if event_type is None:
-                    raise ValueError(f"Unknown event name: {f.__name__}")
-
-            self._handlers[event_type].append(f)
-            self.log.debug(
-                "registered event %s for %s", f.__name__, event_type.__name__
-            )
-            return f
-
-        if func is None:
-            return wrapper
-
-        return wrapper(func)
-
-    def command(
-        self,
-        name: Optional[str] = None,
-        *,
-        description: Optional[str] = None,
-        parent: Optional[str] = None,
-        usage: Optional[str] = None,
-        cooldown: Optional[tuple[int, float]] = None,
-    ) -> Callable[[Callback], Command]:
-        """
-        Decorator to register a coroutine function as a command handler.
-
-        The command name defaults to the function name unless
-        explicitly provided.
-
-        ## Example
-
-        ```python
-        @bot.command(description="Returns pong!")
-        async def ping(ctx):
-            await ctx.reply("Pong!")
-        ```
-        """
-
-        def wrapper(func: Callback) -> Command:
-            cmd = Command(
-                func,
-                name=name,
-                description=description,
-                prefix=self.prefix,
-                parent=parent,
-                usage=usage,
-                cooldown=cooldown,
-            )
-            return self.register_command(cmd)
-
-        return wrapper
-
-    def group(
-        self,
-        name: Optional[str] = None,
-        *,
-        description: Optional[str] = None,
-        parent: Optional[str] = None,
-        usage: Optional[str] = None,
-        cooldown: Optional[tuple[int, float]] = None,
-    ) -> GroupCallable:
-        """Decorator to register a coroutine function as a group handler.
-
-        The group name defaults to the function name unless
-        explicitly provided.
-
-        ## Example
-
-        ```python
-        @bot.group(description="Group of mathematical commands")
-        async def math(ctx):
-            await ctx.reply("You called !math")
-
-
-        @math.command()
-        async def add(ctx, a: int, b: int):
-            await ctx.reply(f"{a} + {b} = {a + b}")
-
-
-        @math.command()
-        async def subtract(ctx, a: int, b: int):
-            await ctx.reply(f"{a} - {b} = {a - b}")
-        """
-
-        def wrapper(func: Callback) -> Group:
-            group = Group(
-                func,
-                name=name,
-                description=description,
-                prefix=self.prefix,
-                parent=parent,
-                usage=usage,
-                cooldown=cooldown,
-            )
-            return self.register_group(group)
-
-        return wrapper
-
-    def schedule(self, cron: str) -> Callable[..., Callback]:
-        """
-        Decorator to register a coroutine function as a scheduled task.
-
-        The cron string defines the schedule for the task.
-
-        :param cron: The cron string defining the schedule.
-        :type cron: str
-        :raises TypeError: If the decorated function is not a coroutine.
-        :return: Decorator that registers the scheduled task.
-        :rtype: Callback
-        """
-
-        def wrapper(f: Callback) -> Callback:
-            if not inspect.iscoroutinefunction(f):
-                raise TypeError("Scheduled tasks must be coroutines")
-
-            self.scheduler.schedule(cron, f)
-            self.log.debug("registered scheduled task %s for cron %s", f.__name__, cron)
-            return f
-
-        return wrapper
-
-    def register_command(self, cmd: Command) -> Command:
-        if cmd in self.commands:
-            raise AlreadyRegisteredError(cmd)
-
-        self.commands[cmd.name] = cmd
-        self.log.debug("command '%s' registered", cmd)
-
-        return cmd
-
-    def register_group(self, group: Group) -> Group:
-        if group in self.commands:
-            raise GroupAlreadyRegisteredError(group)
-
-        self.commands[group.name] = group
-        self.log.debug("group '%s' registered", group)
-        return group
-
-    def error(self, exception: Optional[type[Exception]] = None) -> Callable:
-        """
-        Decorator to register a custom error handler for commands.
-
-        :param exception: The specific exception type to handle.
-        :type exception: Optional[Exception]
-
-        :return: A decorator that registers the given coroutine as
-            an error handler.
-        :rtype: Callable
-        """
-
-        def wrapper(func: ErrorCallback) -> Callable:
-            if not inspect.iscoroutinefunction(func):
-                raise TypeError("The error handler must be a coroutine.")
-
-            if exception:
-                self._error_handlers[exception] = func
-            else:
-                self._on_error = func
-            return func
-
-        return wrapper
-
     def get_room(self, room_id: str) -> Room:
         """Retrieve a Room instance based on the room_id."""
         matrix_room = self.client.rooms[room_id]
         return Room(matrix_room=matrix_room, client=self.client)
+
+    def load_extension(self, extension: Extension) -> None:
+        if extension.name in self.extensions:
+            raise AlreadyRegisteredError(extension)
+
+        for cmd in extension._commands.values():
+            if isinstance(cmd, Group):
+                self.register_group(cmd)
+            else:
+                self.register_command(cmd)
+
+        for event_type, handlers in extension._event_handlers.items():
+            self._event_handlers[event_type].extend(handlers)
+
+        self._checks.extend(extension._checks)
+        self._error_handlers.update(extension._error_handlers)
+        self._command_error_handlers.update(extension._command_error_handlers)
+
+        for job in extension._scheduler.jobs:
+            self.scheduler.schedule(job.cron, job.func)
+
+        self.extensions[extension.name] = extension
+        self.log.info("loaded extension '%s'", extension.name)
+
+    def unload_extension(self, ext_name: str) -> None:
+        pass
 
     def _auto_register_events(self) -> None:
         for attr in dir(self):
@@ -368,7 +110,7 @@ class Bot:
 
     async def _dispatch(self, room: MatrixRoom, event: Event) -> None:
         """Internal type-based fan-out plus optional command handling."""
-        for event_type, funcs in self._handlers.items():
+        for event_type, funcs in self._event_handlers.items():
             if isinstance(event, event_type):
                 for func in funcs:
                     await func(room, event)
@@ -378,7 +120,7 @@ class Bot:
         ctx = await self._build_context(room, event)
 
         if ctx.command:
-            for check in self.checks:
+            for check in self._checks:
                 if not await check(ctx):
                     raise CheckError(ctx.command, check)
 
@@ -389,17 +131,18 @@ class Bot:
         room = self.get_room(matrix_room.room_id)
         ctx = Context(bot=self, room=room, event=event)
 
-        if not self.prefix or not ctx.body.startswith(self.prefix):
-            return ctx
-
         if parts := ctx.body[len(self.prefix) :].split():
             cmd_name = parts[0]
-            cmd = self.commands.get(cmd_name)
+            cmd = self._commands.get(cmd_name)
 
-        if not cmd:
-            raise CommandNotFoundError(cmd_name)
+            if not cmd:
+                raise CommandNotFoundError(cmd_name)
 
-        ctx.command = cmd
+            prefix = cmd.prefix or self.prefix
+            if not prefix or not ctx.body.startswith(prefix):
+                return ctx
+
+            ctx.command = cmd
         return ctx
 
     async def on_message(self, room: MatrixRoom, event: Event) -> None:

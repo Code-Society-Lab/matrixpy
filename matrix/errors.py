@@ -4,12 +4,22 @@ import inspect
 if TYPE_CHECKING:
     from .command import Command  # pragma: no cover
     from .group import Group  # pragma: no cover
+    from .extension import Extension
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 
 
 class MatrixError(Exception):
     pass
+
+
+class RegistryError(MatrixError):
+    pass
+
+
+class AlreadyRegisteredError(RegistryError):
+    def __init__(self, entry: "Command | Group | Extension"):
+        super().__init__(f"{entry.__class__.__name__} '{entry.name}' is already registered")
 
 
 class CommandError(MatrixError):
@@ -21,7 +31,7 @@ class CommandNotFoundError(CommandError):
         super().__init__(f"Command with name '{cmd}' not found")
 
 
-class AlreadyRegisteredError(CommandError):
+class CommandAlreadyRegisteredError(CommandError):
     def __init__(self, cmd: "Command"):
         super().__init__(f"Command '{cmd}' is already registered")
 
@@ -38,11 +48,6 @@ class CheckError(CommandError):
 
 class GroupError(CommandError):
     pass
-
-
-class GroupAlreadyRegisteredError(GroupError):
-    def __init__(self, group: "Group"):
-        super().__init__(f"Group '{group}' is already registered")
 
 
 class ConfigError(MatrixError):
