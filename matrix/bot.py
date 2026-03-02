@@ -133,18 +133,30 @@ class Bot(Registry):
         room = self.get_room(matrix_room.room_id)
         ctx = Context(bot=self, room=room, event=event)
 
-        if parts := ctx.body[len(self.prefix) :].split():
+        if ctx.body.startswith(self.prefix):
+            prefix = self.prefix
+        else:
+            prefix = next(
+                (cmd.prefix for cmd in self._commands.values() if cmd.prefix and ctx.body.startswith(cmd.prefix)),
+                None,
+            )
+
+        if prefix is None:
+            return ctx
+
+        if parts := ctx.body[len(prefix):].split():
             cmd_name = parts[0]
             cmd = self._commands.get(cmd_name)
+
+            if cmd and cmd.prefix:
+                if not ctx.body.startswith(cmd.prefix):
+                    return ctx
 
             if not cmd:
                 raise CommandNotFoundError(cmd_name)
 
-            prefix = cmd.prefix or self.prefix
-            if not prefix or not ctx.body.startswith(prefix):
-                return ctx
-
             ctx.command = cmd
+
         return ctx
 
     async def on_message(self, room: MatrixRoom, event: Event) -> None:
