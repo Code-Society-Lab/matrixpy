@@ -10,8 +10,8 @@ if TYPE_CHECKING:
 
 
 class Extension(Registry):
-    def __init__(self, prefix: Optional[str] = None) -> None:
-        super().__init__(prefix=prefix)
+    def __init__(self, name: str, prefix: Optional[str] = None) -> None:
+        super().__init__(name, prefix=prefix)
 
     async def on_load(self, bot: "Bot") -> None:
         """Called after the extension is fully loaded into the bot."""

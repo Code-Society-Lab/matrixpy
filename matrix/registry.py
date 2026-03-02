@@ -46,7 +46,8 @@ class Registry:
         "on_member_change": RoomMemberEvent,
     }
 
-    def __init__(self, prefix: Optional[str] = None):
+    def __init__(self, name: str, prefix: Optional[str] = None):
+        self.name = name
         self.prefix = prefix
         self.log = logging.getLogger(__name__)
 
@@ -58,10 +59,6 @@ class Registry:
         self._on_error: Optional[ErrorCallback] = None
         self._error_handlers: Dict[type[Exception], ErrorCallback] = {}
         self._command_error_handlers: Dict[type[Exception], CommandErrorCallback] = {}
-
-    @property
-    def name(self) -> str:
-        return self.__class__.__name__
 
     @property
     def commands(self) -> Dict[str, Command]:

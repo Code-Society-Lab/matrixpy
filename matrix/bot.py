@@ -37,7 +37,7 @@ class Bot(Registry):
         else:
             raise TypeError("config must be a Config instance or a config file path")
 
-        super().__init__(prefix=self.config.prefix)
+        super().__init__(self.__class__.__name__, prefix=self.config.prefix)
 
         self.client: AsyncClient = AsyncClient(self.config.homeserver)
         self.extensions: dict[str, Extension] = {}
@@ -58,6 +58,8 @@ class Bot(Registry):
         return Room(matrix_room=matrix_room, client=self.client)
 
     def load_extension(self, extension: Extension) -> None:
+        self.log.info(f"Loading extension: '{extension.name}'")
+
         if extension.name in self.extensions:
             raise AlreadyRegisteredError(extension)
 
