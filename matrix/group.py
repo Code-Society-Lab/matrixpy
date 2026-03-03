@@ -82,3 +82,49 @@ class Group(Command):
             await ctx.subcommand(ctx)
         else:
             await self.callback(ctx)
+
+
+def group(
+    name: str,
+    *,
+    description: Optional[str] = None,
+    prefix: Optional[str] = None,
+    parent: Optional[str] = None,
+    usage: Optional[str] = None,
+    cooldown: Optional[tuple[int, float]] = None,
+) -> Callable[[Callback], Group]:
+    """
+    Decorator to create a group with a callback.
+
+    This is equivalent to @bot.group() but for creating groups
+    without immediately registering them to a bot.
+
+    ## Example
+
+    ```python
+    @group("math", description="Math operations")
+    async def math(ctx):
+        await ctx.reply("Math help")
+
+
+    @math.command()
+    async def add(ctx, a: int, b: int):
+        await ctx.reply(f"{a + b}")
+
+
+    bot.register_group(math)
+    ```
+    """
+
+    def decorator(func: Callback) -> Group:
+        return Group(
+            func,
+            name=name,
+            description=description,
+            prefix=prefix,
+            parent=parent,
+            usage=usage,
+            cooldown=cooldown,
+        )
+
+    return decorator

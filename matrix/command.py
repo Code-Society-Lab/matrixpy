@@ -298,7 +298,6 @@ class Command:
             await ctx.send_help()
 
         ctx.logger.exception("error while executing command '%s'", self)
-        raise error
 
     async def invoke(self, ctx: "Context") -> None:
         parsed_args = self._parse_arguments(ctx)

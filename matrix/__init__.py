@@ -8,7 +8,7 @@ except PackageNotFoundError:
     from matrix._version import version as __version__
 
 from .bot import Bot
-from .group import Group
+from .group import Group, group
 from .config import Config
 from .context import Context
 from .command import Command
@@ -20,6 +20,7 @@ from .extension import Extension
 __all__ = [
     "Bot",
     "Group",
+    "group",
     "Config",
     "Command",
     "Context",
