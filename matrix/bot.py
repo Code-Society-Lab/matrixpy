@@ -58,7 +58,7 @@ class Bot(Registry):
         return Room(matrix_room=matrix_room, client=self.client)
 
     def load_extension(self, extension: Extension) -> None:
-        self.log.info(f"Loading extension: '{extension.name}'")
+        self.log.debug(f"Loading extension: '{extension.name}'")
 
         if extension.name in self.extensions:
             raise AlreadyRegisteredError(extension)
@@ -77,13 +77,46 @@ class Bot(Registry):
         self._command_error_handlers.update(extension._command_error_handlers)
 
         for job in extension._scheduler.jobs:
-            self.scheduler.schedule(job.cron, job.func)
+            self.scheduler.scheduler.add_job(
+                job.func,
+                trigger=job.trigger,
+                name=job.name,
+            )
 
         self.extensions[extension.name] = extension
-        self.log.info("loaded extension '%s'", extension.name)
+        extension.load()
+        self.log.debug("loaded extension '%s'", extension.name)
 
     def unload_extension(self, ext_name: str) -> None:
-        pass
+        self.log.debug("Unloading extension: '%s'", ext_name)
+
+        extension = self.extensions.pop(ext_name, None)
+        if extension is None:
+            raise ValueError(f"No extension named '{ext_name}' is loaded")
+
+        for cmd_name in extension._commands:
+            self._commands.pop(cmd_name, None)
+
+        for event_type, handlers in extension._event_handlers.items():
+            for handler in handlers:
+                self._event_handlers[event_type].remove(handler)
+
+        for check in extension._checks:
+            self._checks.remove(check)
+
+        for exc_type in extension._error_handlers:
+            self._error_handlers.pop(exc_type, None)
+
+        for exc_type in extension._command_error_handlers:
+            self._command_error_handlers.pop(exc_type, None)
+
+        for job in extension._scheduler.jobs:
+            bot_job = next((j for j in self.scheduler.jobs if j.func is job.func), None)
+            if bot_job:
+                bot_job.remove()
+
+        extension.unload()
+        self.log.debug("unloaded extension '%s'", ext_name)
 
     def _auto_register_events(self) -> None:
         for attr in dir(self):
