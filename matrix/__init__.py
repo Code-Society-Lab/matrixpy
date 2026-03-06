@@ -27,5 +27,5 @@ __all__ = [
     "HelpCommand",
     "cooldown",
     "Room",
-    "Extension"
+    "Extension",
 ]

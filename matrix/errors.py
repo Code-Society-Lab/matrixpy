@@ -19,7 +19,9 @@ class RegistryError(MatrixError):
 
 class AlreadyRegisteredError(RegistryError):
     def __init__(self, entry: "Command | Group | Extension"):
-        super().__init__(f"{entry.__class__.__name__} '{entry.name}' is already registered")
+        super().__init__(
+            f"{entry.__class__.__name__} '{entry.name}' is already registered"
+        )
 
 
 class CommandError(MatrixError):

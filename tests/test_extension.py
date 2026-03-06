@@ -55,12 +55,15 @@ def test_on_load_with_sync_function__expect_handler_registered(extension: Extens
 
 def test_on_load_with_coroutine__expect_type_error(extension: Extension):
     with pytest.raises(TypeError):
+
         @extension.on_load
         async def setup():
             pass
 
 
-def test_on_load_returns_the_original_function__expect_same_reference(extension: Extension):
+def test_on_load_returns_the_original_function__expect_same_reference(
+    extension: Extension,
+):
     def setup():
         pass
 
@@ -69,7 +72,9 @@ def test_on_load_returns_the_original_function__expect_same_reference(extension:
     assert result is setup
 
 
-def test_on_load_overwrites_previous_handler__expect_latest_handler(extension: Extension):
+def test_on_load_overwrites_previous_handler__expect_latest_handler(
+    extension: Extension,
+):
     @extension.on_load
     def first():
         pass
@@ -107,12 +112,15 @@ def test_on_unload_with_sync_function__expect_handler_registered(extension: Exte
 
 def test_on_unload_with_coroutine__expect_type_error(extension: Extension):
     with pytest.raises(TypeError):
+
         @extension.on_unload
         async def teardown():
             pass
 
 
-def test_on_unload_returns_the_original_function__expect_same_reference(extension: Extension):
+def test_on_unload_returns_the_original_function__expect_same_reference(
+    extension: Extension,
+):
     def teardown():
         pass
 
@@ -121,7 +129,9 @@ def test_on_unload_returns_the_original_function__expect_same_reference(extensio
     assert result is teardown
 
 
-def test_on_unload_overwrites_previous_handler__expect_latest_handler(extension: Extension):
+def test_on_unload_overwrites_previous_handler__expect_latest_handler(
+    extension: Extension,
+):
     @extension.on_unload
     def first():
         pass

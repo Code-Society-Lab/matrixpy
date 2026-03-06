@@ -181,7 +181,7 @@ class Bot(Registry):
         if prefix is None or not ctx.body.startswith(prefix):
             return ctx
 
-        if parts := ctx.body[len(prefix):].split():
+        if parts := ctx.body[len(prefix) :].split():
             cmd_name = parts[0]
             cmd = self._commands.get(cmd_name)
 

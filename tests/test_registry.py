@@ -29,7 +29,9 @@ async def _dummy_check(ctx):
     return True
 
 
-def test_register_command_with_decorator__expect_command_in_registry(registry: Registry):
+def test_register_command_with_decorator__expect_command_in_registry(
+    registry: Registry,
+):
     @registry.command(description="A test command")
     async def ping(ctx):
         pass
@@ -37,7 +39,9 @@ def test_register_command_with_decorator__expect_command_in_registry(registry: R
     assert "ping" in registry.commands
 
 
-def test_register_command_with_custom_name__expect_custom_name_in_registry(registry: Registry):
+def test_register_command_with_custom_name__expect_custom_name_in_registry(
+    registry: Registry,
+):
     @registry.command(name="pong")
     async def ping(ctx):
         pass
@@ -46,18 +50,23 @@ def test_register_command_with_custom_name__expect_custom_name_in_registry(regis
     assert "ping" not in registry.commands
 
 
-def test_register_command_with_duplicate_name__expect_already_registered_error(registry: Registry):
+def test_register_command_with_duplicate_name__expect_already_registered_error(
+    registry: Registry,
+):
     @registry.command()
     async def ping(ctx):
         pass
 
     with pytest.raises(AlreadyRegisteredError):
+
         @registry.command(name="ping")
         async def ping2(ctx):
             pass
 
 
-def test_register_command_returns_command_instance__expect_command_type(registry: Registry):
+def test_register_command_returns_command_instance__expect_command_type(
+    registry: Registry,
+):
     @registry.command()
     async def ping(ctx):
         pass
@@ -65,14 +74,18 @@ def test_register_command_returns_command_instance__expect_command_type(registry
     assert isinstance(registry.commands["ping"], Command)
 
 
-def test_register_command_directly_with_valid_command__expect_command_in_registry(registry: Registry):
+def test_register_command_directly_with_valid_command__expect_command_in_registry(
+    registry: Registry,
+):
     cmd = Command(_dummy, name="direct", prefix="!")
     registry.register_command(cmd)
 
     assert "direct" in registry.commands
 
 
-def test_register_command_directly_with_duplicate__expect_already_registered_error(registry: Registry):
+def test_register_command_directly_with_duplicate__expect_already_registered_error(
+    registry: Registry,
+):
     cmd = Command(_dummy, name="dupe", prefix="!")
     registry.register_command(cmd)
 
@@ -88,7 +101,9 @@ def test_register_group_with_decorator__expect_group_in_registry(registry: Regis
     assert "math" in registry.commands
 
 
-def test_register_group_with_custom_name__expect_custom_name_in_registry(registry: Registry):
+def test_register_group_with_custom_name__expect_custom_name_in_registry(
+    registry: Registry,
+):
     @registry.group(name="utils")
     async def utility(ctx):
         pass
@@ -97,12 +112,15 @@ def test_register_group_with_custom_name__expect_custom_name_in_registry(registr
     assert "utility" not in registry.commands
 
 
-def test_register_group_with_duplicate_name__expect_already_registered_error(registry: Registry):
+def test_register_group_with_duplicate_name__expect_already_registered_error(
+    registry: Registry,
+):
     @registry.group()
     async def math(ctx):
         pass
 
     with pytest.raises(AlreadyRegisteredError):
+
         @registry.group(name="math")
         async def math2(ctx):
             pass
@@ -119,6 +137,7 @@ def test_register_group_returns_group_instance__expect_group_type(registry: Regi
 # ---------------------------------------------------------------------------
 # event()
 # ---------------------------------------------------------------------------
+
 
 def test_register_event_by_function_name__expect_handler_registered(registry: Registry):
     @registry.event
@@ -146,13 +165,17 @@ def test_register_event_with_type_spec__expect_handler_registered(registry: Regi
 
 def test_register_event_with_unknown_name__expect_value_error(registry: Registry):
     with pytest.raises(ValueError):
+
         @registry.event
         async def on_unknown_event(room, event):
             pass
 
 
-def test_register_event_with_unknown_string_spec__expect_value_error(registry: Registry):
+def test_register_event_with_unknown_string_spec__expect_value_error(
+    registry: Registry,
+):
     with pytest.raises(ValueError):
+
         @registry.event(event_spec="on_nonexistent")
         async def handler(room, event):
             pass
@@ -160,12 +183,15 @@ def test_register_event_with_unknown_string_spec__expect_value_error(registry: R
 
 def test_register_event_with_non_coroutine__expect_type_error(registry: Registry):
     with pytest.raises(TypeError):
+
         @registry.event
         def on_message(room, event):  # not async
             pass
 
 
-def test_register_multiple_handlers_for_same_event__expect_all_registered(registry: Registry):
+def test_register_multiple_handlers_for_same_event__expect_all_registered(
+    registry: Registry,
+):
     @registry.event
     async def on_message(room, event):
         pass
@@ -181,7 +207,10 @@ def test_register_multiple_handlers_for_same_event__expect_all_registered(regist
 # register_event()
 # ---------------------------------------------------------------------------
 
-def test_register_event_directly_with_valid_handler__expect_handler_in_registry(registry: Registry):
+
+def test_register_event_directly_with_valid_handler__expect_handler_in_registry(
+    registry: Registry,
+):
     registry.register_event(ReactionEvent, _dummy_event)
 
     assert _dummy_event in registry._event_handlers[ReactionEvent]
@@ -190,6 +219,7 @@ def test_register_event_directly_with_valid_handler__expect_handler_in_registry(
 # ---------------------------------------------------------------------------
 # check()
 # ---------------------------------------------------------------------------
+
 
 def test_register_check_with_coroutine__expect_check_in_list(registry: Registry):
     registry.check(_dummy_check)
@@ -237,6 +267,7 @@ def test_register_schedule_with_valid_cron__expect_job_in_scheduler(registry: Re
 
 def test_register_schedule_with_non_coroutine__expect_type_error(registry: Registry):
     with pytest.raises(TypeError):
+
         @registry.schedule("0 9 * * *")
         def not_async():
             pass
@@ -256,7 +287,9 @@ def test_register_multiple_schedules__expect_all_jobs_in_scheduler(registry: Reg
     assert evening in funcs
 
 
-def test_register_error_handler_with_exception_type__expect_handler_in_dict(registry: Registry):
+def test_register_error_handler_with_exception_type__expect_handler_in_dict(
+    registry: Registry,
+):
     @registry.error(ValueError)
     async def on_value_error(error):
         pass
@@ -272,8 +305,11 @@ def test_register_generic_error_handler__expect_on_error_set(registry: Registry)
     assert registry._on_error is on_any_error
 
 
-def test_register_error_handler_with_non_coroutine__expect_type_error(registry: Registry):
+def test_register_error_handler_with_non_coroutine__expect_type_error(
+    registry: Registry,
+):
     with pytest.raises(TypeError):
+
         @registry.error(ValueError)
         def sync_handler(error):
             pass
@@ -292,7 +328,9 @@ def test_register_multiple_typed_error_handlers__expect_all_in_dict(registry: Re
     assert RuntimeError in registry._error_handlers
 
 
-def test_register_error_handler_overwrites_previous_handler__expect_latest_handler(registry: Registry):
+def test_register_error_handler_overwrites_previous_handler__expect_latest_handler(
+    registry: Registry,
+):
     @registry.error(ValueError)
     async def first_handler(error):
         pass
@@ -308,7 +346,9 @@ def test_commands_property_with_empty_registry__expect_empty_dict(registry: Regi
     assert registry.commands == {}
 
 
-def test_commands_property_reflects_registered_commands__expect_correct_entries(registry: Registry):
+def test_commands_property_reflects_registered_commands__expect_correct_entries(
+    registry: Registry,
+):
     @registry.command()
     async def foo(ctx):
         pass

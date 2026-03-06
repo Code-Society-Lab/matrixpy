@@ -426,20 +426,26 @@ def extension() -> Extension:
     return ext
 
 
-def test_load_extension_with_valid_extension__expect_extension_in_registry(bot: Bot, extension: Extension):
+def test_load_extension_with_valid_extension__expect_extension_in_registry(
+    bot: Bot, extension: Extension
+):
     bot.load_extension(extension)
 
     assert "test_ext" in bot.extensions
 
 
-def test_load_extension_with_duplicate_extension__expect_already_registered_error(bot: Bot, extension: Extension):
+def test_load_extension_with_duplicate_extension__expect_already_registered_error(
+    bot: Bot, extension: Extension
+):
     bot.load_extension(extension)
 
     with pytest.raises(AlreadyRegisteredError):
         bot.load_extension(extension)
 
 
-def test_load_extension_with_commands__expect_commands_in_bot(bot: Bot, extension: Extension):
+def test_load_extension_with_commands__expect_commands_in_bot(
+    bot: Bot, extension: Extension
+):
     bot.load_extension(extension)
 
     assert "hello" in bot.commands
@@ -469,7 +475,9 @@ def test_load_extension_with_event_handlers__expect_handlers_in_bot(bot: Bot):
     assert on_message in bot._event_handlers[RoomMessageText]
 
 
-def test_load_extension_with_multiple_event_handlers__expect_all_handlers_in_bot(bot: Bot):
+def test_load_extension_with_multiple_event_handlers__expect_all_handlers_in_bot(
+    bot: Bot,
+):
     ext = Extension(name="multi_events_ext")
 
     @ext.event
@@ -564,7 +572,9 @@ def loaded_extension(bot: Bot) -> Extension:
     return ext
 
 
-def test_unload_extension_with_valid_name__expect_extension_removed_from_registry(bot: Bot, loaded_extension: Extension):
+def test_unload_extension_with_valid_name__expect_extension_removed_from_registry(
+    bot: Bot, loaded_extension: Extension
+):
     bot.unload_extension(loaded_extension.name)
 
     assert loaded_extension.name not in bot.extensions
@@ -575,7 +585,9 @@ def test_unload_extension_with_unknown_name__expect_value_error(bot: Bot):
         bot.unload_extension("nonexistent_ext")
 
 
-def test_unload_extension_with_commands__expect_commands_removed_from_bot(bot: Bot, loaded_extension: Extension):
+def test_unload_extension_with_commands__expect_commands_removed_from_bot(
+    bot: Bot, loaded_extension: Extension
+):
     bot.unload_extension(loaded_extension.name)
 
     assert "hello" not in bot.commands
@@ -594,7 +606,9 @@ def test_unload_extension_with_group__expect_group_removed_from_bot(bot: Bot):
     assert "math" not in bot.commands
 
 
-def test_unload_extension_with_event_handlers__expect_handlers_removed_from_bot(bot: Bot):
+def test_unload_extension_with_event_handlers__expect_handlers_removed_from_bot(
+    bot: Bot,
+):
     ext = Extension(name="events_ext")
 
     @ext.event
@@ -607,7 +621,9 @@ def test_unload_extension_with_event_handlers__expect_handlers_removed_from_bot(
     assert on_message not in bot._event_handlers[RoomMessageText]
 
 
-def test_unload_extension_with_multiple_event_handlers__expect_all_handlers_removed(bot: Bot):
+def test_unload_extension_with_multiple_event_handlers__expect_all_handlers_removed(
+    bot: Bot,
+):
     ext = Extension(name="multi_events_ext")
 
     @ext.event
@@ -658,7 +674,9 @@ def test_unload_extension_with_checks__expect_checks_removed_from_bot(bot: Bot):
     assert only_admins not in bot._checks
 
 
-def test_unload_extension_with_error_handlers__expect_handlers_removed_from_bot(bot: Bot):
+def test_unload_extension_with_error_handlers__expect_handlers_removed_from_bot(
+    bot: Bot,
+):
     ext = Extension(name="errors_ext")
 
     @ext.error(ValueError)
@@ -671,7 +689,9 @@ def test_unload_extension_with_error_handlers__expect_handlers_removed_from_bot(
     assert ValueError not in bot._error_handlers
 
 
-def test_unload_extension_with_scheduled_tasks__expect_jobs_removed_from_bot_scheduler(bot: Bot):
+def test_unload_extension_with_scheduled_tasks__expect_jobs_removed_from_bot_scheduler(
+    bot: Bot,
+):
     ext = Extension(name="scheduler_ext")
 
     @ext.schedule("* * * * *")

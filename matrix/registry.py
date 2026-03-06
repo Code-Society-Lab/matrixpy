@@ -86,6 +86,7 @@ class Registry:
             await ctx.reply("Pong!")
         ```
         """
+
         def wrapper(func: Callback) -> Command:
             cmd = Command(
                 func,
@@ -96,6 +97,7 @@ class Registry:
                 cooldown=cooldown,
             )
             return self.register_command(cmd)
+
         return wrapper
 
     def register_command(self, cmd: Command) -> Command:
@@ -143,6 +145,7 @@ class Registry:
             await ctx.reply(f"{a} - {b} = {a - b}")
         ```
         """
+
         def wrapper(func: Callback) -> Group:
             grp = Group(
                 func,
@@ -153,6 +156,7 @@ class Registry:
                 cooldown=cooldown,
             )
             return self.register_group(grp)
+
         return wrapper
 
     def register_group(self, group: Group) -> Group:
@@ -199,6 +203,7 @@ class Registry:
             ...
         ```
         """
+
         def wrapper(f: Callback) -> Callback:
             if not inspect.iscoroutinefunction(f):
                 raise TypeError("Event handlers must be coroutines")
@@ -228,7 +233,9 @@ class Registry:
         is useful when loading event handlers from an extension.
         """
         self._event_handlers[event_type].append(callback)
-        logger.debug("registered event %s for %s", callback.__name__, event_type.__name__)
+        logger.debug(
+            "registered event %s for %s", callback.__name__, event_type.__name__
+        )
         return callback
 
     def check(self, func: Callback) -> Callback:
@@ -268,17 +275,26 @@ class Registry:
             await room.send("Good morning!")
         ```
         """
+
         def wrapper(f: Callback) -> Callback:
             if not inspect.iscoroutinefunction(f):
                 raise TypeError("Scheduled tasks must be coroutines")
 
             self._scheduler.schedule(cron, f)
-            logger.debug("scheduled '%s' for cron '%s' on %s", f.__name__, cron, type(self).__name__)
+            logger.debug(
+                "scheduled '%s' for cron '%s' on %s",
+                f.__name__,
+                cron,
+                type(self).__name__,
+            )
 
             return f
+
         return wrapper
 
-    def error(self, exception: Optional[type[Exception]] = None) -> Callable[[ErrorCallback], ErrorCallback]:
+    def error(
+        self, exception: Optional[type[Exception]] = None
+    ) -> Callable[[ErrorCallback], ErrorCallback]:
         """Decorator to register an error handler.
 
         If an exception type is provided, the handler is only invoked for
@@ -297,6 +313,7 @@ class Registry:
             await room.send(f"Something went wrong: {error}")
         ```
         """
+
         def wrapper(func: ErrorCallback) -> ErrorCallback:
             if not inspect.iscoroutinefunction(func):
                 raise TypeError("Error handlers must be coroutines")
@@ -305,7 +322,12 @@ class Registry:
                 self._error_handlers[exception] = func
             else:
                 self._on_error = func
-            logger.debug("registered error handler '%s' on %s", func.__name__, type(self).__name__)
+            logger.debug(
+                "registered error handler '%s' on %s",
+                func.__name__,
+                type(self).__name__,
+            )
 
             return func
+
         return wrapper
