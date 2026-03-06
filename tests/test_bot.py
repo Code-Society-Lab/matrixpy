@@ -85,8 +85,8 @@ async def test_dispatch_calls_all_handlers(bot):
     async def handler2(room, event):
         called.append("h2")
 
-    bot._handlers[RoomMessageText].append(handler1)
-    bot._handlers[RoomMessageText].append(handler2)
+    bot._event_handlers[RoomMessageText].append(handler1)
+    bot._event_handlers[RoomMessageText].append(handler2)
 
     event = RoomMessageText.from_dict(
         {
@@ -410,5 +410,5 @@ async def test_scheduled_task_in_scheduler(bot):
     async def scheduled_task():
         pass
 
-    job_names = list(map(lambda j: j.name, bot.scheduler.scheduler.get_jobs()))
+    job_names = list(map(lambda j: j.name, bot._scheduler.jobs))
     assert "scheduled_task" in job_names, "Scheduled task not found in scheduler"
