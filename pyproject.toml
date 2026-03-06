@@ -45,3 +45,9 @@ license-files = []
 
 [tool.setuptools_scm]
 write_to = "matrix/_version.py"
+
+[tool.coverage.run]
+omit = [
+    "matrix/_version.py",
+    "matrix/__init__.py",
+]
