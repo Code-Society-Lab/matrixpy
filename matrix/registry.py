@@ -15,6 +15,7 @@ from nio import (
 from matrix.group import Group
 from matrix.command import Command
 from matrix.scheduler import Scheduler
+from matrix.context import Context
 from matrix.errors import AlreadyRegisteredError
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
-CommandErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
+CommandErrorCallback = Callable[[Context, Exception], Coroutine[Any, Any, Any]]
 
 
 class Registry:

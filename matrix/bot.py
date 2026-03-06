@@ -162,28 +162,31 @@ class Bot(Registry):
             await ctx.command(ctx)
 
     async def _build_context(self, matrix_room: MatrixRoom, event: Event) -> Context:
-        """Builds the base context and extracts the command from the event"""
         room = self.get_room(matrix_room.room_id)
         ctx = Context(bot=self, room=room, event=event)
+        prefix: str | None = None
 
-        if ctx.body.startswith(self.prefix):
+        if self.prefix is not None and ctx.body.startswith(self.prefix):
             prefix = self.prefix
         else:
             prefix = next(
-                (cmd.prefix for cmd in self._commands.values() if cmd.prefix and ctx.body.startswith(cmd.prefix)),
-                None,
+                (
+                    cmd.prefix
+                    for cmd in self._commands.values()
+                    if cmd.prefix is not None and ctx.body.startswith(cmd.prefix)
+                ),
+                self.config.prefix,
             )
 
-        if prefix is None:
+        if prefix is None or not ctx.body.startswith(prefix):
             return ctx
 
         if parts := ctx.body[len(prefix):].split():
             cmd_name = parts[0]
             cmd = self._commands.get(cmd_name)
 
-            if cmd and cmd.prefix:
-                if not ctx.body.startswith(cmd.prefix):
-                    return ctx
+            if cmd and cmd.prefix and not ctx.body.startswith(cmd.prefix):
+                return ctx
 
             if not cmd:
                 raise CommandNotFoundError(cmd_name)

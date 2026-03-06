@@ -64,7 +64,6 @@ def test_context_initialization__expect_correct_properties(context, bot, room, e
     assert context.event is event
     assert context.body == "!echo hello world"
     assert context.sender == "@user:matrix.org"
-    assert context.prefix == "!"
     assert context.command is None
     assert context.subcommand is None
     assert context._args == ["!echo", "hello", "world"]

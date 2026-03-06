@@ -28,7 +28,6 @@ class Context:
         self.sender: str = event.sender
 
         # Command metadata
-        self.prefix: str = bot.prefix
         self.command: Optional[Command] = None
         self.subcommand: Optional[Command] = None
         self._args: List[str] = shlex.split(self.body)
