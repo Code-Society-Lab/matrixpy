@@ -1,30 +1,56 @@
 import logging
+import inspect
 
-from typing import TYPE_CHECKING, Optional
+from typing import Any, Callable, Coroutine, Optional
 from matrix.registry import Registry
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from matrix.bot import Bot
 
 
 class Extension(Registry):
     def __init__(self, name: str, prefix: Optional[str] = None) -> None:
         super().__init__(name, prefix=prefix)
+        self._on_load: Optional[Callable] = None
+        self._on_unload: Optional[Callable] = None
 
-    async def on_load(self, bot: "Bot") -> None:
-        """Called after the extension is fully loaded into the bot."""
-        pass
+    def load(self) -> None:
+        if self._on_load:
+            self._on_load()
 
-    async def on_unload(self, bot: "Bot") -> None:
-        """Called before the extension is removed from the bot."""
-        pass
+    def on_load(self, func: Callable) -> Callable:
+        """Decorator to register a function to be called after this extension
+        is loaded into the bot.
 
-    def __repr__(self) -> str:
-        return (
-            f"<Extension name={self.name!r} prefix={self.prefix!r} "
-            f"commands={list(self._commands)}"
-            f"events={[t.__name__ for t in self._event_handlers]}"
-            f"errors={[t.__name__ for t in self._error_handlers]}"">"
-        )
+        ## Example
+
+        ```python
+        @extension.on_load
+        def setup():
+            print("extension loaded")
+        ```
+        """
+        if inspect.iscoroutinefunction(func):
+            raise TypeError("on_load handler must not be a coroutine")
+        self._on_load = func
+        return func
+
+    def unload(self) -> None:
+        if self._on_unload:
+            self._on_unload()
+
+    def on_unload(self, func: Callable) -> Callable:
+        """Decorator to register a function to be called before this extension
+        is unloaded from the bot.
+
+        ## Example
+
+        ```python
+        @extension.on_unload
+        def teardown():
+            print("extension unloaded")
+        ```
+        """
+        if inspect.iscoroutinefunction(func):
+            raise TypeError("on_unload handler must not be a coroutine")
+        self._on_unload = func
+        return func
