@@ -5,6 +5,7 @@ from nio import MatrixRoom, RoomMessageText
 
 from matrix.bot import Bot
 from matrix.config import Config
+from matrix.extension import Extension
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,
@@ -85,8 +86,8 @@ async def test_dispatch_calls_all_handlers(bot):
     async def handler2(room, event):
         called.append("h2")
 
-    bot._handlers[RoomMessageText].append(handler1)
-    bot._handlers[RoomMessageText].append(handler2)
+    bot._event_handlers[RoomMessageText].append(handler1)
+    bot._event_handlers[RoomMessageText].append(handler2)
 
     event = RoomMessageText.from_dict(
         {
@@ -410,5 +411,322 @@ async def test_scheduled_task_in_scheduler(bot):
     async def scheduled_task():
         pass
 
-    job_names = list(map(lambda j: j.name, bot.scheduler.scheduler.get_jobs()))
+    job_names = list(map(lambda j: j.name, bot._scheduler.jobs))
     assert "scheduled_task" in job_names, "Scheduled task not found in scheduler"
+
+
+@pytest.fixture
+def extension() -> Extension:
+    ext = Extension(name="test_ext", prefix="!")
+
+    @ext.command()
+    async def hello(ctx):
+        pass
+
+    return ext
+
+
+def test_load_extension_with_valid_extension__expect_extension_in_registry(
+    bot: Bot, extension: Extension
+):
+    bot.load_extension(extension)
+
+    assert "test_ext" in bot.extensions
+
+
+def test_load_extension_with_duplicate_extension__expect_already_registered_error(
+    bot: Bot, extension: Extension
+):
+    bot.load_extension(extension)
+
+    with pytest.raises(AlreadyRegisteredError):
+        bot.load_extension(extension)
+
+
+def test_load_extension_with_commands__expect_commands_in_bot(
+    bot: Bot, extension: Extension
+):
+    bot.load_extension(extension)
+
+    assert "hello" in bot.commands
+
+
+def test_load_extension_with_group__expect_group_in_bot(bot: Bot):
+    ext = Extension(name="math_ext", prefix="!")
+
+    @ext.group()
+    async def math(ctx):
+        pass
+
+    bot.load_extension(ext)
+
+    assert "math" in bot.commands
+
+
+def test_load_extension_with_event_handlers__expect_handlers_in_bot(bot: Bot):
+    ext = Extension(name="events_ext")
+
+    @ext.event
+    async def on_message(room, event):
+        pass
+
+    bot.load_extension(ext)
+
+    assert on_message in bot._event_handlers[RoomMessageText]
+
+
+def test_load_extension_with_multiple_event_handlers__expect_all_handlers_in_bot(
+    bot: Bot,
+):
+    ext = Extension(name="multi_events_ext")
+
+    @ext.event
+    async def on_message(room, event):
+        pass
+
+    @ext.event(event_spec="on_message")
+    async def on_message_two(room, event):
+        pass
+
+    bot.load_extension(ext)
+
+    assert on_message in bot._event_handlers[RoomMessageText]
+    assert on_message_two in bot._event_handlers[RoomMessageText]
+
+
+def test_load_extension_with_checks__expect_checks_in_bot(bot: Bot):
+    ext = Extension(name="checks_ext")
+
+    @ext.check
+    async def only_admins(ctx):
+        return True
+
+    bot.load_extension(ext)
+
+    assert only_admins in bot._checks
+
+
+def test_load_extension_with_error_handlers__expect_handlers_in_bot(bot: Bot):
+    ext = Extension(name="errors_ext")
+
+    @ext.error(ValueError)
+    async def on_value_error(error):
+        pass
+
+    bot.load_extension(ext)
+
+    assert ValueError in bot._error_handlers
+    assert bot._error_handlers[ValueError] is on_value_error
+
+
+def test_load_extension_with_scheduled_tasks__expect_jobs_in_bot_scheduler(bot: Bot):
+    ext = Extension(name="scheduler_ext")
+
+    @ext.schedule("* * * * *")
+    async def periodic_task():
+        pass
+
+    bot.load_extension(ext)
+
+    job_names = [j.name for j in bot.scheduler.jobs]
+    assert "periodic_task" in job_names
+
+
+def test_load_extension_does_not_add_jobs_to_extension_scheduler(bot: Bot):
+    ext = Extension(name="scheduler_ext")
+
+    @ext.schedule("* * * * *")
+    async def periodic_task():
+        pass
+
+    initial_bot_job_count = len(bot.scheduler.jobs)
+    bot.load_extension(ext)
+
+    assert len(bot.scheduler.jobs) == initial_bot_job_count + 1
+
+
+def test_load_extension_logs_loading(bot: Bot, extension: Extension):
+    bot.load_extension(extension)
+
+    bot.log.debug.assert_any_call("loaded extension '%s'", extension.name)
+
+
+def test_load_extension_with_empty_extension__expect_no_commands_added(bot: Bot):
+    ext = Extension(name="empty_ext")
+    initial_command_count = len(bot.commands)
+
+    bot.load_extension(ext)
+
+    assert len(bot.commands) == initial_command_count
+
+
+@pytest.fixture
+def loaded_extension(bot: Bot) -> Extension:
+    ext = Extension(name="loaded_ext", prefix="!")
+
+    @ext.command()
+    async def hello(ctx):
+        pass
+
+    bot.load_extension(ext)
+    return ext
+
+
+def test_unload_extension_with_valid_name__expect_extension_removed_from_registry(
+    bot: Bot, loaded_extension: Extension
+):
+    bot.unload_extension(loaded_extension.name)
+
+    assert loaded_extension.name not in bot.extensions
+
+
+def test_unload_extension_with_unknown_name__expect_value_error(bot: Bot):
+    with pytest.raises(ValueError):
+        bot.unload_extension("nonexistent_ext")
+
+
+def test_unload_extension_with_commands__expect_commands_removed_from_bot(
+    bot: Bot, loaded_extension: Extension
+):
+    bot.unload_extension(loaded_extension.name)
+
+    assert "hello" not in bot.commands
+
+
+def test_unload_extension_with_group__expect_group_removed_from_bot(bot: Bot):
+    ext = Extension(name="group_ext", prefix="!")
+
+    @ext.group()
+    async def math(ctx):
+        pass
+
+    bot.load_extension(ext)
+    bot.unload_extension(ext.name)
+
+    assert "math" not in bot.commands
+
+
+def test_unload_extension_with_event_handlers__expect_handlers_removed_from_bot(
+    bot: Bot,
+):
+    ext = Extension(name="events_ext")
+
+    @ext.event
+    async def on_message(room, event):
+        pass
+
+    bot.load_extension(ext)
+    bot.unload_extension(ext.name)
+
+    assert on_message not in bot._event_handlers[RoomMessageText]
+
+
+def test_unload_extension_with_multiple_event_handlers__expect_all_handlers_removed(
+    bot: Bot,
+):
+    ext = Extension(name="multi_events_ext")
+
+    @ext.event
+    async def on_message(room, event):
+        pass
+
+    @ext.event(event_spec="on_message")
+    async def on_message_two(room, event):
+        pass
+
+    bot.load_extension(ext)
+    bot.unload_extension(ext.name)
+
+    assert on_message not in bot._event_handlers[RoomMessageText]
+    assert on_message_two not in bot._event_handlers[RoomMessageText]
+
+
+def test_unload_extension_does_not_remove_other_extension_handlers(bot: Bot):
+    ext_a = Extension(name="ext_a")
+    ext_b = Extension(name="ext_b")
+
+    @ext_a.event
+    async def on_message(room, event):
+        pass
+
+    @ext_b.event(event_spec="on_message")
+    async def on_message_b(room, event):
+        pass
+
+    bot.load_extension(ext_a)
+    bot.load_extension(ext_b)
+    bot.unload_extension(ext_a.name)
+
+    assert on_message not in bot._event_handlers[RoomMessageText]
+    assert on_message_b in bot._event_handlers[RoomMessageText]
+
+
+def test_unload_extension_with_checks__expect_checks_removed_from_bot(bot: Bot):
+    ext = Extension(name="checks_ext")
+
+    @ext.check
+    async def only_admins(ctx):
+        return True
+
+    bot.load_extension(ext)
+    bot.unload_extension(ext.name)
+
+    assert only_admins not in bot._checks
+
+
+def test_unload_extension_with_error_handlers__expect_handlers_removed_from_bot(
+    bot: Bot,
+):
+    ext = Extension(name="errors_ext")
+
+    @ext.error(ValueError)
+    async def on_value_error(error):
+        pass
+
+    bot.load_extension(ext)
+    bot.unload_extension(ext.name)
+
+    assert ValueError not in bot._error_handlers
+
+
+def test_unload_extension_with_scheduled_tasks__expect_jobs_removed_from_bot_scheduler(
+    bot: Bot,
+):
+    ext = Extension(name="scheduler_ext")
+
+    @ext.schedule("* * * * *")
+    async def periodic_task():
+        pass
+
+    bot.load_extension(ext)
+    bot.unload_extension(ext.name)
+
+    job_names = [j.name for j in bot.scheduler.jobs]
+    assert "periodic_task" not in job_names
+
+
+def test_unload_extension_does_not_remove_other_extension_jobs(bot: Bot):
+    ext_a = Extension(name="scheduler_ext_a")
+    ext_b = Extension(name="scheduler_ext_b")
+
+    @ext_a.schedule("* * * * *")
+    async def task_a():
+        pass
+
+    @ext_b.schedule("* * * * *")
+    async def task_b():
+        pass
+
+    bot.load_extension(ext_a)
+    bot.load_extension(ext_b)
+    bot.unload_extension(ext_a.name)
+
+    job_names = [j.name for j in bot.scheduler.jobs]
+    assert "task_a" not in job_names
+    assert "task_b" in job_names
+
+
+def test_unload_extension_logs_unloading(bot: Bot, loaded_extension: Extension):
+    bot.unload_extension(loaded_extension.name)
+
+    bot.log.debug.assert_any_call("unloaded extension '%s'", loaded_extension.name)

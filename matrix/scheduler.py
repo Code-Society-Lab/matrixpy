@@ -1,6 +1,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from typing import Any, Callable, Coroutine
+from apscheduler.job import Job
+from typing import cast, Any, Callable, Coroutine
 
 Callback = Callable[..., Coroutine[Any, Any, Any]]
 
@@ -12,6 +13,10 @@ class Scheduler:
         Uses APScheduler under the hood.
         """
         self.scheduler = AsyncIOScheduler()
+
+    @property
+    def jobs(self) -> list[Job]:
+        return cast(list[Job], self.scheduler.get_jobs())
 
     def _parse_cron(self, cron: str) -> dict:
         """
