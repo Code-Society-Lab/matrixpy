@@ -47,6 +47,16 @@ class Registry:
         "on_member_change": RoomMemberEvent,
     }
 
+    LIFECYCLE_EVENTS: set[str] = {
+        "on_ready",
+        "on_error",
+        "on_command",
+        "on_command_error",
+        "on_command_invoke",
+        "on_load",
+        "on_unload",
+    }
+
     def __init__(self, name: str, prefix: Optional[str] = None):
         self.name = name
         self.prefix = prefix
@@ -57,6 +67,7 @@ class Registry:
         self._scheduler: Scheduler = Scheduler()
 
         self._event_handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
+        self._hook_handlers: Dict[str, List[Callback]] = defaultdict(list)
         self._on_error: Optional[ErrorCallback] = None
         self._error_handlers: Dict[type[Exception], ErrorCallback] = {}
         self._command_error_handlers: Dict[type[Exception], CommandErrorCallback] = {}
@@ -208,17 +219,15 @@ class Registry:
             if not inspect.iscoroutinefunction(f):
                 raise TypeError("Event handlers must be coroutines")
 
-            if event_spec:
-                if isinstance(event_spec, str):
-                    event_type = self.EVENT_MAP.get(event_spec)
-                    if event_type is None:
-                        raise ValueError(f"Unknown event string: {event_spec}")
-                else:
-                    event_type = event_spec
-            else:
-                event_type = self.EVENT_MAP.get(f.__name__)
-                if event_type is None:
-                    raise ValueError(f"Unknown event name: {f.__name__}")
+            key = event_spec if isinstance(event_spec, str) else f.__name__
+            event_type: type[Event] | None = (
+                event_spec
+                if event_spec and not isinstance(event_spec, str)
+                else self.EVENT_MAP.get(key)
+            )
+
+            if event_type is None:
+                raise ValueError(f"Unknown event: {key!r}")
 
             return self.register_event(event_type, f)
 
@@ -235,6 +244,64 @@ class Registry:
         self._event_handlers[event_type].append(callback)
         logger.debug(
             "registered event %s for %s", callback.__name__, event_type.__name__
+        )
+        return callback
+
+    def hook(
+        self, func: Optional[Callback], *, event_name: Optional[str] = None
+    ) -> Union[Callback, Callable[[Callback], Callback]]:
+        """Decorator to register a coroutine as a lifecycle event hook.
+
+        Lifecycle events include things like ``on_ready``, ``on_command``,
+        and ``on_error``. If the event name is not provided, it is inferred
+        from the function name. Multiple handlers for the same lifecycle
+        event are supported and called in registration order.
+
+        ## Example
+
+        ```python
+        @bot.hook
+        async def on_ready():
+            print("Bot is ready!")
+
+        @bot.hook(event_name="on_command")
+        async def log_command(ctx):
+            print(f"Command invoked: {ctx.command}")
+        ```
+        """
+
+        def wrapper(f: Callback) -> Callback:
+            if not inspect.iscoroutinefunction(f):
+                raise TypeError("Lifecycle hooks must be coroutines")
+
+            name = event_name or f.__name__
+            if name not in self.LIFECYCLE_EVENTS:
+                raise ValueError(f"Unknown lifecycle event: {name}")
+
+            return self.register_hook(name, f)
+
+        if func is None:
+            return wrapper
+        return wrapper(func)
+
+    def register_hook(self, event_name: str, callback: Callback) -> Callback:
+        """Register a lifecycle event hook directly for a given event name.
+
+        Prefer the :meth:`hook` decorator for typical use. This method
+        is useful when loading lifecycle hooks from an extension.
+        """
+        if not inspect.iscoroutinefunction(callback):
+            raise TypeError("Lifecycle hooks must be coroutines")
+
+        if event_name not in self.LIFECYCLE_EVENTS:
+            raise ValueError(f"Unknown lifecycle event: {event_name}")
+
+        self._hook_handlers[event_name].append(callback)
+        logger.debug(
+            "registered lifecycle hook '%s' for event '%s' on %s",
+            callback.__name__,
+            event_name,
+            type(self).__name__,
         )
         return callback
 

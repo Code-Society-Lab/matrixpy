@@ -3,7 +3,7 @@ import inspect
 import asyncio
 import logging
 
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 from nio import AsyncClient, Event, MatrixRoom
 
@@ -72,6 +72,9 @@ class Bot(Registry):
         for event_type, handlers in extension._event_handlers.items():
             self._event_handlers[event_type].extend(handlers)
 
+        for hook_name, handlers in extension._hook_handlers.items():
+            self._hook_handlers[hook_name].extend(handlers)
+
         self._checks.extend(extension._checks)
         self._error_handlers.update(extension._error_handlers)
         self._command_error_handlers.update(extension._command_error_handlers)
@@ -122,12 +125,19 @@ class Bot(Registry):
         for attr in dir(self):
             if not attr.startswith("on_"):
                 continue
+
             coro = getattr(self, attr, None)
-            if inspect.iscoroutinefunction(coro):
-                try:
+            if not inspect.iscoroutinefunction(coro):
+                continue
+
+            try:
+                if attr in self.LIFECYCLE_EVENTS:
+                    self.hook(coro)
+
+                if attr in self.EVENT_MAP:
                     self.event(coro)
-                except ValueError:  # ignore unknown name
-                    continue
+            except ValueError:
+                continue
 
     async def _on_event(self, room: MatrixRoom, event: Event) -> None:
         # ignore bot events
@@ -139,11 +149,16 @@ class Bot(Registry):
             return
 
         try:
-            await self._dispatch(room, event)
+            await self._dispatch_matrix_event(room, event)
         except Exception as error:
             await self.on_error(error)
 
-    async def _dispatch(self, room: MatrixRoom, event: Event) -> None:
+    async def _dispatch(self, event_name: str, *args: Any, **kwargs: Any) -> None:
+        """Fire all listeners registered for a named lifecycle event."""
+        for handler in self._hook_handlers.get(event_name, []):
+            await handler(*args, **kwargs)
+
+    async def _dispatch_matrix_event(self, room: MatrixRoom, event: Event) -> None:
         """Internal type-based fan-out plus optional command handling."""
         for event_type, funcs in self._event_handlers.items():
             if isinstance(event, event_type):
@@ -202,10 +217,6 @@ class Bot(Registry):
         This method is automatically called when a :class:`nio.RoomMessageText`
         event is detected. It is primarily responsible for detecting and
         processing commands that match the bot's defined prefix.
-
-        :param ctx: The context object containing information about the Matrix
-                    room and the message event.
-        :type ctx: Context
         """
         await self._process_commands(room, event)
 
@@ -217,9 +228,6 @@ class Bot(Registry):
         """
         Handle errors by invoking a registered error handler,
         a generic error callback, or logging the exception.
-
-        :param error: The exception instance that was raised.
-        :type error: Exceptipon
         """
         if handler := self._error_handlers.get(type(error)):
             await handler(error)
@@ -268,7 +276,7 @@ class Bot(Registry):
 
         self.scheduler.start()
 
-        await self.on_ready()
+        await self._dispatch("on_ready")
         await self.client.sync_forever(timeout=30_000)
 
     def start(self) -> None:
