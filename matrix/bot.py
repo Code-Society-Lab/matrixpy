@@ -49,8 +49,26 @@ class Bot(Registry):
         self.help: HelpCommand = help or DefaultHelpCommand(prefix=self.prefix)
         self.register_command(self.help)
 
-        self.client.add_event_callback(self._on_event, Event)
+        self.client.add_event_callback(self._on_matrix_event, Event)
         self._auto_register_events()
+
+    def _auto_register_events(self) -> None:
+        for attr in dir(self):
+            if not attr.startswith("on_"):
+                continue
+
+            coro = getattr(self, attr, None)
+            if not inspect.iscoroutinefunction(coro):
+                continue
+
+            try:
+                if attr in self.LIFECYCLE_EVENTS:
+                    self.hook(coro)
+
+                if attr in self.EVENT_MAP:
+                    self.event(coro)
+            except ValueError:
+                continue
 
     def get_room(self, room_id: str) -> Room:
         """Retrieve a Room instance based on the room_id."""
@@ -121,138 +139,74 @@ class Bot(Registry):
         extension.unload()
         self.log.debug("unloaded extension '%s'", ext_name)
 
-    def _auto_register_events(self) -> None:
-        for attr in dir(self):
-            if not attr.startswith("on_"):
-                continue
-
-            coro = getattr(self, attr, None)
-            if not inspect.iscoroutinefunction(coro):
-                continue
-
-            try:
-                if attr in self.LIFECYCLE_EVENTS:
-                    self.hook(coro)
-
-                if attr in self.EVENT_MAP:
-                    self.event(coro)
-            except ValueError:
-                continue
-
-    async def _on_event(self, room: MatrixRoom, event: Event) -> None:
-        # ignore bot events
-        if event.sender == self.client.user:
-            return
-
-        # ignore events that happened before the bot started
-        if self.start_at and self.start_at > (event.server_timestamp / 1000):
-            return
-
-        try:
-            await self._dispatch_matrix_event(room, event)
-        except Exception as error:
-            await self.on_error(error)
-
-    async def _dispatch(self, event_name: str, *args: Any, **kwargs: Any) -> None:
-        """Fire all listeners registered for a named lifecycle event."""
-        for handler in self._hook_handlers.get(event_name, []):
-            await handler(*args, **kwargs)
-
-    async def _dispatch_matrix_event(self, room: MatrixRoom, event: Event) -> None:
-        """Internal type-based fan-out plus optional command handling."""
-        for event_type, funcs in self._event_handlers.items():
-            if isinstance(event, event_type):
-                for func in funcs:
-                    await func(room, event)
-
-    async def _process_commands(self, room: MatrixRoom, event: Event) -> None:
-        """Parse and execute commands"""
-        ctx = await self._build_context(room, event)
-
-        if ctx.command:
-            for check in self._checks:
-                if not await check(ctx):
-                    raise CheckError(ctx.command, check)
-
-            await ctx.command(ctx)
-
-    async def _build_context(self, matrix_room: MatrixRoom, event: Event) -> Context:
-        room = self.get_room(matrix_room.room_id)
-        ctx = Context(bot=self, room=room, event=event)
-        prefix: str | None = None
-
-        if self.prefix is not None and ctx.body.startswith(self.prefix):
-            prefix = self.prefix
-        else:
-            prefix = next(
-                (
-                    cmd.prefix
-                    for cmd in self._commands.values()
-                    if cmd.prefix is not None and ctx.body.startswith(cmd.prefix)
-                ),
-                self.config.prefix,
-            )
-
-        if prefix is None or not ctx.body.startswith(prefix):
-            return ctx
-
-        if parts := ctx.body[len(prefix) :].split():
-            cmd_name = parts[0]
-            cmd = self._commands.get(cmd_name)
-
-            if cmd and cmd.prefix and not ctx.body.startswith(cmd.prefix):
-                return ctx
-
-            if not cmd:
-                raise CommandNotFoundError(cmd_name)
-
-            ctx.command = cmd
-
-        return ctx
-
-    async def on_message(self, room: MatrixRoom, event: Event) -> None:
-        """
-        Invoked when a message event is received.
-
-        This method is automatically called when a :class:`nio.RoomMessageText`
-        event is detected. It is primarily responsible for detecting and
-        processing commands that match the bot's defined prefix.
-        """
-        await self._process_commands(room, event)
+    # LIFECYCLE
 
     async def on_ready(self) -> None:
-        """Invoked after a successful login, before sync starts."""
-        self.log.info("bot is ready")
+        """Override this in a subclass."""
+        pass
+
+    async def _on_ready(self) -> None:
+        """Internal hook — always fires, calls public override then extension handlers."""
+        await self.on_ready()
+        await self._dispatch("on_ready")
 
     async def on_error(self, error: Exception) -> None:
-        """
-        Handle errors by invoking a registered error handler,
-        a generic error callback, or logging the exception.
-        """
+        """Override this in a subclass."""
+        self.log.exception("Unhandled error: '%s'", error)
+
+    async def _on_error(self, error: Exception) -> None:
         if handler := self._error_handlers.get(type(error)):
             await handler(error)
             return
 
-        if self._on_error:
-            await self._on_error(error)
+        if self._fallback_error_handler:
+            await self._fallback_error_handler(error)
             return
+
+        await self._dispatch("on_error", error)
+
+    async def on_command(self, _ctx: Context) -> None:
+        """Override this in a subclass."""
+        pass
+
+    async def _on_command(self, ctx: Context) -> None:
+        await self._dispatch("on_command", ctx)
+
+    async def on_command_error(self, _ctx: Context, error: Exception) -> None:
+        """Override this in a subclass."""
         self.log.exception("Unhandled error: '%s'", error)
 
-    async def on_command_error(self, ctx: "Context", error: Exception) -> None:
+    async def _on_command_error(self, ctx: Context, error: Exception) -> None:
         """
         Handles errors raised during command invocation.
 
         This method is called automatically when a command error occurs.
         If a specific error handler is registered for the type of the
         exception, it will be invoked with the current context and error.
-
-        :param ctx: The context in which the command was invoked.
-        :type ctx: Context
-        :param error: The exception that was raised during command execution.
-        :type error: Exception
         """
         if handler := self._command_error_handlers.get(type(error)):
             await handler(ctx, error)
+            return
+
+        await self._dispatch("on_command_error", ctx, error)
+
+    # ENTRYPOINT
+
+    def start(self) -> None:
+        """
+        Synchronous entry point for running the bot.
+
+        This is a convenience wrapper that allows running the bot like a
+        script using a blocking call. It internally calls :meth:`run` within
+        :func:`asyncio.run`, and ensures the client is closed gracefully
+        on interruption.
+        """
+        try:
+            asyncio.run(self.run())
+        except KeyboardInterrupt:
+            self.log.info("bot interrupted by user")
+        finally:
+            asyncio.run(self.client.close())
 
     async def run(self) -> None:
         """
@@ -276,21 +230,67 @@ class Bot(Registry):
 
         self.scheduler.start()
 
-        await self._dispatch("on_ready")
+        await self._on_ready()
         await self.client.sync_forever(timeout=30_000)
 
-    def start(self) -> None:
-        """
-        Synchronous entry point for running the bot.
+    # MATRIX EVENTS
 
-        This is a convenience wrapper that allows running the bot like a
-        script using a blocking call. It internally calls :meth:`run` within
-        :func:`asyncio.run`, and ensures the client is closed gracefully
-        on interruption.
-        """
+    async def on_message(self, room: MatrixRoom, event: Event) -> None:
+        await self._process_commands(room, event)
+
+    async def _on_matrix_event(self, room: MatrixRoom, event: Event) -> None:
+        # ignore bot events
+        if event.sender == self.client.user:
+            return
+
+        # ignore events that happened before the bot started
+        if self.start_at and self.start_at > (event.server_timestamp / 1000):
+            return
+
         try:
-            asyncio.run(self.run())
-        except KeyboardInterrupt:
-            self.log.info("bot interrupted by user")
-        finally:
-            asyncio.run(self.client.close())
+            await self._dispatch_matrix_event(room, event)
+        except Exception as error:
+            await self._on_error(error)
+
+    async def _dispatch(self, event_name: str, *args: Any, **kwargs: Any) -> None:
+        """Fire all listeners registered for a named lifecycle event."""
+        for handler in self._hook_handlers.get(event_name, []):
+            await handler(*args, **kwargs)
+
+    async def _dispatch_matrix_event(self, room: MatrixRoom, event: Event) -> None:
+        """Fire all listeners registered for a named matrix event."""
+        for event_type, funcs in self._event_handlers.items():
+            if isinstance(event, event_type):
+                for func in funcs:
+                    await func(room, event)
+
+    async def _process_commands(self, room: MatrixRoom, event: Event) -> None:
+        """Parse and execute commands"""
+        ctx = await self._build_context(room, event)
+
+        if ctx.command:
+            for check in self._checks:
+                if not await check(ctx):
+                    raise CheckError(ctx.command, check)
+
+            await self._on_command(ctx)
+            await ctx.command(ctx)
+
+    async def _build_context(self, matrix_room: MatrixRoom, event: Event) -> Context:
+        room = self.get_room(matrix_room.room_id)
+        ctx = Context(bot=self, room=room, event=event)
+        prefix = self.prefix or self.config.prefix
+
+        if not ctx.body.startswith(prefix):
+            return ctx
+
+        if parts := ctx.body[len(prefix) :].split():
+            cmd_name = parts[0]
+            cmd = self._commands.get(cmd_name)
+
+            if not cmd:
+                raise CommandNotFoundError(cmd_name)
+
+            ctx.command = cmd
+
+        return ctx

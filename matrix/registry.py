@@ -52,9 +52,6 @@ class Registry:
         "on_error",
         "on_command",
         "on_command_error",
-        "on_command_invoke",
-        "on_load",
-        "on_unload",
     }
 
     def __init__(self, name: str, prefix: Optional[str] = None):
@@ -68,7 +65,7 @@ class Registry:
 
         self._event_handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._hook_handlers: Dict[str, List[Callback]] = defaultdict(list)
-        self._on_error: Optional[ErrorCallback] = None
+        self._fallback_error_handler: Optional[ErrorCallback] = None
         self._error_handlers: Dict[type[Exception], ErrorCallback] = {}
         self._command_error_handlers: Dict[type[Exception], CommandErrorCallback] = {}
 
@@ -248,7 +245,7 @@ class Registry:
         return callback
 
     def hook(
-        self, func: Optional[Callback], *, event_name: Optional[str] = None
+        self, func: Optional[Callback] = None, *, event_name: Optional[str] = None
     ) -> Union[Callback, Callable[[Callback], Callback]]:
         """Decorator to register a coroutine as a lifecycle event hook.
 
@@ -388,7 +385,7 @@ class Registry:
             if exception:
                 self._error_handlers[exception] = func
             else:
-                self._on_error = func
+                self._fallback_error_handler = func
             logger.debug(
                 "registered error handler '%s' on %s",
                 func.__name__,
