@@ -105,7 +105,7 @@ class Bot(Registry):
             )
 
         self.extensions[extension.name] = extension
-        extension.load()
+        extension.load(self)
         self.log.debug("loaded extension '%s'", extension.name)
 
     def unload_extension(self, ext_name: str) -> None:
