@@ -297,12 +297,14 @@ def test_register_error_handler_with_exception_type__expect_handler_in_dict(
     assert registry._error_handlers[ValueError] is on_value_error
 
 
-def test_register_generic_error_handler__expect_on_error_set(registry: Registry):
+def test_register_generic_error_handler__expect_fallback_error_handler_set(
+    registry: Registry,
+):
     @registry.error()
     async def on_any_error(error):
         pass
 
-    assert registry._on_error is on_any_error
+    assert registry._fallback_error_handler is on_any_error
 
 
 def test_register_error_handler_with_non_coroutine__expect_type_error(

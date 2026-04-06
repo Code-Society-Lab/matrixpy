@@ -64,16 +64,15 @@ def test_bot_init_with_invalid_config_file():
 
 
 def test_auto_register_events_registers_known_events(bot):
-    # Add a dummy coroutine named on_message_known to bot instance
-    async def on_message_known(room, event):
+    async def on_message(room, event):
         pass
 
-    setattr(bot, "on_message_known", on_message_known)
+    setattr(bot, "on_message", on_message)
 
-    with patch.object(bot, "event", wraps=bot.event) as event:
+    with patch.object(bot, "event", wraps=bot.event) as mock_event:
         bot._auto_register_events()
 
-    event.assert_any_call(on_message_known)
+    mock_event.assert_any_call(on_message)
 
 
 @pytest.mark.asyncio
@@ -100,7 +99,7 @@ async def test_dispatch_calls_all_handlers(bot):
     )
     room = MatrixRoom("!roomid:matrix.org", "room_alias")
 
-    await bot._dispatch(room, event)
+    await bot._dispatch_matrix_event(room, event)
     assert "h1" in called
     assert "h2" in called
 
@@ -114,26 +113,27 @@ async def test_on_event_ignores_self_events(bot):
     event.sender = "@grace:matrix.org"
     event.server_timestamp = 123456789
 
-    with patch.object(bot, "_dispatch", new_callable=AsyncMock) as dispatch:
-        await bot._on_event(MatrixRoom("!room:matrix.org", "alias"), event)
+    with patch.object(
+        bot, "_dispatch_matrix_event", new_callable=AsyncMock
+    ) as dispatch:
+        await bot._on_matrix_event(MatrixRoom("!room:matrix.org", "alias"), event)
         dispatch.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_on_event_ignores_old_events(bot, room, event):
-    # Set start_at after event time
     bot.client.user = "@somebot:matrix.org"
     bot.start_at = event.server_timestamp / 1000 + 10
 
-    bot._dispatch = AsyncMock()
-    await bot._on_event(room, event)
+    bot._dispatch_matrix_event = AsyncMock()
+    await bot._on_matrix_event(room, event)
 
-    bot._dispatch.assert_not_called()
+    bot._dispatch_matrix_event.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_on_event_calls_error_handler(bot):
-    bot._dispatch = AsyncMock(side_effect=Exception("boom"))
+    bot._dispatch_matrix_event = AsyncMock(side_effect=Exception("boom"))
 
     custom_error_handler = AsyncMock()
     bot.error()(custom_error_handler)
@@ -144,7 +144,7 @@ async def test_on_event_calls_error_handler(bot):
     bot.start_at = 0
     bot.client.user = "@grace:matrix.org"
 
-    await bot._on_event(MatrixRoom("!roomid", "alias"), event)
+    await bot._on_matrix_event(MatrixRoom("!roomid", "alias"), event)
     custom_error_handler.assert_awaited_once()
 
 
@@ -156,13 +156,28 @@ async def test_on_message_calls_process_commands(bot, room, event):
 
 
 @pytest.mark.asyncio
-async def test_on_ready(bot):
-    await bot.on_ready()
-    bot.log.info.assert_called_once_with("bot is ready")
+async def test_on_ready_dispatches(bot):
+    with patch.object(bot, "_dispatch", new_callable=AsyncMock) as mock_dispatch:
+        await bot._on_ready()
+        mock_dispatch.assert_awaited_once_with("on_ready")
 
 
 @pytest.mark.asyncio
-async def test_on_error_calls_custom_handler(bot):
+async def test_on_error_calls_specific_handler(bot):
+    called = False
+
+    @bot.error(ValueError)
+    async def custom_error_handler(e):
+        nonlocal called
+        called = True
+
+    await bot._on_error(ValueError("test error"))
+
+    assert called, "Specific error handler was not called"
+
+
+@pytest.mark.asyncio
+async def test_on_error_calls_fallback_handler(bot):
     called = False
 
     @bot.error()
@@ -170,15 +185,14 @@ async def test_on_error_calls_custom_handler(bot):
         nonlocal called
         called = True
 
-    error = Exception("test error")
-    await bot.on_error(error)
+    await bot._fallback_error_handler(Exception("test error"))
+    await bot.on_error(Exception("test error"))
 
-    assert called, "Custom error handler was not called"
+    assert called, "Fallback error handler was not called"
 
 
 @pytest.mark.asyncio
 async def test_on_error_logs_when_no_handler(bot):
-    bot._on_error = None
     error = Exception("test")
 
     await bot.on_error(error)
@@ -197,7 +211,6 @@ async def test_process_commands_executes_command(bot, event):
     event.body = "!greet"
     room = MatrixRoom("!roomid:matrix.org", "alias")
 
-    # Patch _build_context to return context with command assigned
     with patch.object(
         bot, "_build_context", new_callable=AsyncMock
     ) as mock_build_context:
@@ -383,12 +396,12 @@ async def test_run_uses_token():
 async def test_run_with_username_and_password(bot):
     bot.client.login = AsyncMock(return_value="login_resp")
     bot.client.sync_forever = AsyncMock()
-    bot.on_ready = AsyncMock()
+    bot._on_ready = AsyncMock()
 
     await bot.run()
 
     bot.client.login.assert_awaited_once_with("grace1234")
-    bot.on_ready.assert_awaited_once()
+    bot._on_ready.assert_awaited_once()
     bot.client.sync_forever.assert_awaited_once()
 
 
