@@ -1,6 +1,6 @@
 from typing import Any
 
-from nio import AsyncClient, MatrixRoom
+from nio import AsyncClient, MatrixRoom, Event
 
 from matrix.errors import MatrixError
 from matrix.message import Message
@@ -24,6 +24,22 @@ class Room:
     def __init__(self, matrix_room: MatrixRoom, client: AsyncClient) -> None:
         self._matrix_room: MatrixRoom = matrix_room
         self._client: AsyncClient = client
+
+    def __getattr__(self, name: str) -> Any:
+        """
+        Fallback to MatrixRoom for attributes not explicitly defined.
+
+        This allows access to any MatrixRoom attribute not wrapped by this class.
+        See matrix-nio's MatrixRoom documentation for available attributes.
+
+        https://matrix-nio.readthedocs.io/en/latest/nio.html#nio.rooms.MatrixRoom
+        """
+        try:
+            return getattr(self._matrix_room, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            ) from None
 
     @property
     def matrix_room(self) -> MatrixRoom:
@@ -64,22 +80,6 @@ class Room:
     def encrypted(self) -> bool:
         """Whether the room is encrypted."""
         return self._matrix_room.encrypted  # type: ignore[no-any-return]
-
-    def __getattr__(self, name: str) -> Any:
-        """
-        Fallback to MatrixRoom for attributes not explicitly defined.
-
-        This allows access to any MatrixRoom attribute not wrapped by this class.
-        See matrix-nio's MatrixRoom documentation for available attributes.
-
-        https://matrix-nio.readthedocs.io/en/latest/nio.html#nio.rooms.MatrixRoom
-        """
-        try:
-            return getattr(self._matrix_room, name)
-        except AttributeError:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{name}'"
-            ) from None
 
     async def send(
         self,
@@ -319,15 +319,18 @@ class Room:
                 message_type="m.room.message",
                 content=payload.build(),
             )
+            event = self.get_event(resp.event_id)
 
             return Message(
                 room=self,
-                event_id=resp.event_id,
-                body=getattr(payload, "body", None),
+                event=event,
                 client=self.client,
             )
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
+
+    async def get_event(self, event_id: str) -> Event:
+        return
 
     async def invite_user(self, user_id: str) -> None:
         """Invite a user to the room.
