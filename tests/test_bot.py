@@ -15,14 +15,15 @@ from matrix.errors import (
 
 @pytest.fixture
 def bot():
-    bot = Bot(config="tests/config_fixture.yaml")
+    b = Bot()
+    b._load_config("tests/config_fixture.yaml")
 
-    bot.client = MagicMock()
-    bot.client.room_send = AsyncMock()
-    bot.log = MagicMock()
-    bot.log.getChild.return_value = MagicMock()
+    b._client = MagicMock()
+    b._client.room_send = AsyncMock()
+    b.log = MagicMock()
+    b.log.getChild.return_value = MagicMock()
 
-    return bot
+    return b
 
 
 @pytest.fixture
@@ -46,12 +47,8 @@ def event():
 
 
 def test_bot_init_with_config():
-    bot = Bot(
-        config=Config(
-            username="grace",
-            password="grace1234",
-        )
-    )
+    bot = Bot()
+    bot._load_config(Config(username="grace", password="grace1234"))
 
     assert bot.config.user_id == "grace"
     assert bot.config.password == "grace1234"
@@ -59,8 +56,9 @@ def test_bot_init_with_config():
 
 
 def test_bot_init_with_invalid_config_file():
+    bot = Bot()
     with pytest.raises(FileNotFoundError):
-        Bot(config="not-a-dict")
+        bot._load_config("not-a-dict")
 
 
 def test_auto_register_events_registers_known_events(bot):
@@ -107,7 +105,7 @@ async def test_dispatch_calls_all_handlers(bot):
 @pytest.mark.asyncio
 async def test_on_event_ignores_self_events(bot):
     bot.start_at = None
-    bot.client.user = "@grace:matrix.org"
+    bot._client.user = "@grace:matrix.org"
 
     event = MagicMock(spec=RoomMessageText)
     event.sender = "@grace:matrix.org"
@@ -122,7 +120,7 @@ async def test_on_event_ignores_self_events(bot):
 
 @pytest.mark.asyncio
 async def test_on_event_ignores_old_events(bot, room, event):
-    bot.client.user = "@somebot:matrix.org"
+    bot._client.user = "@somebot:matrix.org"
     bot.start_at = event.server_timestamp / 1000 + 10
 
     bot._dispatch_matrix_event = AsyncMock()
@@ -142,7 +140,7 @@ async def test_on_event_calls_error_handler(bot):
     event.sender = "@someone:matrix.org"
     event.server_timestamp = 999999999
     bot.start_at = 0
-    bot.client.user = "@grace:matrix.org"
+    bot._client.user = "@grace:matrix.org"
 
     await bot._on_matrix_event(MatrixRoom("!roomid", "alias"), event)
     custom_error_handler.assert_awaited_once()
@@ -380,42 +378,44 @@ def test_command_duplicate_raises(bot):
 
 @pytest.mark.asyncio
 async def test_run_uses_token():
-    bot = Bot(config="tests/config_fixture_token.yaml")
+    bot = Bot()
+    bot._load_config("tests/config_fixture_token.yaml")
 
-    bot.client.sync_forever = AsyncMock()
+    bot._client.sync_forever = AsyncMock()
     bot.on_ready = AsyncMock()
 
     await bot.run()
 
-    assert bot.client.access_token == "abc123"
+    assert bot._client.access_token == "abc123"
     bot.on_ready.assert_awaited_once()
-    bot.client.sync_forever.assert_awaited_once()
+    bot._client.sync_forever.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_run_with_username_and_password(bot):
-    bot.client.login = AsyncMock(return_value="login_resp")
-    bot.client.sync_forever = AsyncMock()
+    bot._client.login = AsyncMock(return_value="login_resp")
+    bot._client.sync_forever = AsyncMock()
     bot._on_ready = AsyncMock()
 
     await bot.run()
 
-    bot.client.login.assert_awaited_once_with("grace1234")
+    bot._client.login.assert_awaited_once_with("grace1234")
     bot._on_ready.assert_awaited_once()
-    bot.client.sync_forever.assert_awaited_once()
+    bot._client.sync_forever.assert_awaited_once()
 
 
 def test_start_handles_keyboard_interrupt(caplog):
-    bot = Bot(config="tests/config_fixture.yaml")
-
+    bot = Bot()
+    bot._client = MagicMock()
+    bot._client.close = AsyncMock()
     bot.run = AsyncMock(side_effect=KeyboardInterrupt)
-    bot.client.close = AsyncMock()
 
-    with caplog.at_level("INFO"):
-        bot.start()
+    with patch.object(bot, "_load_config"):
+        with caplog.at_level("INFO"):
+            bot.start(config="tests/config_fixture.yaml")
 
     assert "bot interrupted by user" in caplog.text
-    bot.client.close.assert_awaited_once()
+    bot._client.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio

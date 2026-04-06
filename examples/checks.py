@@ -1,7 +1,7 @@
 from matrix import Bot, Context
 from matrix.errors import CheckError
 
-bot = Bot(config="config.yaml")
+bot = Bot()
 
 allowed_users = {"@alice:matrix.org", "@bob:matrix.org"}
 
@@ -23,4 +23,4 @@ async def permission_error_handler(ctx: Context, error: CheckError) -> None:
     await ctx.reply(f"Access denied: {error}")
 
 
-bot.start()
+bot.start(config="config.yaml")

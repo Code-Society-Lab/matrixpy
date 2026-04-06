@@ -19,6 +19,7 @@ decorator-based API similar to popular event-driven frameworks, allowing
 developers to focus on behavior rather than boilerplate.
 
 #### Key Features
+
 - Minimal setup, easy to extend
 - Event-driven API using async/await
 - Clean command registration
@@ -28,6 +29,7 @@ developers to focus on behavior rather than boilerplate.
 # Quickstart
 
 **Requirements**
+
 - Python 3.10+
 
 ```
@@ -35,38 +37,45 @@ pip install matrix-python
 ```
 
 If you plan on contributing to matrix.py, we recommend to install the development libraries:
+
 ```
 pip install -e .[dev]
 ```
 
-*Note*: It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) when installing python packages.
-
+*Note*: It is recommended to use
+a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
+when installing python packages.
 
 ```python
 from matrix import Bot, Context
 
-bot = Bot(config="config.yml")
+bot = Bot()
 
 
 @bot.command("ping")
 async def ping(ctx: Context):
-    await ctx.send("Pong!")
+    await ctx.reply("Pong!")
 
 
-bot.start()
+bot.start(config="config.yml")
 ```
 
 [Documentation](https://github.com/Code-Society-Lab/matrixpy/wiki) - [Examples](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples)
 
 # Contributing
-We welcome everyone to contribute! 
+
+We welcome everyone to contribute!
 
 Whether it's fixing bugs, suggesting features, or improving the docs - every bit helps.
+
 - Submit an issue
 - Open a pull request
-- Or just hop into our [Matrix](https://matrix.to/#/%23codesociety:matrix.org) or [Discord](https://discord.gg/code-society-823178343943897088) server and say hi!
+- Or just hop into our [Matrix](https://matrix.to/#/%23codesociety:matrix.org)
+  or [Discord](https://discord.gg/code-society-823178343943897088) server and say hi!
 
-If you intend to contribute, please read the [CONTRIBUTING.md](./CONTRIBUTING.md) first. Additionally, **every contributor** is expected to follow the [code of conduct](./CODE_OF_CONDUCT.md).
+If you intend to contribute, please read the [CONTRIBUTING.md](./CONTRIBUTING.md) first. Additionally, **every
+contributor** is expected to follow the [code of conduct](./CODE_OF_CONDUCT.md).
 
 # License
+
 matrix.py is released under [GPL-3.0](https://opensource.org/license/gpl-3-0)

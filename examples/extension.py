@@ -34,12 +34,14 @@ async def divide_error(ctx: Context, error):
 
 
 """
+# bot.py
+
 from matrix import Bot
 from math_extension import extension as math_extension
 
-bot = Bot(config="config.yaml")
+bot = Bot()
 
 
 bot.load_extension(math_extension)
-bot.start()
+bot.start(config="config.yaml")
 """
