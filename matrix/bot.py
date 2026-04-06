@@ -28,29 +28,34 @@ class Bot(Registry):
     """
 
     def __init__(
-        self, *, config: Union[Config, str], help: Optional[HelpCommand] = None
+        self,
+        *,
+        help_: Optional[HelpCommand] = None,
     ) -> None:
-        if isinstance(config, Config):
-            self.config = config
-        elif isinstance(config, str):
-            self.config = Config(config_path=config)
-        else:
-            raise TypeError("config must be a Config instance or a config file path")
+        super().__init__(self.__class__.__name__)
 
-        super().__init__(self.__class__.__name__, prefix=self.config.prefix)
-
-        self.client: AsyncClient = AsyncClient(self.config.homeserver)
+        self._config: Config | None = None
+        self._client: AsyncClient | None = None
+        self._help: HelpCommand | None = help_
         self.extensions: dict[str, Extension] = {}
         self.scheduler: Scheduler = Scheduler()
         self.log: logging.Logger = logging.getLogger(__name__)
+        self.start_at: float | None = None
 
-        self.start_at: float | None = None  # unix timestamp
+    @property
+    def client(self) -> AsyncClient:
+        assert self._client is not None, "Bot has not been started."
+        return self._client
 
-        self.help: HelpCommand = help or DefaultHelpCommand(prefix=self.prefix)
-        self.register_command(self.help)
+    @property
+    def config(self) -> Config:
+        assert self._config is not None, "Bot has not been started."
+        return self._config
 
-        self.client.add_event_callback(self._on_matrix_event, Event)
-        self._auto_register_events()
+    @property
+    def help(self) -> HelpCommand:
+        assert self._help is not None, "Bot has not been started."
+        return self._help
 
     def _auto_register_events(self) -> None:
         for attr in dir(self):
@@ -192,7 +197,26 @@ class Bot(Registry):
 
     # ENTRYPOINT
 
-    def start(self) -> None:
+    def _load_config(self, config: Config | str) -> None:
+        if self._config is not None:
+            raise RuntimeError("Config is already loaded.")
+
+        if isinstance(config, str):
+            config = Config(config_path=config)
+        elif not isinstance(config, Config):
+            raise TypeError("config must be a Config instance or a config file path")
+
+        self._config = config
+        self._client = AsyncClient(config.homeserver)
+        self._help = self._help or DefaultHelpCommand()
+
+        self.prefix = config.prefix
+        self.register_command(self.help)
+
+        self.client.add_event_callback(self._on_matrix_event, Event)
+        self._auto_register_events()
+
+    def start(self, *, config: Config | str) -> None:
         """
         Synchronous entry point for running the bot.
 
@@ -201,6 +225,9 @@ class Bot(Registry):
         :func:`asyncio.run`, and ensures the client is closed gracefully
         on interruption.
         """
+        if config is not None:
+            self._load_config(config)
+
         try:
             asyncio.run(self.run())
         except KeyboardInterrupt:
