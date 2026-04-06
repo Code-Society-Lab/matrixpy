@@ -1,7 +1,7 @@
 from matrix import Bot, Context, cooldown
 from matrix.errors import CooldownError
 
-bot = Bot(config="config.yaml")
+bot = Bot()
 
 
 # Invoke by using !hello
@@ -27,4 +27,4 @@ async def cooldown_function(ctx: Context, error: CooldownError) -> None:
     await ctx.reply(f"⏳ Try again in {error.retry:.1f}s")
 
 
-bot.start()
+bot.start(config="config.yaml")
