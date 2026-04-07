@@ -319,7 +319,7 @@ class Room:
                 message_type="m.room.message",
                 content=payload.build(),
             )
-            event = self.get_event(resp.event_id)
+            event = await self.fetch_event(resp.event_id)
 
             return Message(
                 room=self,
@@ -329,8 +329,39 @@ class Room:
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
-    async def get_event(self, event_id: str) -> Event:
-        return
+    async def fetch_event(self, event_id: str) -> Event:
+        """Fetch a Matrix event by its ID.
+
+        ## Example
+        ```python
+            event = await room.fetch_event("$event_id:matrix.org")
+            print(event.sender)
+        ```
+        """
+        try:
+            response = await self.client.room_get_event(
+                room_id=self.room_id,
+                event_id=event_id,
+            )
+            return response.event
+        except Exception as e:
+            raise MatrixError(f"Failed to get event: {e}")
+
+    async def fetch_message(self, event_id: str) -> Message:
+        """Fetch a Message by its event ID.
+
+        ## Example
+        ```python
+            message = await room.fetch_message("$event_id:matrix.org")
+            message.reply("hello world")
+        ```
+        """
+        event = await self.fetch_event(event_id)
+        return Message(
+            room=self,
+            event=event,
+            client=self.client,
+        )
 
     async def invite_user(self, user_id: str) -> None:
         """Invite a user to the room.

@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Self
 
 from nio import AsyncClient, Event
 
+from matrix.types import Reaction
 from matrix.content import ReactionContent, EditContent
 from matrix.errors import MatrixError
 
@@ -17,16 +18,10 @@ class Message:
         self._matrix_event: Event = event
         self._client = client
 
-    def __repr__(self) -> str:
-        return f"<Message id={self.id!r} body={self.body!r}>"
+        self._body = getattr(self._matrix_event, "body", None)
 
-    @classmethod
-    def from_event(cls, room: "Room", event: Event) -> Self:
-        return Message(
-            room=room,
-            event=event,
-            client=room.client,
-        )
+    def __repr__(self) -> str:
+        return f"<Message id={self.event_id!r} body={self.body!r}>"
 
     @property
     def room(self) -> "Room":
@@ -46,18 +41,22 @@ class Message:
     @property
     def event_id(self) -> str:
         """The event ID of this message."""
-        return self._matrix_event.event_id
+        return str(self._matrix_event.event_id)
 
     @property
     def body(self) -> str | None:
         """The text content of this message."""
-        return getattr(self._matrix_event, "body", None)
+        return self._body
 
-    async def fetch_reactions(self) -> dict[str, list[str]]:
+    @property
+    def key(self) -> str | None:
+        """The key of this message."""
+        return getattr(self._matrix_event, "key", None)
+
+    async def fetch_reactions(self) -> list[Reaction]:
         """Fetch all reactions for this message.
 
-            Returns a dict mapping emoji to a list of sender IDs who reacted with it.
-
+        Returns a dict mapping emoji to a list of sender IDs who reacted with it.
 
         ## Example
         ```python
@@ -69,24 +68,22 @@ class Message:
                     await ctx.reply(f"{emoji}: {len(senders)} reaction(s)")
         ```
         """
-        reactions: dict[str, list[str]] = {}
+        raw: dict[str, list[str]] = {}
 
         try:
-            async for response in self.client.room_get_event_relations(
+            async for event in self.client.room_get_event_relations(
                 room_id=self.room.room_id,
                 event_id=self.event_id,
-                relation_type="m.annotation",
             ):
-                for event in response.chunk:
-                    emoji = event.get("content", {}).get("m.relates_to", {}).get("key")
-                    sender = event.get("sender")
+                emoji = getattr(event, "key", None)
+                sender = getattr(event, "sender", None)
 
-                    if emoji and sender:
-                        reactions.setdefault(emoji, []).append(sender)
+                if emoji and sender:
+                    raw.setdefault(emoji, []).append(sender)
         except Exception as e:
             raise MatrixError(f"Failed to fetch reactions: {e}")
 
-        return reactions
+        return [Reaction(key=emoji, senders=senders) for emoji, senders in raw.items()]
 
     async def reply(self, body: str) -> "Message":
         """Reply to this message.
@@ -102,7 +99,7 @@ class Message:
         ```
         """
         try:
-            return await self.room.send_text(content=body, reply_to=self.id)
+            return await self.room.send_text(content=body, reply_to=self.event_id)
         except Exception as e:
             raise MatrixError(f"Failed to send reply: {e}")
 
@@ -117,7 +114,7 @@ class Message:
             await msg.react("👍")
         ```
         """
-        content = ReactionContent(event_id=self.id, emoji=emoji)
+        content = ReactionContent(event_id=self.event_id, emoji=emoji)
 
         try:
             await self.client.room_send(
@@ -140,7 +137,7 @@ class Message:
             await msg.edit("Hello world!")
         ```
         """
-        content = EditContent(new_body, original_event_id=self.id)
+        content = EditContent(new_body, original_event_id=self.event_id)
 
         try:
             await self.client.room_send(
@@ -167,7 +164,7 @@ class Message:
         try:
             await self.client.room_redact(
                 room_id=self.room.room_id,
-                event_id=self.id,
+                event_id=self.event_id,
             )
         except Exception as e:
             raise MatrixError(f"Failed to delete message: {e}")
