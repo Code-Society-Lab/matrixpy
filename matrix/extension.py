@@ -17,7 +17,20 @@ class Extension(Registry):
         self._on_load: Optional[Callable] = None
         self._on_unload: Optional[Callable] = None
 
-    def get_room(self, room_id: str) -> Room:
+    def get_room(self, room_id: str) -> Room | None:
+        """Retrieve a `Room` instance by its Matrix room ID.
+
+        Returns the `Room` object corresponding to `room_id` if it exists in
+        the client's known rooms. Returns `None` if the room cannot be found.
+
+        ## Example
+
+        ```python
+        room = extension.get_room("!abc123:matrix.org")
+        if room:
+            print(room.name)
+        ```
+        """
         if self.bot is None:
             raise RuntimeError("Extension is not loaded")
         return self.bot.get_room(room_id)
