@@ -15,6 +15,7 @@ from .command import Command
 from .help import HelpCommand
 from .checks import cooldown
 from .room import Room
+from .message import Message
 from .extension import Extension
 
 __all__ = [
@@ -27,5 +28,6 @@ __all__ = [
     "HelpCommand",
     "cooldown",
     "Room",
+    "Message",
     "Extension",
 ]

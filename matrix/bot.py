@@ -262,10 +262,10 @@ class Bot(Registry):
 
     # MATRIX EVENTS
 
-    async def on_message(self, room: MatrixRoom, event: Event) -> None:
+    async def on_message(self, room: Room, event: Event) -> None:
         await self._process_commands(room, event)
 
-    async def _on_matrix_event(self, room: MatrixRoom, event: Event) -> None:
+    async def _on_matrix_event(self, matrix_room: MatrixRoom, event: Event) -> None:
         # ignore bot events
         if event.sender == self.client.user:
             return
@@ -275,6 +275,7 @@ class Bot(Registry):
             return
 
         try:
+            room = self.get_room(matrix_room.room_id)
             await self._dispatch_matrix_event(room, event)
         except Exception as error:
             await self._on_error(error)
@@ -284,14 +285,14 @@ class Bot(Registry):
         for handler in self._hook_handlers.get(event_name, []):
             await handler(*args, **kwargs)
 
-    async def _dispatch_matrix_event(self, room: MatrixRoom, event: Event) -> None:
+    async def _dispatch_matrix_event(self, room: Room, event: Event) -> None:
         """Fire all listeners registered for a named matrix event."""
         for event_type, funcs in self._event_handlers.items():
             if isinstance(event, event_type):
                 for func in funcs:
                     await func(room, event)
 
-    async def _process_commands(self, room: MatrixRoom, event: Event) -> None:
+    async def _process_commands(self, room: Room, event: Event) -> None:
         """Parse and execute commands"""
         ctx = await self._build_context(room, event)
 
@@ -303,7 +304,7 @@ class Bot(Registry):
             await self._on_command(ctx)
             await ctx.command(ctx)
 
-    async def _build_context(self, matrix_room: MatrixRoom, event: Event) -> Context:
+    async def _build_context(self, matrix_room: Room, event: Event) -> Context:
         room = self.get_room(matrix_room.room_id)
         ctx = Context(bot=self, room=room, event=event)
         prefix = self.prefix or self.config.prefix

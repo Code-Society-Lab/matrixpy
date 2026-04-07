@@ -1,6 +1,6 @@
 import pytest
-from unittest.mock import AsyncMock, Mock
-from nio import MatrixRoom
+from unittest.mock import AsyncMock, Mock, MagicMock
+from nio import MatrixRoom, Event
 from matrix.errors import MatrixError
 from matrix.room import Room
 from matrix.message import Message
@@ -20,8 +20,7 @@ def matrix_room():
 
 @pytest.fixture
 def client():
-    client = AsyncMock()
-    return client
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -29,13 +28,27 @@ def room(matrix_room, client):
     return Room(matrix_room, client)
 
 
-@pytest.mark.asyncio
-async def test_send_markdown__expect_formatted_message(room, client):
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
+@pytest.fixture
+def mock_send_response(client):
+    """Set up client to return a mock event after room_send and fetch_event."""
+    send_response = Mock()
+    send_response.event_id = "$event123"
+    client.room_send = AsyncMock(return_value=send_response)
 
+    mock_event = MagicMock(spec=Event)
+    mock_event.event_id = "$event123"
+
+    get_event_response = Mock()
+    get_event_response.event = mock_event
+    client.room_get_event = AsyncMock(return_value=get_event_response)
+
+    return send_response
+
+
+@pytest.mark.asyncio
+async def test_send_markdown__expect_formatted_message(
+    room, client, mock_send_response
+):
     msg = await room.send("Hello **world**!")
 
     client.room_send.assert_awaited_once()
@@ -46,19 +59,13 @@ async def test_send_markdown__expect_formatted_message(room, client):
     assert call_args.kwargs["content"]["body"] == "Hello **world**!"
     assert "formatted_body" in call_args.kwargs["content"]
     assert isinstance(msg, Message)
-    assert msg.id == "$event123"
+    assert msg.event_id == "$event123"
 
 
 @pytest.mark.asyncio
-async def test_send_raw__expect_unformatted_message(room, client):
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
-
+async def test_send_raw__expect_unformatted_message(room, client, mock_send_response):
     await room.send("Hello world!", raw=True)
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.text"
@@ -67,15 +74,11 @@ async def test_send_raw__expect_unformatted_message(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_notice__expect_notice_message_type(room, client):
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
-
+async def test_send_notice__expect_notice_message_type(
+    room, client, mock_send_response
+):
     await room.send("Bot starting up...", notice=True)
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.notice"
@@ -83,15 +86,11 @@ async def test_send_notice__expect_notice_message_type(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_text_with_reply_to__expect_threaded_reply(room, client):
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
-
+async def test_send_text_with_reply_to__expect_threaded_reply(
+    room, client, mock_send_response
+):
     await room.send_text("Replying!", reply_to="$original_event")
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.text"
@@ -101,13 +100,22 @@ async def test_send_text_with_reply_to__expect_threaded_reply(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_file__expect_file_message(room, client):
-    from matrix.types import File
+async def test_send_no_content__expect_value_error(room):
+    with pytest.raises(ValueError, match="You must provide content or file."):
+        await room.send()
 
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
+
+@pytest.mark.asyncio
+async def test_send_message_with_network_error__expect_matrix_error(room, client):
+    client.room_send = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to send message"):
+        await room.send("Hello, world!")
+
+
+@pytest.mark.asyncio
+async def test_send_file__expect_file_message(room, client, mock_send_response):
+    from matrix.types import File
 
     file = File(
         path="mxc://example.com/abc123",
@@ -117,7 +125,6 @@ async def test_send_file__expect_file_message(room, client):
 
     await room.send(file=file)
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.file"
@@ -126,13 +133,10 @@ async def test_send_file__expect_file_message(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_image__expect_image_message_with_dimensions(room, client):
+async def test_send_image__expect_image_message_with_dimensions(
+    room, client, mock_send_response
+):
     from matrix.types import Image
-
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
 
     image = Image(
         path="mxc://example.com/xyz789",
@@ -144,7 +148,6 @@ async def test_send_image__expect_image_message_with_dimensions(room, client):
 
     await room.send(file=image)
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.image"
@@ -155,13 +158,10 @@ async def test_send_image__expect_image_message_with_dimensions(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_video__expect_video_message_with_metadata(room, client):
+async def test_send_video__expect_video_message_with_metadata(
+    room, client, mock_send_response
+):
     from matrix.types import Video
-
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
 
     video = Video(
         path="mxc://example.com/video123",
@@ -174,7 +174,6 @@ async def test_send_video__expect_video_message_with_metadata(room, client):
 
     await room.send(file=video)
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.video"
@@ -186,13 +185,10 @@ async def test_send_video__expect_video_message_with_metadata(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_audio__expect_audio_message_with_duration(room, client):
+async def test_send_audio__expect_audio_message_with_duration(
+    room, client, mock_send_response
+):
     from matrix.types import Audio
-
-    client.room_send = AsyncMock()
-    mock_response = Mock()
-    mock_response.event_id = "$event123"
-    client.room_send.return_value = mock_response
 
     audio = Audio(
         path="mxc://example.com/audio123",
@@ -203,7 +199,6 @@ async def test_send_audio__expect_audio_message_with_duration(room, client):
 
     await room.send(file=audio)
 
-    client.room_send.assert_awaited_once()
     call_args = client.room_send.call_args
     content = call_args.kwargs["content"]
     assert content["msgtype"] == "m.audio"
@@ -213,24 +208,63 @@ async def test_send_audio__expect_audio_message_with_duration(room, client):
 
 
 @pytest.mark.asyncio
-async def test_send_no_content__expect_value_error(room):
-    with pytest.raises(ValueError, match="You must provide content or file."):
-        await room.send()
+async def test_fetch_event__expect_event_returned(room, client):
+    mock_event = MagicMock(spec=Event)
+    mock_event.event_id = "$event123"
+
+    response = Mock()
+    response.event = mock_event
+    client.room_get_event = AsyncMock(return_value=response)
+
+    result = await room.fetch_event("$event123")
+
+    client.room_get_event.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_id="$event123",
+    )
+    assert result is mock_event
 
 
 @pytest.mark.asyncio
-async def test_send_message_with_network_error__expect_matrix_error(room, client):
-    client.room_send = AsyncMock()
-    client.room_send.side_effect = Exception("Network error")
+async def test_fetch_event_with_error__expect_matrix_error(room, client):
+    client.room_get_event = AsyncMock(side_effect=Exception("Not found"))
 
-    with pytest.raises(MatrixError, match="Failed to send message"):
-        await room.send("Hello, world!")
+    with pytest.raises(MatrixError, match="Failed to get event"):
+        await room.fetch_event("$event123")
+
+
+# FETCH MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_fetch_message__expect_message_returned(room, client):
+    mock_event = MagicMock(spec=Event)
+    mock_event.event_id = "$event123"
+
+    response = Mock()
+    response.event = mock_event
+    client.room_get_event = AsyncMock(return_value=response)
+
+    result = await room.fetch_message("$event123")
+
+    assert isinstance(result, Message)
+    assert result.event_id == "$event123"
+
+
+@pytest.mark.asyncio
+async def test_fetch_message_with_error__expect_matrix_error(room, client):
+    client.room_get_event = AsyncMock(side_effect=Exception("Not found"))
+
+    with pytest.raises(MatrixError, match="Failed to get event"):
+        await room.fetch_message("$event123")
+
+
+# INVITE
 
 
 @pytest.mark.asyncio
 async def test_invite_user__expect_successful_invitation(room, client):
     client.room_invite = AsyncMock()
-    client.room_invite.return_value = None
 
     await room.invite_user("@alice:example.com")
 
@@ -241,17 +275,18 @@ async def test_invite_user__expect_successful_invitation(room, client):
 
 @pytest.mark.asyncio
 async def test_invite_user_with_error__expect_matrix_error(room, client):
-    client.room_invite = AsyncMock()
-    client.room_invite.side_effect = Exception("User not found")
+    client.room_invite = AsyncMock(side_effect=Exception("User not found"))
 
     with pytest.raises(MatrixError, match="Failed to invite user"):
         await room.invite_user("@alice:example.com")
 
 
+# BAN
+
+
 @pytest.mark.asyncio
 async def test_ban_user_without_reason__expect_successful_ban(room, client):
     client.room_ban = AsyncMock()
-    client.room_ban.return_value = None
 
     await room.ban_user("@spammer:example.com")
 
@@ -263,7 +298,6 @@ async def test_ban_user_without_reason__expect_successful_ban(room, client):
 @pytest.mark.asyncio
 async def test_ban_user_with_reason__expect_successful_ban_with_reason(room, client):
     client.room_ban = AsyncMock()
-    client.room_ban.return_value = None
 
     await room.ban_user("@spammer:example.com", "Spam and harassment")
 
@@ -276,8 +310,7 @@ async def test_ban_user_with_reason__expect_successful_ban_with_reason(room, cli
 
 @pytest.mark.asyncio
 async def test_ban_user_with_error__expect_matrix_error(room, client):
-    client.room_ban = AsyncMock()
-    client.room_ban.side_effect = Exception("Insufficient permissions")
+    client.room_ban = AsyncMock(side_effect=Exception("Insufficient permissions"))
 
     with pytest.raises(MatrixError, match="Failed to ban user"):
         await room.ban_user("@spammer:example.com")
@@ -286,7 +319,6 @@ async def test_ban_user_with_error__expect_matrix_error(room, client):
 @pytest.mark.asyncio
 async def test_unban_user__expect_successful_unban(room, client):
     client.room_unban = AsyncMock()
-    client.room_unban.return_value = None
 
     await room.unban_user("@alice:example.com")
 
@@ -297,8 +329,7 @@ async def test_unban_user__expect_successful_unban(room, client):
 
 @pytest.mark.asyncio
 async def test_unban_user_with_error__expect_matrix_error(room, client):
-    client.room_unban = AsyncMock()
-    client.room_unban.side_effect = Exception("User not banned")
+    client.room_unban = AsyncMock(side_effect=Exception("User not banned"))
 
     with pytest.raises(MatrixError, match="Failed to unban user"):
         await room.unban_user("@alice:example.com")
@@ -307,7 +338,6 @@ async def test_unban_user_with_error__expect_matrix_error(room, client):
 @pytest.mark.asyncio
 async def test_kick_user_without_reason__expect_successful_kick(room, client):
     client.room_kick = AsyncMock()
-    client.room_kick.return_value = None
 
     await room.kick_user("@troublemaker:example.com")
 
@@ -319,7 +349,6 @@ async def test_kick_user_without_reason__expect_successful_kick(room, client):
 @pytest.mark.asyncio
 async def test_kick_user_with_reason__expect_successful_kick_with_reason(room, client):
     client.room_kick = AsyncMock()
-    client.room_kick.return_value = None
 
     await room.kick_user("@troublemaker:example.com", "Violating rules")
 
@@ -332,8 +361,7 @@ async def test_kick_user_with_reason__expect_successful_kick_with_reason(room, c
 
 @pytest.mark.asyncio
 async def test_kick_user_with_error__expect_matrix_error(room, client):
-    client.room_kick = AsyncMock()
-    client.room_kick.side_effect = Exception("User not in room")
+    client.room_kick = AsyncMock(side_effect=Exception("User not in room"))
 
     with pytest.raises(MatrixError, match="Failed to kick user"):
         await room.kick_user("@troublemaker:example.com")
@@ -354,3 +382,8 @@ def test_room_matrix_room_property__expect_underlying_matrix_room(room, matrix_r
 
 def test_room_client_property__expect_async_client(room, client):
     assert room.client is client
+
+
+def test_room_unknown_attribute__expect_attribute_error(room):
+    with pytest.raises(AttributeError):
+        _ = room.nonexistent_attribute

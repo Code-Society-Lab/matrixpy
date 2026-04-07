@@ -24,3 +24,9 @@ class Video(File):
     width: int = 0
     height: int = 0
     duration: int = 0
+
+
+@dataclass
+class Reaction:
+    key: str
+    senders: list[str]
