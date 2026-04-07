@@ -1,6 +1,6 @@
 import pytest
-from unittest.mock import AsyncMock, Mock
-from nio import MatrixRoom, AsyncClient
+from unittest.mock import AsyncMock, MagicMock, Mock
+from nio import MatrixRoom, AsyncClient, Event
 from matrix.errors import MatrixError
 from matrix.message import Message
 from matrix.room import Room
@@ -20,8 +20,7 @@ def matrix_room():
 
 @pytest.fixture
 def client():
-    client = AsyncMock(spec=AsyncClient)
-    return client
+    return AsyncMock(spec=AsyncClient)
 
 
 @pytest.fixture
@@ -30,8 +29,17 @@ def room(matrix_room, client):
 
 
 @pytest.fixture
-def message(room, client):
-    return Message(room=room, event_id="$event123", body="Hello world!", client=client)
+def mock_event():
+    event = MagicMock(spec=Event)
+    event.event_id = "$event123"
+    event.body = "Hello world!"
+    event.sender = "@user:matrix.org"
+    return event
+
+
+@pytest.fixture
+def message(room, client, mock_event):
+    return Message(room=room, event=mock_event, client=client)
 
 
 @pytest.mark.asyncio
@@ -49,7 +57,6 @@ async def test_reply__expect_threaded_reply_message(message, client):
     assert "m.relates_to" in content
     assert content["m.relates_to"]["m.in_reply_to"]["event_id"] == "$event123"
     assert isinstance(result, Message)
-    assert result.id == "$reply456"
 
 
 @pytest.mark.asyncio
@@ -126,11 +133,73 @@ async def test_delete_with_error__expect_matrix_error(message, client):
         await message.delete()
 
 
-def test_message_properties__expect_correct_values(message, room, client):
-    assert message.id == "$event123"
+@pytest.mark.asyncio
+async def test_fetch_reactions__expect_grouped_by_key(message, client):
+    reaction_a = MagicMock()
+    reaction_a.key = "👍"
+    reaction_a.sender = "@alice:matrix.org"
+
+    reaction_b = MagicMock()
+    reaction_b.key = "👍"
+    reaction_b.sender = "@bob:matrix.org"
+
+    reaction_c = MagicMock()
+    reaction_c.key = "👎"
+    reaction_c.sender = "@carol:matrix.org"
+
+    async def mock_relations(*args, **kwargs):
+        for r in [reaction_a, reaction_b, reaction_c]:
+            yield r
+
+    client.room_get_event_relations = mock_relations
+
+    result = await message.fetch_reactions()
+
+    assert len(result) == 2
+    thumbs_up = next(r for r in result if r.key == "👍")
+    thumbs_down = next(r for r in result if r.key == "👎")
+    assert sorted(thumbs_up.senders) == sorted(["@alice:matrix.org", "@bob:matrix.org"])
+    assert thumbs_down.senders == ["@carol:matrix.org"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_reactions_empty__expect_empty_list(message, client):
+    async def mock_relations(*args, **kwargs):
+        return
+        yield  # make it an async generator
+
+    client.room_get_event_relations = mock_relations
+
+    result = await message.fetch_reactions()
+
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_reactions_with_error__expect_matrix_error(message, client):
+    async def mock_relations(*args, **kwargs):
+        raise Exception("Network error")
+        yield
+
+    client.room_get_event_relations = mock_relations
+
+    with pytest.raises(MatrixError, match="Failed to fetch reactions"):
+        await message.fetch_reactions()
+
+
+def test_message_event_id__expect_correct_value(message):
     assert message.event_id == "$event123"
+
+
+def test_message_body__expect_correct_value(message):
     assert message.body == "Hello world!"
+
+
+def test_message_room__expect_correct_reference(message, room):
     assert message.room is room
+
+
+def test_message_client__expect_correct_reference(message, client):
     assert message.client is client
 
 

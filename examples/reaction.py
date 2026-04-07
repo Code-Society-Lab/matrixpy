@@ -11,8 +11,7 @@ async def on_message(room: Room, event: RoomMessageText) -> None:
     This function listens for new messages in a room and reacts based
     on the message content.
     """
-    room = bot.get_room(room.room_id)
-    message = Message.from_event(room, event)
+    message = await room.fetch_message(event.event_id)
 
     if message.body.lower().startswith("thanks"):
         await message.react("🙏")
@@ -31,12 +30,9 @@ async def on_react(room: Room, event: ReactionEvent) -> None:
     This function listens for new member reaction to messages in a room,
     and reacts based on the reaction emoji.
     """
-    room = bot.get_room(room.room_id)
-    message = Message.from_event(room, event)
+    message = await room.fetch_message(event.reacts_to)
 
-    emoji = event.key
-
-    if emoji == "🙏":
+    if message.key == "🙏":
         await message.react("❤️")
 
 
