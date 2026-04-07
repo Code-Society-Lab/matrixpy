@@ -3,7 +3,7 @@ import inspect
 import asyncio
 import logging
 
-from typing import Union, Optional, Any
+from typing import Optional, Any
 
 from nio import AsyncClient, Event, MatrixRoom
 
@@ -15,7 +15,12 @@ from .extension import Extension
 from .registry import Registry
 from .help import HelpCommand, DefaultHelpCommand
 from .scheduler import Scheduler
-from .errors import AlreadyRegisteredError, CommandNotFoundError, CheckError
+from .errors import (
+    AlreadyRegisteredError,
+    CommandNotFoundError,
+    CheckError,
+    RoomNotFoundError,
+)
 
 
 class Bot(Registry):
@@ -36,7 +41,9 @@ class Bot(Registry):
 
         self._config: Config | None = None
         self._client: AsyncClient | None = None
+        self._synced: asyncio.Event = asyncio.Event()
         self._help: HelpCommand | None = help_
+
         self.extensions: dict[str, Extension] = {}
         self.scheduler: Scheduler = Scheduler()
         self.log: logging.Logger = logging.getLogger(__name__)
@@ -75,10 +82,23 @@ class Bot(Registry):
             except ValueError:
                 continue
 
-    def get_room(self, room_id: str) -> Room:
-        """Retrieve a Room instance based on the room_id."""
-        matrix_room = self.client.rooms[room_id]
-        return Room(matrix_room=matrix_room, client=self.client)
+    def get_room(self, room_id: str) -> Room | None:
+        """Retrieve a `Room` instance by its Matrix room ID.
+
+        Returns the `Room` object corresponding to `room_id` if it exists in
+        the client's known rooms. Returns `None` if the room cannot be found.
+
+        ## Example
+
+        ```python
+        room = bot.get_room("!abc123:matrix.org")
+        if room:
+            print(room.name)
+        ```
+        """
+        if matrix_room := self.client.rooms.get(room_id):
+            return Room(matrix_room=matrix_room, client=self.client)
+        return None
 
     def load_extension(self, extension: Extension) -> None:
         self.log.debug(f"Loading extension: '{extension.name}'")
@@ -255,10 +275,16 @@ class Bot(Registry):
             login_resp = await self.client.login(self.config.password)
             self.log.info("logged in: %s", login_resp)
 
-        self.scheduler.start()
+        sync_task = asyncio.create_task(self.client.sync_forever(timeout=30_000))
 
+        await self._wait_until_synced()
         await self._on_ready()
-        await self.client.sync_forever(timeout=30_000)
+
+        self.scheduler.start()
+        await sync_task
+
+    async def _wait_until_synced(self) -> None:
+        await self._synced.wait()
 
     # MATRIX EVENTS
 
@@ -266,6 +292,9 @@ class Bot(Registry):
         await self._process_commands(room, event)
 
     async def _on_matrix_event(self, matrix_room: MatrixRoom, event: Event) -> None:
+        if not self._synced.is_set():
+            self._synced.set()
+
         # ignore bot events
         if event.sender == self.client.user:
             return
@@ -276,6 +305,10 @@ class Bot(Registry):
 
         try:
             room = self.get_room(matrix_room.room_id)
+
+            if not room:
+                raise RoomNotFoundError(f"Room '{matrix_room.room_id}' not found.")
+
             await self._dispatch_matrix_event(room, event)
         except Exception as error:
             await self._on_error(error)
@@ -306,6 +339,10 @@ class Bot(Registry):
 
     async def _build_context(self, matrix_room: Room, event: Event) -> Context:
         room = self.get_room(matrix_room.room_id)
+
+        if not room:
+            raise RoomNotFoundError(f"Room '{matrix_room.room_id}' not found.")
+
         ctx = Context(bot=self, room=room, event=event)
         prefix = self.prefix or self.config.prefix
 

@@ -314,6 +314,30 @@ async def test_command_executes(bot):
 
 
 @pytest.mark.asyncio
+async def test_command_not_processed_without_prefix(bot, room):
+    called = False
+
+    @bot.command()
+    async def greet(ctx):
+        nonlocal called
+        called = True
+
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "greet", "msgtype": "m.text"},
+            "event_id": "$id",
+            "origin_server_ts": 123456,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
+
+    await bot._process_commands(room, event)
+
+    assert not called
+
+
+@pytest.mark.asyncio
 async def test_error_decorator_requires_coroutine(bot):
     with pytest.raises(TypeError):
 
@@ -376,18 +400,37 @@ def test_command_duplicate_raises(bot):
             pass
 
 
+import asyncio
+
+
+async def start_and_stop(coro):
+    task = asyncio.create_task(coro)
+    await asyncio.sleep(0)  # allow startup
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+
 @pytest.mark.asyncio
 async def test_run_uses_token():
     bot = Bot()
     bot._load_config("tests/config_fixture_token.yaml")
 
     bot._client.sync_forever = AsyncMock()
-    bot.on_ready = AsyncMock()
+    bot._on_ready = AsyncMock()
 
-    await bot.run()
+    # unblock readiness
+    bot._synced.set()
+
+    task = asyncio.create_task(bot.run())
+
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
     assert bot._client.access_token == "abc123"
-    bot.on_ready.assert_awaited_once()
+    bot._on_ready.assert_awaited_once()
     bot._client.sync_forever.assert_awaited_once()
 
 
@@ -397,7 +440,15 @@ async def test_run_with_username_and_password(bot):
     bot._client.sync_forever = AsyncMock()
     bot._on_ready = AsyncMock()
 
-    await bot.run()
+    bot._synced.set()
+
+    task = asyncio.create_task(bot.run())
+
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
     bot._client.login.assert_awaited_once_with("grace1234")
     bot._on_ready.assert_awaited_once()
@@ -416,6 +467,39 @@ def test_start_handles_keyboard_interrupt(caplog):
 
     assert "bot interrupted by user" in caplog.text
     bot._client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_on_ready_called_only_once(bot):
+    # Prepare
+    bot._synced.set()
+    bot._on_ready = AsyncMock()
+
+    # Simulate run
+    await bot._wait_until_synced()
+    await bot._on_ready()
+
+    bot._on_ready.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_scheduler_starts_after_ready(bot):
+    bot._synced.set()
+
+    order = []
+
+    async def ready():
+        order.append("ready")
+
+    bot._on_ready = AsyncMock(side_effect=ready)
+    bot.scheduler.start = MagicMock(side_effect=lambda: order.append("scheduler"))
+
+    # Simulate run
+    await bot._wait_until_synced()
+    await bot._on_ready()
+    bot.scheduler.start()
+
+    assert order == ["ready", "scheduler"]
 
 
 @pytest.mark.asyncio
@@ -743,3 +827,25 @@ def test_unload_extension_logs_unloading(bot: Bot, loaded_extension: Extension):
     bot.unload_extension(loaded_extension.name)
 
     bot.log.debug.assert_any_call("unloaded extension '%s'", loaded_extension.name)
+
+
+def test_unload_extension_removes_only_its_jobs(bot: Bot):
+    ext_a = Extension(name="a")
+    ext_b = Extension(name="b")
+
+    @ext_a.schedule("* * * * *")
+    async def task():
+        pass
+
+    @ext_b.schedule("* * * * *")
+    async def task():
+        pass
+
+    bot.load_extension(ext_a)
+    bot.load_extension(ext_b)
+
+    bot.unload_extension("a")
+
+    job_names = [j.name for j in bot.scheduler.jobs]
+
+    assert "task" in job_names

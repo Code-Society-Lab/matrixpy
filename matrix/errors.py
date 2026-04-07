@@ -13,6 +13,10 @@ class MatrixError(Exception):
     pass
 
 
+class RoomNotFoundError(MatrixError):
+    pass
+
+
 class RegistryError(MatrixError):
     pass
 
