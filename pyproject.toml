@@ -5,33 +5,33 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 name = "matrix-python"
 dynamic = ["version"]
 authors = [
-    { name="Simon Roy" },
-    { name=" Chris Dedman Rollet " }
+    { name = "Simon Roy" },
+    { name = " Chris Dedman Rollet " }
 ]
 maintainers = [
-    { name="Code Society Lab", email="admin@codesociety.xyz" }
+    { name = "Code Society Lab", email = "admin@codesociety.xyz" }
 ]
 description = "An easy-to-use Matrix bot framework designed for quick development and minimal setup"
 readme = "README.md"
-license = { file="LICENSE" }
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 
 dependencies = [
-    "matrix-nio",
+    "matrix-nio==0.25.2",
     "logger",
-    'PyYAML',
-    'markdown',
-    'APScheduler',
+    "PyYAML==6.0.3",
+    "markdown==3.10.2",
+    "APScheduler==3.11.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-asyncio",
-    "black",
-    "mypy",
-    "types-PyYAML",
-    'types-Markdown',
+    "pytest==9.0.3",
+    "pytest-asyncio==1.3.0",
+    "black==26.3.1",
+    "mypy==1.20.0",
+    "types-PyYAML==6.0.12.20260408",
+    "types-Markdown==3.10.2.20260408",
 ]
 
 [project.urls]
