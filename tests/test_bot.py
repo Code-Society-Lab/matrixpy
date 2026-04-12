@@ -205,9 +205,7 @@ async def test_on_error_calls_fallback_handler(bot):
         nonlocal called
         called = True
 
-    await bot._fallback_error_handler(Exception("test error"))
-    await bot.on_error(Exception("test error"))
-
+    await bot._on_error(Exception("test error"))
     assert called, "Fallback error handler was not called"
 
 
