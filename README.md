@@ -78,4 +78,5 @@ contributor** is expected to follow the [code of conduct](./CODE_OF_CONDUCT.md).
 
 # License
 
-matrix.py is released under [GPL-3.0](https://opensource.org/license/gpl-3-0)
+This project is licensed under the terms
+of [MIT license](https://github.com/Code-Society-Lab/matrixpy/blob/main/LICENSE).
