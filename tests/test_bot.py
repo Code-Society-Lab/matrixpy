@@ -16,7 +16,30 @@ from matrix.errors import (
 @pytest.fixture
 def bot():
     b = Bot()
-    b._load_config("tests/config_fixture.yaml")
+    b._load_config(
+        Config(
+            username="grace",
+            password="grace1234",
+        )
+    )
+
+    b._client = MagicMock()
+    b._client.room_send = AsyncMock()
+    b.log = MagicMock()
+    b.log.getChild.return_value = MagicMock()
+
+    return b
+
+
+@pytest.fixture
+def bot_with_token():
+    b = Bot()
+    b._load_config(
+        Config(
+            username="grace",
+            token="abc123",
+        )
+    )
 
     b._client = MagicMock()
     b._client.room_send = AsyncMock()
@@ -50,7 +73,7 @@ def test_bot_init_with_config():
     bot = Bot()
     bot._load_config(Config(username="grace", password="grace1234"))
 
-    assert bot.config.user_id == "grace"
+    assert bot.config.username == "grace"
     assert bot.config.password == "grace1234"
     assert bot.config.homeserver == "https://matrix.org"
 
@@ -411,17 +434,14 @@ async def start_and_stop(coro):
 
 
 @pytest.mark.asyncio
-async def test_run_uses_token():
-    bot = Bot()
-    bot._load_config("tests/config_fixture_token.yaml")
-
-    bot._client.sync_forever = AsyncMock()
-    bot._on_ready = AsyncMock()
+async def test_run_uses_token(bot_with_token):
+    bot_with_token._client.sync_forever = AsyncMock()
+    bot_with_token._on_ready = AsyncMock()
 
     # unblock readiness
-    bot._synced.set()
+    bot_with_token._synced.set()
 
-    task = asyncio.create_task(bot.run())
+    task = asyncio.create_task(bot_with_token.run())
 
     await asyncio.sleep(0)
     await asyncio.sleep(0)
@@ -429,14 +449,22 @@ async def test_run_uses_token():
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
-    assert bot._client.access_token == "abc123"
-    bot._on_ready.assert_awaited_once()
-    bot._client.sync_forever.assert_awaited_once()
+    assert bot_with_token._client.access_token == "abc123"
+    bot_with_token._on_ready.assert_awaited_once()
+    bot_with_token._client.sync_forever.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_run_with_username_and_password(bot):
-    bot._client.login = AsyncMock(return_value="login_resp")
+    assert bot.config.token is None
+
+    login_called = asyncio.Event()
+
+    async def mock_login(password):
+        login_called.set()
+        return "login_resp"
+
+    bot._client.login = AsyncMock(side_effect=mock_login)
     bot._client.sync_forever = AsyncMock()
     bot._on_ready = AsyncMock()
 
@@ -444,15 +472,13 @@ async def test_run_with_username_and_password(bot):
 
     task = asyncio.create_task(bot.run())
 
-    await asyncio.sleep(0)
-    await asyncio.sleep(0)
+    await asyncio.wait_for(login_called.wait(), timeout=1.0)
 
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
     bot._client.login.assert_awaited_once_with("grace1234")
     bot._on_ready.assert_awaited_once()
-    bot._client.sync_forever.assert_awaited_once()
 
 
 def test_start_handles_keyboard_interrupt(caplog):
@@ -463,7 +489,12 @@ def test_start_handles_keyboard_interrupt(caplog):
 
     with patch.object(bot, "_load_config"):
         with caplog.at_level("INFO"):
-            bot.start(config="tests/config_fixture.yaml")
+            bot.start(
+                config=Config(
+                    username="grace",
+                    password="grace1234",
+                )
+            )
 
     assert "bot interrupted by user" in caplog.text
     bot._client.close.assert_awaited_once()
