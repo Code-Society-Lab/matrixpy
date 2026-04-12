@@ -326,15 +326,19 @@ class Bot(Registry):
 
     async def _process_commands(self, room: Room, event: Event) -> None:
         """Parse and execute commands"""
-        ctx = await self._build_context(room, event)
+        try:
+            ctx = await self._build_context(room, event)
 
-        if ctx.command:
-            for check in self._checks:
-                if not await check(ctx):
-                    raise CheckError(ctx.command, check)
+            if ctx.command:
+                for check in self._checks:
+                    if not await check(ctx):
+                        raise CheckError(ctx.command, check)
 
-            await self._on_command(ctx)
-            await ctx.command(ctx)
+                await self._on_command(ctx)
+                await ctx.command(ctx)
+        except Exception as error:
+            ctx = Context(bot=self, room=room, event=event)
+            await self._on_command_error(ctx, error)
 
     async def _build_context(self, matrix_room: Room, event: Event) -> Context:
         room = self.get_room(matrix_room.room_id)
