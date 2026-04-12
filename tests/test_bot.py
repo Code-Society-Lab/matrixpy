@@ -3,9 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from nio import MatrixRoom, RoomMessageText
 
-from matrix.bot import Bot
-from matrix.config import Config
-from matrix.extension import Extension
+from matrix.bot import Bot, Config, Extension, Room
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,
@@ -118,7 +116,8 @@ async def test_dispatch_calls_all_handlers(bot):
             "type": "m.room.message",
         }
     )
-    room = MatrixRoom("!roomid:matrix.org", "room_alias")
+    matrix_room = MatrixRoom("!roomid:matrix.org", "room_alias")
+    room = Room(matrix_room, bot.client)
 
     await bot._dispatch_matrix_event(room, event)
     assert "h1" in called
@@ -245,7 +244,9 @@ async def test_process_commands_executes_command(bot, event):
 
 
 @pytest.mark.asyncio
-async def test_command_not_found_raises(bot):
+async def test_command_not_found_calls_command_error_handler(bot):
+    bot._on_command_error = AsyncMock()
+
     event = RoomMessageText.from_dict(
         {
             "content": {"body": "!nonexistent", "msgtype": "m.text"},
@@ -258,17 +259,14 @@ async def test_command_not_found_raises(bot):
 
     room = MatrixRoom("!roomid", "alias")
 
-    with patch("matrix.context.Context", autospec=True) as MockContext:
-        mock_ctx = MagicMock()
-        mock_ctx.body = "!nonexistent"
-        MockContext.return_value = mock_ctx
+    await bot._process_commands(room, event)
 
-        with pytest.raises(CommandNotFoundError):
-            await bot._process_commands(room, event)
+    bot._on_command_error.assert_awaited_once()
+    assert isinstance(bot._on_command_error.call_args[0][1], CommandNotFoundError)
 
 
 @pytest.mark.asyncio
-async def test_bot_does_not_execute_when_global_check_fails(bot, event):
+async def test_bot_does_not_execute_command_when_global_check_fails(bot):
     called = False
 
     @bot.command()
@@ -280,6 +278,8 @@ async def test_bot_does_not_execute_when_global_check_fails(bot, event):
     async def global_check(ctx):
         return False
 
+    bot._on_command_error = AsyncMock()
+
     event = RoomMessageText.from_dict(
         {
             "content": {"body": "!greet", "msgtype": "m.text"},
@@ -290,18 +290,14 @@ async def test_bot_does_not_execute_when_global_check_fails(bot, event):
         }
     )
 
-    room = MatrixRoom("!roomid", "alias")
+    matrix_room = MatrixRoom("!roomid", "alias")
+    room = Room(matrix_room, bot.client)
 
-    with patch("matrix.context.Context", autospec=True) as MockContext:
-        mock_ctx = MagicMock()
-        mock_ctx.body = "!greet"
-        mock_ctx.command = bot.commands["greet"]
-        MockContext.return_value = mock_ctx
+    await bot._process_commands(room, event)
 
-        with pytest.raises(CheckError):
-            await bot._process_commands(room, event)
-
-    assert not called, "Expected command handler not to be called"
+    assert not called
+    bot._on_command_error.assert_awaited_once()
+    assert isinstance(bot._on_command_error.call_args[0][1], CheckError)
 
 
 @pytest.mark.asyncio
