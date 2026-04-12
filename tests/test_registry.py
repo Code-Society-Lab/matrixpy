@@ -5,7 +5,7 @@ from nio import RoomMessageText, RoomMemberEvent, TypingNoticeEvent, ReactionEve
 from matrix.registry import Registry
 from matrix.command import Command
 from matrix.group import Group
-from matrix.errors import AlreadyRegisteredError
+from matrix.errors import AlreadyRegisteredError, CommandNotFoundError, CheckError
 
 
 @pytest.fixture
@@ -332,6 +332,68 @@ def test_register_error_handler_overwrites_previous_handler__expect_latest_handl
         pass
 
     assert registry._error_handlers[ValueError] is second_handler
+
+
+def test_register_command_error_handler_with_exception_type__expect_handler_in_dict(
+    registry: Registry,
+):
+    @registry.error(CommandNotFoundError, context=True)
+    async def on_command_not_found(ctx, error):
+        pass
+
+    assert (
+        registry._command_error_handlers[CommandNotFoundError] is on_command_not_found
+    )
+
+
+def test_register_command_error_handler_with_non_coroutine__expect_type_error(
+    registry: Registry,
+):
+    with pytest.raises(TypeError):
+
+        @registry.error(CommandNotFoundError, context=True)
+        def sync_handler(ctx, error):
+            pass
+
+
+def test_register_multiple_command_error_handlers__expect_all_in_dict(
+    registry: Registry,
+):
+    @registry.error(CommandNotFoundError, context=True)
+    async def on_command_not_found(ctx, error):
+        pass
+
+    @registry.error(CheckError, context=True)
+    async def on_check_error(ctx, error):
+        pass
+
+    assert CommandNotFoundError in registry._command_error_handlers
+    assert CheckError in registry._command_error_handlers
+
+
+def test_register_command_error_handler_overwrites_previous__expect_latest_handler(
+    registry: Registry,
+):
+    @registry.error(CommandNotFoundError, context=True)
+    async def first_handler(ctx, error):
+        pass
+
+    @registry.error(CommandNotFoundError, context=True)
+    async def second_handler(ctx, error):
+        pass
+
+    assert registry._command_error_handlers[CommandNotFoundError] is second_handler
+
+
+def test_register_error_with_context_false__expect_handler_in_error_handlers(
+    registry: Registry,
+):
+    @registry.error(ValueError, context=False)
+    async def on_value_error(error):
+        pass
+
+    assert registry._error_handlers[ValueError] is on_value_error
+    assert ValueError not in registry._command_error_handlers
 
 
 def test_commands_property_with_empty_registry__expect_empty_dict(registry: Registry):
