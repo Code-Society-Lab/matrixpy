@@ -65,7 +65,6 @@ class Registry:
 
         self._event_handlers: Dict[Type[Event], List[Callback]] = defaultdict(list)
         self._hook_handlers: Dict[str, List[Callback]] = defaultdict(list)
-        self._fallback_error_handler: Optional[ErrorCallback] = None
         self._error_handlers: Dict[type[Exception], ErrorCallback] = {}
         self._command_error_handlers: Dict[type[Exception], CommandErrorCallback] = {}
 
@@ -378,14 +377,15 @@ class Registry:
         ```
         """
 
+        if not exception:
+            exception = Exception
+
         def wrapper(func: ErrorCallback) -> ErrorCallback:
             if not inspect.iscoroutinefunction(func):
                 raise TypeError("Error handlers must be coroutines")
 
-            if exception:
-                self._error_handlers[exception] = func
-            else:
-                self._fallback_error_handler = func
+            self._error_handlers[exception] = func
+
             logger.debug(
                 "registered error handler '%s' on %s",
                 func.__name__,

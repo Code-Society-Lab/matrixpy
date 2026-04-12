@@ -184,10 +184,6 @@ class Bot(Registry):
             await handler(error)
             return
 
-        if self._fallback_error_handler:
-            await self._fallback_error_handler(error)
-            return
-
         await self._dispatch("on_error", error)
 
     async def on_command(self, _ctx: Context) -> None:
