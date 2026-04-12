@@ -245,8 +245,7 @@ class Bot(Registry):
         :func:`asyncio.run`, and ensures the client is closed gracefully
         on interruption.
         """
-        if config is not None:
-            self._load_config(config)
+        self._load_config(config)
 
         try:
             asyncio.run(self.run())
@@ -264,7 +263,7 @@ class Bot(Registry):
         calls the :meth:`on_ready` hook, and starts the long-running
         sync loop for receiving events.
         """
-        self.client.user = self.config.user_id
+        self.client.user = self.config.username
 
         self.start_at = time.time()
         self.log.info("starting – timestamp=%s", self.start_at)
