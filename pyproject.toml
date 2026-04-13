@@ -44,6 +44,9 @@ dev = [
 packages = ["matrix"]
 license-files = []
 
+[tool.setuptools.package-data]
+matrix = ["py.typed"]
+
 [tool.setuptools_scm]
 write_to = "matrix/_version.py"
 
