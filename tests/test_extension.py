@@ -3,12 +3,17 @@ import pytest
 from unittest.mock import MagicMock
 from typing import Optional
 
+from matrix.config import Config
 from matrix.extension import Extension
 from matrix.room import Room
 
 
 class MockBot:
     prefix: str = "!"
+
+    @property
+    def config(self) -> Config:
+        return MagicMock(spec=Config)
 
     def __init__(self, room: Optional[Room] = None) -> None:
         self.get_room = MagicMock(return_value=room or MagicMock(spec=Room))
@@ -41,7 +46,8 @@ def test_init_with_name_only__expect_prefix_is_none():
 
 
 def test_init__expect_bot_is_none(extension: Extension):
-    assert extension.bot is None
+    with pytest.raises(AssertionError):
+        _ = extension.bot
 
 
 def test_init__expect_on_load_is_none(extension: Extension):
@@ -190,7 +196,8 @@ def test_unload__expect_bot_cleared(extension: Extension, bot: MockBot):
     extension.load(bot)
     extension.unload()
 
-    assert extension.bot is None
+    with pytest.raises(AssertionError):
+        _ = extension.bot
 
 
 def test_unload_with_registered_handler__expect_handler_called(
@@ -217,7 +224,7 @@ def test_unload_with_no_handler__expect_no_error(extension: Extension, bot: Mock
 
 
 def test_get_room_before_load__expect_runtime_error(extension: Extension):
-    with pytest.raises(RuntimeError, match="Extension is not loaded"):
+    with pytest.raises(AssertionError):
         extension.get_room("!room:example.com")
 
 
@@ -241,5 +248,5 @@ def test_get_room_after_unload__expect_runtime_error(
     extension.load(bot)
     extension.unload()
 
-    with pytest.raises(RuntimeError, match="Extension is not loaded"):
+    with pytest.raises(AssertionError):
         extension.get_room("!room:example.com")
