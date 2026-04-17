@@ -2,7 +2,20 @@ import inspect
 import logging
 
 from collections import defaultdict
-from typing import Any, Callable, Coroutine, Optional, Type, Union, Dict, List
+from typing import (
+    TypeVar,
+    Any,
+    Callable,
+    Coroutine,
+    Literal,
+    Optional,
+    Type,
+    Union,
+    Dict,
+    List,
+    cast,
+    overload,
+)
 
 from nio import (
     Event,
@@ -24,6 +37,8 @@ Callback = Callable[..., Coroutine[Any, Any, Any]]
 GroupCallable = Callable[[Callable[..., Coroutine[Any, Any, Any]]], Group]
 ErrorCallback = Callable[[Exception], Coroutine]
 CommandErrorCallback = Callable[[Context, Exception], Coroutine[Any, Any, Any]]
+
+F = TypeVar("F", ErrorCallback, CommandErrorCallback)
 
 
 class Registry:
@@ -355,43 +370,91 @@ class Registry:
 
         return wrapper
 
+    @overload
     def error(
-        self, exception: Optional[type[Exception]] = None
-    ) -> Callable[[ErrorCallback], ErrorCallback]:
+        self,
+        exception: Optional[type[Exception]] = None,
+        *,
+        context: Literal[True],
+    ) -> Callable[[CommandErrorCallback], CommandErrorCallback]: ...
+
+    @overload
+    def error(
+        self,
+        exception: Optional[type[Exception]] = None,
+        *,
+        context: Literal[False] = ...,
+    ) -> Callable[[ErrorCallback], ErrorCallback]: ...
+
+    def error(
+        self,
+        exception: Optional[type[Exception]] = None,
+        *,
+        context: bool = False,
+    ) -> Union[
+        Callable[[ErrorCallback], ErrorCallback],
+        Callable[[CommandErrorCallback], CommandErrorCallback],
+    ]:
         """Decorator to register an error handler.
 
         If an exception type is provided, the handler is only invoked for
         that specific exception. If omitted, the handler acts as a generic
         fallback for any unhandled error.
 
+        Set ``context=True`` to receive the command context alongside the error,
+        useful for command-specific errors where you want to reply to the user.
+
         ## Example
 
         ```python
         @bot.error(ValueError)
         async def on_value_error(error):
-            await room.send(f"Bad value: {error}")
+            pass
 
         @bot.error()
         async def on_any_error(error):
-            await room.send(f"Something went wrong: {error}")
+            pass
+
+        @bot.error(CommandNotFoundError, context=True)
+        async def on_command_not_found(ctx, error):
+            await ctx.reply("Command not found!")
         ```
         """
 
-        if not exception:
-            exception = Exception
-
-        def wrapper(func: ErrorCallback) -> ErrorCallback:
+        def wrapper(
+            func: F,
+        ) -> F:
             if not inspect.iscoroutinefunction(func):
                 raise TypeError("Error handlers must be coroutines")
 
-            self._error_handlers[exception] = func
+            if context:
+                self._register_command_error(
+                    cast(CommandErrorCallback, func), exception
+                )
+            else:
+                self._register_error(cast(ErrorCallback, func), exception)
 
             logger.debug(
                 "registered error handler '%s' on %s",
                 func.__name__,
                 type(self).__name__,
             )
-
             return func
 
         return wrapper
+
+    def _register_error(
+        self, func: ErrorCallback, exception: Optional[type[Exception]] = None
+    ) -> None:
+        if not exception:
+            exception = Exception
+        self._error_handlers[exception] = func
+
+    def _register_command_error(
+        self,
+        func: CommandErrorCallback,
+        exception: Optional[type[Exception]] = None,
+    ) -> None:
+        if not exception:
+            exception = Exception
+        self._command_error_handlers[exception] = func
