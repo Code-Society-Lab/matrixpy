@@ -76,8 +76,11 @@ Whether it's fixing bugs, suggesting features, or improving the docs - every bit
 - Or just hop into our [Matrix](https://matrix.to/#/%23codesociety:matrix.org)
   or [Discord](https://discord.gg/code-society-823178343943897088) server and say hi!
 
-If you intend to contribute, please read the [CONTRIBUTING.md](./CONTRIBUTING.md) first. Additionally, **every
-contributor** is expected to follow the [code of conduct](./CODE_OF_CONDUCT.md).
+If you intend to contribute, please read
+the [CONTRIBUTING.md](https://github.com/Code-Society-Lab/matrixpy/blob/main/CONTRIBUTING.md) first. Additionally, *
+*every
+contributor** is expected to follow
+the [code of conduct](https://github.com/Code-Society-Lab/matrixpy/blob/main/CODE_OF_CONDUCT.md).
 
 # License
 

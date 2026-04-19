@@ -49,6 +49,44 @@ theme:
   language: en
 plugins:
   - search
-  - mkdocstrings
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_if_no_docstring: true
+            inherited_members: false
+            members_order: source
+            separate_signature: true
+            unwrap_annotated: true
+            filters:
+            - '!^_'
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            signature_crossrefs: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.superfences
 extra_css:
   - stylesheets/extra.css
+nav:
+  - Home: index.md
+  - Reference:
+      - Bot: reference/bot.md
+      - Checks: reference/checks.md
+      - Command: reference/command.md
+      - Config: reference/config.md
+      - Content: reference/content.md
+      - Context: reference/context.md
+      - Errors: reference/errors.md
+      - Extension: reference/extension.md
+      - Group: reference/group.md
+      - Message: reference/message.md
+      - Protocols: reference/protocols.md
+      - Registry: reference/registry.md
+      - Room: reference/room.md
+      - Scheduler: reference/scheduler.md
+      - Types: reference/types.md
