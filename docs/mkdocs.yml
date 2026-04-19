@@ -77,6 +77,8 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      base_path: [".."]
 extra_css:
   - stylesheets/extra.css
 nav:
@@ -107,3 +109,12 @@ nav:
       - Room: reference/room.md
       - Scheduler: reference/scheduler.md
       - Types: reference/types.md
+  - Examples:
+      - Overview: examples/index.md
+      - Ping Bot: examples/ping.md
+      - Reactions: examples/reaction.md
+      - Checks: examples/checks.md
+      - Cooldowns: examples/cooldown.md
+      - Error Handling: examples/error-handling.md
+      - Extension: examples/extension.md
+      - Scheduler: examples/scheduler.md

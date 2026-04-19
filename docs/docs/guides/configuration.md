@@ -17,12 +17,12 @@ Matrix.py's `Config` allows you to configure your bot in two ways:
 
 If a YAML file is provided, it loads values from that file. Otherwise, configuration values can be passed directly. At least one authentication method, either password or token, must be provided.
 
-> [!warning] 
-> If neither PASSWORD nor TOKEN is supplied (either via the YAML file or via parameters), the bot will fail to log in and will raise a [`ConfigError`](../reference/errors.md).
+!!! WARNING
+    If neither PASSWORD nor TOKEN is supplied (either via the YAML file or via parameters), the bot will fail to log in and will raise a [`ConfigError`](../reference/errors.md).
 
 # Configuration Options
 - `HOMESERVER` — Matrix homeserver URL (default: https://matrix.org).
-- `USERNAME` — Your bot's Matrix ID (required).
+- `USERNAME` — Your bot's Matrix HumID (required).
 - `PASSWORD` — Password for your bot account (required unless TOKEN is provided).
 - `TOKEN` — Matrix access token (optional alternative to password).
 - `PREFIX` — Command prefix for bot commands (default: !).

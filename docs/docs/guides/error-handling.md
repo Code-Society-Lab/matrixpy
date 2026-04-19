@@ -77,12 +77,21 @@ async def handle_divide_errors(ctx, error):
         await ctx.reply(f"❌ An error occurred: {error}")
 ```
 
-# Matrix Common Error Types
-Matrix.py has several built-in error types — see the [`errors`](../reference/errors.md) reference for full details:
+# Matrix.py Error Types
+
+All library exceptions inherit from [`MatrixError`](../reference/errors.md#matrix.errors.MatrixError). See the [`errors`](../reference/errors.md) reference for full details.
 
 | Error | When It Happens |
 |-------|-----------------|
-| [`MissingArgumentError`](../reference/errors.md) | Required parameter not provided |
-| [`CheckError`](../reference/errors.md) | A check function returned `False` |
-| [`CooldownError`](../reference/errors.md) | User hit rate limit |
-| [`CommandNotFoundError`](../reference/errors.md) | Command doesn't exist |
+| [`MatrixError`](../reference/errors.md#matrix.errors.MatrixError) | Base class for all matrix.py exceptions |
+| [`ConfigError`](../reference/errors.md#matrix.errors.ConfigError) | Required config value is missing |
+| [`RoomNotFoundError`](../reference/errors.md#matrix.errors.RoomNotFoundError) | Room lookup failed |
+| [`RegistryError`](../reference/errors.md#matrix.errors.RegistryError) | Base class for registry exceptions |
+| [`AlreadyRegisteredError`](../reference/errors.md#matrix.errors.AlreadyRegisteredError) | A command, group, or extension is registered twice |
+| [`CommandError`](../reference/errors.md#matrix.errors.CommandError) | Base class for command exceptions |
+| [`CommandNotFoundError`](../reference/errors.md#matrix.errors.CommandNotFoundError) | Command doesn't exist |
+| [`CommandAlreadyRegisteredError`](../reference/errors.md#matrix.errors.CommandAlreadyRegisteredError) | Command name is already taken |
+| [`MissingArgumentError`](../reference/errors.md#matrix.errors.MissingArgumentError) | Required argument not provided |
+| [`CheckError`](../reference/errors.md#matrix.errors.CheckError) | A check function returned `False` |
+| [`CooldownError`](../reference/errors.md#matrix.errors.CooldownError) | User hit the rate limit |
+| [`GroupError`](../reference/errors.md#matrix.errors.GroupError) | Base class for group exceptions |
