@@ -6,11 +6,16 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -20,8 +25,15 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: |
-          pip install .[doc]
+        run: pip install .[doc]
+
+      - name: Build docs
+        run: mkdocs build --config-file docs/mkdocs.yml
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force --config-file docs/mkdocs.yml
+        id: deployment
+        uses: actions/deploy-pages@v4
