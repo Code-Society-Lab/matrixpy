@@ -45,7 +45,7 @@ theme:
   icon:
     repo: fontawesome/brands/github-alt
   logo: img/matrixpy-white.svg
-  #  favicon: img/matrixpy-white.svg
+  favicon: img/favicon.svg
   language: en
 plugins:
   - search

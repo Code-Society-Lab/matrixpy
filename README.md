@@ -6,7 +6,7 @@
 
 <hr />
 
-[![Static Badge](https://img.shields.io/badge/%F0%9F%93%9A-Documentation-%235c5c5c)](https://github.com/Code-Society-Lab/matrixpy/wiki)
+[![Static Badge](https://img.shields.io/badge/%F0%9F%93%9A-Documentation-%235c5c5c)](https://matrixpy.codesociety.xyz/)
 [![Join Discord](https://discordapp.com/api/guilds/823178343943897088/widget.png?style=shield)](https://discord.gg/code-society-823178343943897088)
 [![Join Matrix](https://img.shields.io/matrix/codesociety%3Amatrix.org?logo=matrix&label=%20&labelColor=%23202020&color=%23202020)](https://matrix.to/#/%23codesociety:matrix.org )
 [![Tests](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml)
@@ -60,7 +60,15 @@ async def ping(ctx: Context):
 bot.start(config="config.yml")
 ```
 
-[Documentation](https://github.com/Code-Society-Lab/matrixpy/wiki) - [Examples](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples)
+Basic configuration:
+Tha
+
+```yaml
+USERNAME: "MY BOT USERNAME"
+PASSWORD: "MY BOT PASSWORD"
+```
+
+[Documentation](https://matrixpy.codesociety.xyz/) - [Examples](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples)
 
 # Contributing
 
