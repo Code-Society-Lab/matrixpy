@@ -21,11 +21,6 @@ class Scheduler:
     def _parse_cron(self, cron: str) -> dict:
         """
         Parse a cron string into a dictionary suitable for CronTrigger.
-
-        :param cron: The cron string to parse.
-        :type cron: str
-        :return: A dictionary with cron fields.
-        :rtype: dict
         """
         fields = cron.split()
         if len(fields) != 5:
@@ -42,10 +37,13 @@ class Scheduler:
         """
         Schedule a coroutine function to be run at specified intervals.
 
-        :param cron: The cron string defining the schedule.
-        :type cron: str
-        :param func: The coroutine function to run.
-        :type func: Callback
+        ## Example
+
+        ```python
+        @bot.schedule("0 9 * * 1-5")
+        async def morning_update() -> None:
+            await room.send("Good morning!")
+        ```
         """
         cron_trigger = CronTrigger(**self._parse_cron(cron))
         self.scheduler.add_job(func, trigger=cron_trigger, name=func.__name__)

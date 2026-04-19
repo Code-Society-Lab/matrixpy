@@ -30,19 +30,6 @@ ErrorCallback = Callable[["Context", Exception], Coroutine[Any, Any, Any]]
 class Command:
     """
     Represents a command that can be executed with a context and arguments.
-
-    :param func: The coroutine that is executed when the command is invoked.
-    :type func: Callable[..., Coroutine[Any, Any, Any]]
-
-    :param name: Optional name. Defaults to the function's name.
-    :param description: Optional description of what the command does.
-    :param prefix: Optional prefix for the command.
-    :param parent: Optional parent command name for subcommands.
-    :param usage: Optional usage string for the command.
-    :param cooldown: Optional cooldown settings as a tuple of (rate, period).
-
-    :raises TypeError: If the provided name is not a string.
-    :raises TypeError: If the provided callback is not a coroutine.
     """
 
     def __init__(
@@ -85,9 +72,6 @@ class Command:
     def callback(self) -> Callback:
         """
         Returns the coroutine function for this command.
-
-        :return: The command's coroutine function.
-        :rtype: Callback
         """
         return self._callback
 
@@ -96,10 +80,6 @@ class Command:
         """
         Sets the coroutine function for the command and extracts type
         hints and parameters.
-
-        :param func: The coroutine function to use.
-        :type func: Callback
-        :raises TypeError: If the provided function is not a coroutine.
         """
         if not inspect.iscoroutinefunction(func):
             raise TypeError("Commands must be coroutines")
@@ -113,9 +93,6 @@ class Command:
     def _build_help(self) -> str:
         """
         Returns the help text for the command.
-
-        :return: The help text for the command.
-        :rtype: str
         """
         default_help = f"{self.description}\n\nusage: {self.usage}"
         return inspect.cleandoc(default_help)
@@ -124,9 +101,6 @@ class Command:
         """
         Builds and returns the default usage string for the command.
         set at the command initalization.
-
-        :return: A usage string.
-        :rtype: str
         """
         params = " ".join(f"[{p.name}]" for p in self.params)
         command_name = self.name
@@ -186,10 +160,17 @@ class Command:
         """
         Register a check callback
 
-        :param func: The check callback
-        :type func: Callback
+        ## Example
 
-        :raises TypeError: If the function is not a coroutine.
+        ```python
+        @bot.command("secret")
+        async def secret(ctx: Context) -> None:
+            await ctx.reply("Access granted!")
+
+        @secret.check
+        async def is_allowed(ctx: Context) -> bool:
+            return ctx.sender == "@admin:matrix.org"
+        ```
         """
         if not inspect.iscoroutinefunction(func):
             raise TypeError("Checks must be coroutine")
@@ -227,10 +208,17 @@ class Command:
         """
         Registers a coroutine to be called before the command is invoked.
 
-        :param func: The coroutine function to call before command invocation.
-        :type func: Callback
+        ## Example
 
-        :raises TypeError: If the function is not a coroutine.
+        ```python
+        @bot.command("ping")
+        async def ping(ctx: Context) -> None:
+            await ctx.reply("Pong!")
+
+        @ping.before_invoke
+        async def before_ping(ctx: Context) -> None:
+            print(f"ping invoked by {ctx.sender}")
+        ```
         """
 
         if not inspect.iscoroutinefunction(func):
@@ -242,10 +230,17 @@ class Command:
         """
         Registers a coroutine to be called after the command is invoked.
 
-        :param func: The coroutine function to call after command execution.
-        :type func: Callback
+        ## Example
 
-        :raises TypeError: If the function is not a coroutine.
+        ```python
+        @bot.command("ping")
+        async def ping(ctx: Context) -> None:
+            await ctx.reply("Pong!")
+
+        @ping.after_invoke
+        async def after_ping(ctx: Context) -> None:
+            print(f"ping completed for {ctx.sender}")
+        ```
         """
 
         if not inspect.iscoroutinefunction(func):
@@ -257,11 +252,21 @@ class Command:
         """
         Decorator used to register an error handler for this command.
 
-        :param exception: Exception type to register the handler for.
-        :type exception: Optional[Exception]
-        :return: A decorator that registers the provided coroutine as an
-            error handler and returns the original function.
-        :rtype: Callable
+        ## Example
+
+        ```python
+        @bot.command("div")
+        async def div(ctx: Context, a: int, b: int) -> None:
+            await ctx.reply(f"{a / b}")
+
+        @div.error(ZeroDivisionError)
+        async def div_error(ctx: Context, error: ZeroDivisionError) -> None:
+            await ctx.reply("Cannot divide by zero!")
+
+        @div.error(MissingArgumentError)
+        async def div_missing(ctx: Context, error: MissingArgumentError) -> None:
+            await ctx.reply(f"Missing argument: {error}")
+        ```
         """
 
         def wrapper(func: ErrorCallback) -> Callable:
@@ -279,11 +284,6 @@ class Command:
     async def on_error(self, ctx: "Context", error: Exception) -> None:
         """
         Executes the registered error handler if present.
-
-        :param ctx: The command execution context.
-        :type ctx: Context
-        :param error: The exception that was raised.
-        :type error: Exception
         """
 
         if handler := self._error_handlers.get(type(error)):
@@ -322,9 +322,6 @@ class Command:
     async def __call__(self, ctx: "Context") -> None:
         """
         Execute the command with parsed arguments.
-
-        :param ctx: The command execution context.
-        :type ctx: Context
         """
         await self._invoke(ctx)
 

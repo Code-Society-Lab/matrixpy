@@ -7,22 +7,14 @@ class Paginator(Generic[T]):
     """A generic paginator for any list of items."""
 
     def __init__(self, items: List[T], per_page: int = 5):
-        """Initialize the paginator.
-
-        :param items: List of items to paginate
-        :param per_page: Number of items per page
-        """
+        """Initialize the paginator."""
         self.items = items
         self.per_page = per_page
         self.total_items = len(items)
         self.total_pages = max(1, -(-self.total_items // self.per_page))
 
     def get_page(self, page_number: int) -> "Page[T]":
-        """Get a specific page of items.
-
-        :param page_number: Page number to retrieve (1-indexed)
-        :return: Page object containing items and metadata
-        """
+        """Get a specific page of items."""
         # Clamp page number to valid range
         page_number = max(1, min(page_number, self.total_pages))
 
@@ -38,10 +30,7 @@ class Paginator(Generic[T]):
         )
 
     def get_pages(self) -> List["Page[T]"]:
-        """Get all pages.
-
-        :return: List of all pages
-        """
+        """Get all pages."""
         return [self.get_page(i) for i in range(1, self.total_pages + 1)]
 
 
@@ -56,14 +45,7 @@ class Page(Generic[T]):
         per_page: int,
         total_items: int,
     ):
-        """Initialize a page.
-
-        :param items: Items on this page
-        :param page_number: Current page number
-        :param total_pages: Total number of pages
-        :param per_page: Items per page
-        :param total_items: Total number of items across all pages
-        """
+        """Initialize a page."""
         self.items = items
         self.page_number = page_number
         self.total_pages = total_pages

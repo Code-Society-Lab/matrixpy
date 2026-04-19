@@ -58,10 +58,10 @@
 
 Matrix.py is a lightweight and intuitive Python library to build bots on the [Matrix protocol](https://matrix.org). It provides a clean, decorator-based API similar to popular event-driven frameworks, allowing developers to focus on behavior rather than boilerplate.
 
-- :material-lightning-bolt: **Minimal setup** — install and have a working bot running in minutes
-- :material-refresh: **Event-driven** — async/await API reacting to any Matrix room event
-- :material-robot: **Command system** — decorator-based commands with automatic argument parsing
-- :material-puzzle: **Extensions** — split your bot into modules as it grows
+- **Minimal setup** — install and have a working bot running in minutes
+- **Event-driven** — async/await API reacting to any Matrix room event
+- **Command system** — decorator-based commands with automatic argument parsing
+- **Extensions** — split your bot into modules as it grows
 
 ## Quickstart
 

@@ -52,13 +52,21 @@ class Group(Command):
         The command name defaults to the function name unless
         explicitly provided.
 
-        :param name: The name of the command. If omitted, the function
-                     name is used.
-        :type name: str, optional
-        :raises TypeError: If the decorated function is not a coroutine.
-        :raises ValueError: If a command with the same name is registered.
-        :return: Decorator that registers the command handler.
-        :rtype: Callback
+        ## Example
+
+        ```python
+        @bot.group("math")
+        async def math(ctx: Context) -> None:
+            await ctx.send_help()
+
+        @math.command()
+        async def add(ctx: Context, a: int, b: int) -> None:
+            await ctx.reply(f"{a + b}")
+
+        @math.command("sub")
+        async def subtract(ctx: Context, a: int, b: int) -> None:
+            await ctx.reply(f"{a - b}")
+        ```
         """
 
         def wrapper(func: Callback) -> Command:
