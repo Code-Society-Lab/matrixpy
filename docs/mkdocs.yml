@@ -69,11 +69,28 @@ plugins:
 markdown_extensions:
   - admonition
   - codehilite
+  - attr_list
+  - md_in_html
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 extra_css:
   - stylesheets/extra.css
 nav:
   - Home: index.md
+  - Guides:
+      - Overview: guides/index.md
+      - Introduction: guides/introduction.md
+      - Configuration: guides/configuration.md
+      - Commands: guides/commands.md
+      - Groups: guides/groups.md
+      - Events: guides/events.md
+      - Checks: guides/checks.md
+      - Error Handling: guides/error-handling.md
+      - Bigger Bot: guides/bigger-bot.md
   - Reference:
       - Bot: reference/bot.md
       - Checks: reference/checks.md

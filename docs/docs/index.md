@@ -1,93 +1,168 @@
-# matrix.py
-
-<div align="center">
+<div align="center" style="margin-bottom: 20px">
   <em>A simple, developer-friendly library to create powerful <a href="https://matrix.org">Matrix</a> bots.</em>
 </div>
 
-<img alt="image" src="img/matrixpy-white.svg#only-dark" />
-<img alt="image" src="img/matrixpy-black.svg#only-light" />
+<div align="center">
+  <img alt="matrix.py logo" src="img/matrixpy-white.svg#only-dark"/>
+  <img alt="matrix.py logo" src="img/matrixpy-black.svg#only-light" />
+</div>
 
-<hr />
+<div align="center" markdown>
 
-[![Join Discord](https://discordapp.com/api/guilds/823178343943897088/widget.png?style=shield)](https://discord.gg/code-society-823178343943897088)
-[![Join Matrix](https://img.shields.io/matrix/codesociety%3Amatrix.org?logo=matrix&label=%20&labelColor=%23202020&color=%23202020)](https://matrix.to/#/%23codesociety:matrix.org )
-[![Tests](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml)
-[![CodeQL Advanced](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Code-Society-Lab/matrixpy/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Code-Society-Lab/matrixpy)
+[Get Started](guides/introduction.md){ .md-button .md-button--primary }
+[Reference](reference/bot.md){ .md-button }
 
-Matrix.py is a lightweight and intuitive Python library to build bots on
-the [Matrix protocol](https://matrix.org). It provides a clean,
-decorator-based API similar to popular event-driven frameworks, allowing
-developers to focus on behavior rather than boilerplate.
+</div>
 
-#### Key Features
+<div align="center">
 
-- Minimal setup, easy to extend
-- Event-driven API using async/await
-- Clean command registration
-- Automatic event handler registration
-- Built on [matrix-nio](https://github.com/matrix-nio/matrix-nio)
+<p>
+  <a href="https://discord.gg/code-society-823178343943897088">
+    <img
+      src="https://discordapp.com/api/guilds/823178343943897088/widget.png?style=shield"
+      alt="Join Discord"
+    />
+  </a>
 
-# Quickstart
+  <a href="https://matrix.to/#/%23codesociety:matrix.org">
+    <img
+      src="https://img.shields.io/matrix/codesociety%3Amatrix.org?logo=matrix&label=%20&labelColor=%23202020&color=%23202020"
+      alt="Join Matrix"
+    />
+  </a>
 
-**Requirements**
+  <a href="https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml">
+    <img
+      src="https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml/badge.svg"
+      alt="Tests"
+    />
+  </a>
 
-- Python 3.10+
+  <a href="https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml">
+    <img
+      src="https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml/badge.svg"
+      alt="CodeQL Advanced"
+    />
+  </a>
 
-```
-pip install matrix-python
-```
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/Code-Society-Lab/matrixpy">
+    <img
+      src="https://api.securityscorecards.dev/projects/github.com/Code-Society-Lab/matrixpy/badge"
+      alt="OpenSSF Scorecard"
+    />
+  </a>
+</p>
 
-If you plan on contributing to matrix.py, we recommend to install the development libraries:
+</div>
+---
 
-```
-pip install -e .[dev]
-```
+Matrix.py is a lightweight and intuitive Python library to build bots on the [Matrix protocol](https://matrix.org). It provides a clean, decorator-based API similar to popular event-driven frameworks, allowing developers to focus on behavior rather than boilerplate.
 
-*Note*: It is recommended to use
-a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
-when installing python packages.
+- :material-lightning-bolt: **Minimal setup** — install and have a working bot running in minutes
+- :material-refresh: **Event-driven** — async/await API reacting to any Matrix room event
+- :material-robot: **Command system** — decorator-based commands with automatic argument parsing
+- :material-puzzle: **Extensions** — split your bot into modules as it grows
 
-```python
-from matrix import Bot, Context
+## Quickstart
 
-bot = Bot()
+=== "Install"
+
+    **Requirements:** Python 3.10+
+
+    ```bash
+    pip install matrix-python
+    ```
+
+    Using a virtual environment is strongly recommended:
+
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Windows: venv\Scripts\activate
+    pip install matrix-python
+    ```
+
+=== "Configure"
+
+    Create a `config.yml` file:
+
+    ```yaml
+    USERNAME: "@yourbot:matrix.org"
+    PASSWORD: "your_password"
+    ```
+
+    Or use environment variables:
+
+    ```yaml
+    USERNAME: ${MATRIX_USERNAME}
+    PASSWORD: ${MATRIX_PASSWORD}
+    ```
+
+=== "Code"
+
+    ```python
+    from matrix import Bot, Context
+
+    bot = Bot()
 
 
-@bot.command("ping")
-async def ping(ctx: Context):
-    await ctx.reply("Pong!")
+    @bot.command("ping")
+    async def ping(ctx: Context):
+        await ctx.reply("Pong!")
 
 
-bot.start(config="config.yml")
-```
+    bot.start(config="config.yml")
+    ```
 
-Basic configuration:
-```yaml
-USERNAME: "MY BOT USERNAME"
-PASSWORD: "MY BOT PASSWORD"
-```
+    Send `!ping` in any room the bot is in — it will reply `Pong!`.
 
-[Guides](https://github.com/Code-Society-Lab/matrixpy/wiki) - [Examples](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples)
+## Where to go next
 
-# Contributing
+<div class="grid cards" markdown>
 
-We welcome everyone to contribute!
+-   :fontawesome-solid-book-open: **Guides**
 
-Whether it's fixing bugs, suggesting features, or improving the docs - every bit helps.
+    ---
 
-- Submit an issue
-- Open a pull request
-- Or just hop into our [Matrix](https://matrix.to/#/%23codesociety:matrix.org)
-  or [Discord](https://discord.gg/code-society-823178343943897088) server and say hi!
+    Step-by-step tutorials covering commands, events, checks, extensions, and more.
 
-If you intend to contribute, please read
-the [CONTRIBUTING.md](https://github.com/Code-Society-Lab/matrixpy/blob/main/CONTRIBUTING.md) first. Additionally, *
-*every
-contributor** is expected to follow
-the [code of conduct](https://github.com/Code-Society-Lab/matrixpy/blob/main/CODE_OF_CONDUCT.md).
+    [:octicons-arrow-right-24: Start with the Introduction](guides/introduction.md)
 
-# License
+-   :fontawesome-solid-code: **Reference**
 
-This project is licensed under the terms
-of [MIT license](https://github.com/Code-Society-Lab/matrixpy/blob/main/LICENSE).
+    ---
+
+    Complete API documentation for every class and function in the library.
+
+    [:octicons-arrow-right-24: Browse the Reference](reference/bot.md)
+
+-   :fontawesome-brands-github: **Examples**
+
+    ---
+
+    Ready-to-run example bots demonstrating common patterns and use cases.
+
+    [:octicons-arrow-right-24: View on GitHub](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples)
+
+-   :octicons-code-square-24: **Source Code**
+
+    ---
+
+    Browse the source, open issues, and contribute on GitHub.
+
+    [:octicons-arrow-right-24: View Source Code](https://github.com/Code-Society-Lab/matrixpy)
+
+</div>
+
+## Contributing
+
+We welcome everyone to contribute! Whether it's fixing bugs, suggesting features, or improving the docs — every bit helps.
+
+- [Submit an issue](https://github.com/Code-Society-Lab/matrixpy/issues)
+- [Open a pull request](https://github.com/Code-Society-Lab/matrixpy/blob/main/CONTRIBUTING.md)
+- Hop into our [Matrix](https://matrix.to/#/%23codesociety:matrix.org) or [Discord](https://discord.gg/code-society-823178343943897088) and say hi!
+
+Please read the [CONTRIBUTING.md](https://github.com/Code-Society-Lab/matrixpy/blob/main/CONTRIBUTING.md) and follow the [code of conduct](https://github.com/Code-Society-Lab/matrixpy/blob/main/CODE_OF_CONDUCT.md).
+
+## License
+
+Released under the [MIT License](https://github.com/Code-Society-Lab/matrixpy/blob/main/LICENSE).
