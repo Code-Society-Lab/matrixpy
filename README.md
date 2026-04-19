@@ -79,7 +79,7 @@ Send `!ping` in any room the bot is in, it will reply `Pong!`.
   events, checks, extensions, and more
 - [**Reference**](https://matrixpy.code-society.xyz/reference/bot/) — complete API documentation for every class and
   function
-- [**Examples**](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples) — ready-to-run example bots
+- [**Examples**](https://matrixpy.codesociety.xyz/examples/) — ready-to-run example bots
   demonstrating common patterns
 
 ## Contributing

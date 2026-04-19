@@ -135,21 +135,21 @@ Matrix.py is a lightweight and intuitive Python library to build bots on the [Ma
 
     [:octicons-arrow-right-24: Browse the Reference](reference/bot.md)
 
--   :fontawesome-brands-github: **Examples**
+-   :fontawesome-solid-terminal: **Examples**
 
     ---
 
     Ready-to-run example bots demonstrating common patterns and use cases.
 
-    [:octicons-arrow-right-24: View on GitHub](https://github.com/Code-Society-Lab/matrixpy/tree/main/examples)
+    [:octicons-arrow-right-24: View Examples](/examples)
 
--   :octicons-code-square-24: **Source Code**
+-   :fontawesome-brands-github: **Source Code**
 
     ---
 
     Browse the source, open issues, and contribute on GitHub.
 
-    [:octicons-arrow-right-24: View Source Code](https://github.com/Code-Society-Lab/matrixpy)
+    [:octicons-arrow-right-24: View on GitHub](https://github.com/Code-Society-Lab/matrixpy)
 
 </div>
 
