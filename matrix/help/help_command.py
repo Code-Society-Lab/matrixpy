@@ -17,11 +17,7 @@ class HelpCommand(Command, ABC):
     DEFAULT_PER_PAGE = 5
 
     def __init__(self, prefix: Optional[str] = None, per_page: int = DEFAULT_PER_PAGE):
-        """Initialize the help command.
-
-        :param prefix: Command prefix override
-        :param per_page: Number of commands to display per page
-        """
+        """Initialize the help command."""
         super().__init__(
             self.execute,
             name="help",
@@ -32,18 +28,48 @@ class HelpCommand(Command, ABC):
 
     @abstractmethod
     def format_help_page(self, page: Page[Command], title: str = "Commands") -> str:
+        """Format a full page of commands into a displayable string.
+
+        ## Example
+
+        ```python
+        def format_help_page(self, page, title="Commands") -> str:
+            lines = [f"**{title}**"]
+            for cmd in page.items:
+                lines.append(self.format_command(cmd))
+            lines.append(self.format_page_info(page))
+            return "\\n".join(lines)
+        ```
+        """
         pass  # pragma: no cover
 
     @abstractmethod
     def format_subcommand_page(self, page: Page[Command], group_name: str) -> str:
+        """Format a full page of subcommands for a group into a displayable string.
+
+        ## Example
+
+        ```python
+        def format_subcommand_page(self, page, group_name) -> str:
+            lines = [f"**{group_name} subcommands**"]
+            for cmd in page.items:
+                lines.append(self.format_subcommand(cmd))
+            lines.append(self.format_page_info(page))
+            return "\\n".join(lines)
+        ```
+        """
         pass  # pragma: no cover
 
     @abstractmethod
     def format_command(self, cmd: Command) -> str:
         """Format a single command for display.
 
-        :param cmd: The command to format
-        :return: Formatted string representation of the command
+        ## Example
+
+        ```python
+        def format_command(self, cmd) -> str:
+            return f"**{cmd.name}** — {cmd.description}"
+        ```
         """
         pass  # pragma: no cover
 
@@ -51,8 +77,12 @@ class HelpCommand(Command, ABC):
     def format_group(self, group: Group) -> str:  # pragma: no cover
         """Format a group command for display.
 
-        :param group: The group to format
-        :return: Formatted string representation of the group
+        ## Example
+
+        ```python
+        def format_group(self, group) -> str:
+            return f"**{group.name}** [group] — {group.description}"
+        ```
         """
         pass
 
@@ -60,8 +90,12 @@ class HelpCommand(Command, ABC):
     def format_subcommand(self, subcommand: Command) -> str:
         """Format a subcommand for display.
 
-        :param subcommand: The subcommand to format
-        :return: Formatted string representation of the subcommand
+        ## Example
+
+        ```python
+        def format_subcommand(self, subcommand) -> str:
+            return f"  **{subcommand.name}** — {subcommand.description}"
+        ```
         """
         pass  # pragma: no cover
 
@@ -69,8 +103,12 @@ class HelpCommand(Command, ABC):
     def format_page_info(self, page: Page[Command]) -> str:
         """Format the page information display.
 
-        :param page: Page object containing pagination info
-        :return: Formatted page information string
+        ## Example
+
+        ```python
+        def format_page_info(self, page) -> str:
+            return f"Page {page.page_number}/{page.total_pages}"
+        ```
         """
         pass  # pragma: no cover
 
@@ -98,43 +136,25 @@ class HelpCommand(Command, ABC):
         pass  # pragma: no cover
 
     def get_commands_paginator(self, ctx: Context) -> Paginator[Command]:
-        """Get a paginator for all commands.
-
-        :param ctx: Command context
-        :return: Paginator configured with all commands
-        """
+        """Get a paginator for all commands."""
         all_commands = list(ctx.bot.commands.values())
         sorted_commands = sorted(all_commands, key=lambda c: c.name.lower())
 
         return Paginator(sorted_commands, self.per_page)
 
     def get_subcommands_paginator(self, group: Group) -> Paginator[Command]:
-        """Get a paginator for all subcommands in a group.
-
-        :param group: The group to get subcommands from
-        :return: Paginator configured with all subcommands
-        """
+        """Get a paginator for all subcommands in a group."""
         subcommands = list(getattr(group, "commands", {}).values())
         sorted_subcommands = sorted(subcommands, key=lambda c: c.name.lower())
 
         return Paginator(sorted_subcommands, self.per_page)
 
     def find_command(self, ctx: Context, command_name: str) -> Optional[Command]:
-        """Find a command by name.
-
-        :param ctx: Command context
-        :param command_name: Name of the command to find
-        :return: Command if found, None otherwise
-        """
+        """Find a command by name."""
         return ctx.bot.commands.get(command_name)
 
     def find_subcommand(self, group: Group, subcommand_name: str) -> Optional[Command]:
-        """Find a subcommand within a group.
-
-        :param group: The group to search in
-        :param subcommand_name: Name of the subcommand to find
-        :return: Subcommand if found, None otherwise
-        """
+        """Find a subcommand within a group."""
         group_commands = getattr(group, "commands", {})
         return group_commands.get(subcommand_name)
 
@@ -175,11 +195,7 @@ class HelpCommand(Command, ABC):
             await self.on_empty_page(ctx)
 
     async def show_help_page(self, ctx: Context, page_number: int = 1) -> None:
-        """Show a paginated help page for all commands.
-
-        :param ctx: Command context
-        :param page_number: Page number to display
-        """
+        """Show a paginated help page for all commands."""
         paginator = self.get_commands_paginator(ctx)
         page = paginator.get_page(page_number)
         help_message = self.format_help_page(page)
@@ -271,12 +287,7 @@ class DefaultHelpCommand(HelpCommand):
     """
 
     def format_help_page(self, page: Page[Command], title: str = "Commands") -> str:
-        """Format a complete help page.
-
-        :param page: Page object containing commands and pagination info
-        :param title: Title for the help page
-        :return: Complete formatted help page
-        """
+        """Format a complete help page."""
         help_entries = []
 
         if not page.items:
@@ -294,12 +305,7 @@ class DefaultHelpCommand(HelpCommand):
         return f"**{title}**\n\n{help_text}\n\n{page_info}"
 
     def format_subcommand_page(self, page: Page[Command], group_name: str) -> str:
-        """Format a complete subcommand help page.
-
-        :param page: Page object containing subcommands and pagination info
-        :param group_name: Name of the parent group
-        :return: Complete formatted subcommand help page
-        """
+        """Format a complete subcommand help page."""
         help_entries = []
 
         if not page.items:
@@ -314,11 +320,7 @@ class DefaultHelpCommand(HelpCommand):
         return f"**{group_name} Subcommands**\n\n{help_text}\n\n{page_info}"
 
     def format_command(self, cmd: Command) -> str:
-        """Format a single command for display.
-
-        :param cmd: The command to format
-        :return: Formatted string representation of the command
-        """
+        """Format a single command for display."""
         return (
             f"**{cmd.name}**\n"
             f"Usage: `{cmd.usage}`\n"
@@ -326,11 +328,7 @@ class DefaultHelpCommand(HelpCommand):
         )
 
     def format_group(self, group: Group) -> str:
-        """Format a group command for display.
-
-        :param group: The group to format
-        :return: Formatted string representation of the group
-        """
+        """Format a group command for display."""
         subcommands_text = ""
         subcommand_count = len(getattr(group, "commands", {}))
 
@@ -344,11 +342,7 @@ class DefaultHelpCommand(HelpCommand):
         )
 
     def format_subcommand(self, subcommand: Command) -> str:
-        """Format a subcommand for display.
-
-        :param subcommand: The subcommand to format
-        :return: Formatted string representation of the subcommand
-        """
+        """Format a subcommand for display."""
         return (
             f"**{subcommand.name}**\n"
             f"Usage: `{subcommand.usage}`\n"
@@ -356,11 +350,7 @@ class DefaultHelpCommand(HelpCommand):
         )
 
     def format_page_info(self, page: Page[Command]) -> str:
-        """Format the page information display.
-
-        :param page: Page object containing pagination info
-        :return: Formatted page information string
-        """
+        """Format the page information display."""
         return f"**Page {page.page_number}/{page.total_pages}**"
 
     async def on_command_not_found(self, ctx: Context, command_name: str) -> None:

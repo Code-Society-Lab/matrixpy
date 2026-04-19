@@ -1,0 +1,120 @@
+site_name: matrix.py
+site_description: A simple, developer-friendly library to create powerful Matrix bots.
+site_url: https://matrixpy.code-society.xyz/
+theme:
+  name: material
+  palette:
+    - media: (prefers-color-scheme)
+      toggle:
+        icon: material/lightbulb-auto
+        name: Switch to light mode
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to system preference
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - content.footnote.tooltips
+    - content.tabs.link
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github-alt
+  logo: img/matrixpy-white.svg
+  favicon: img/favicon.svg
+  language: en
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_if_no_docstring: true
+            inherited_members: false
+            members_order: source
+            separate_signature: true
+            unwrap_annotated: true
+            filters:
+            - '!^_'
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            signature_crossrefs: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+markdown_extensions:
+  - admonition
+  - codehilite
+  - attr_list
+  - md_in_html
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      base_path: [".."]
+extra_css:
+  - stylesheets/extra.css
+nav:
+  - Home: index.md
+  - Guides:
+      - Overview: guides/index.md
+      - Introduction: guides/introduction.md
+      - Configuration: guides/configuration.md
+      - Commands: guides/commands.md
+      - Groups: guides/groups.md
+      - Events: guides/events.md
+      - Checks: guides/checks.md
+      - Error Handling: guides/error-handling.md
+      - Bigger Bot: guides/bigger-bot.md
+  - Reference:
+      - Bot: reference/bot.md
+      - Checks: reference/checks.md
+      - Command: reference/command.md
+      - Config: reference/config.md
+      - Content: reference/content.md
+      - Context: reference/context.md
+      - Errors: reference/errors.md
+      - Extension: reference/extension.md
+      - Group: reference/group.md
+      - Message: reference/message.md
+      - Protocols: reference/protocols.md
+      - Registry: reference/registry.md
+      - Room: reference/room.md
+      - Scheduler: reference/scheduler.md
+      - Types: reference/types.md
+  - Examples:
+      - Overview: examples/index.md
+      - Ping Bot: examples/ping.md
+      - Reactions: examples/reaction.md
+      - Checks: examples/checks.md
+      - Cooldowns: examples/cooldown.md
+      - Error Handling: examples/error-handling.md
+      - Extension: examples/extension.md
+      - Scheduler: examples/scheduler.md

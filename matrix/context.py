@@ -38,9 +38,6 @@ class Context:
         Returns the list of parsed arguments from the message body.
 
         If a command is present, the command name is excluded.
-
-        :return: The list of arguments.
-        :rtype: List[str]
         """
         if self.subcommand:
             return self._args[2:]
