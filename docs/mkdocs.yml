@@ -1,7 +1,7 @@
 site_name: matrix.py
 site_description: A simple, developer-friendly library to create powerful Matrix bots.
 site_url: https://matrixpy.codesociety.xyz/
-repo_url: https://github.com/Code-Society-LabHow t/matrixpy
+repo_url: https://github.com/Code-Society-Lab/matrixpy
 repo_name: Code-Society-Lab/matrixpy
 theme:
   name: material
