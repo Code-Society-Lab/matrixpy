@@ -8,8 +8,8 @@
 
 <div align="center">
 
-[<img src="https://img.shields.io/badge/Get%20Started-black?style=for-the-badge" />](https://matrixpy.code-society.xyz/guides/introduction/)
-[<img src="https://img.shields.io/badge/Reference-555555?style=for-the-badge" />](https://matrixpy.code-society.xyz/reference/bot/)
+[<img src="https://img.shields.io/badge/Get%20Started-black?style=for-the-badge" />](https://matrixpy.codesociety.xyz/guides/introduction/)
+[<img src="https://img.shields.io/badge/Reference-555555?style=for-the-badge" />](https://matrixpy.codesociety.xyz/reference/bot/)
 
 </div>
 
@@ -18,6 +18,7 @@
 [![Join Discord](https://discordapp.com/api/guilds/823178343943897088/widget.png?style=shield)](https://discord.gg/code-society-823178343943897088)
 [![Join Matrix](https://img.shields.io/matrix/codesociety%3Amatrix.org?logo=matrix&label=%20&labelColor=%23202020&color=%23202020)](https://matrix.to/#/%23codesociety:matrix.org)
 [![Tests](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/matrix-python)](https://pypi.org/project/matrix-python/)
 [![CodeQL Advanced](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml/badge.svg)](https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Code-Society-Lab/matrixpy/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Code-Society-Lab/matrixpy)
 
