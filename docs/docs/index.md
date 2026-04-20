@@ -38,6 +38,13 @@
     />
   </a>
 
+  <a href="https://pypi.org/project/matrix-python/">
+    <img
+      src="https://img.shields.io/pypi/v/matrix-python"
+      alt="PyPI"
+    />
+  </a>
+
   <a href="https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml">
     <img
       src="https://github.com/Code-Society-Lab/matrixpy/actions/workflows/codeql.yml/badge.svg"
