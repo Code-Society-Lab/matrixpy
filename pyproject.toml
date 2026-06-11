@@ -31,7 +31,7 @@ dev = [
     "pytest-asyncio==1.4.0",
     "black==26.5.1",
     "mypy==2.1.0",
-    "types-PyYAML==6.0.12.20260408",
+    "types-PyYAML==6.0.12.20260518",
     "types-Markdown==3.10.2.20260518",
 ]
 doc = [
