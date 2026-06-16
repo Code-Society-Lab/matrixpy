@@ -80,8 +80,17 @@ def test_get_room__with_known_room_id__expect_room(bot, room):
 
     result = bot.get_room(room.room_id)
 
-    assert isinstance(result, Room)
+    assert type(result) is Room
     assert result.matrix_room is room
+
+
+def test_get_room__with_space_room_id__expect_space(bot, space_room):
+    bot._client.rooms = {space_room.room_id: space_room}
+
+    result = bot.get_room(space_room.room_id)
+
+    assert isinstance(result, Space)
+    assert result.matrix_room is space_room
 
 
 def test_get_room__with_unknown_room_id__expect_none(bot):
@@ -94,10 +103,11 @@ def test_get_rooms__expect_all_known_rooms(bot, room, space_room):
     bot._client.rooms = {room.room_id: room, space_room.room_id: space_room}
 
     rooms = bot.get_rooms()
+    by_id = {r.room_id: r for r in rooms}
 
     assert len(rooms) == 2
-    assert {r.matrix_room for r in rooms} == {room, space_room}
-    assert all(isinstance(r, Room) for r in rooms)
+    assert type(by_id[room.room_id]) is Room
+    assert isinstance(by_id[space_room.room_id], Space)
 
 
 def test_get_space__with_space_room_id__expect_space(bot, space_room):
