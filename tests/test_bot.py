@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from nio import MatrixRoom, RoomMessageText
 
-from matrix.bot import Bot, Config, Extension, Room
+from matrix.bot import Bot, Config, Extension, Room, Space
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,
@@ -65,6 +65,76 @@ def event():
             "type": "m.room.message",
         }
     )
+
+
+@pytest.fixture
+def space_room():
+    space = MatrixRoom(room_id="!space:id", own_user_id="grace")
+    space.name = "Test Space"
+    space.room_type = "m.space"
+    return space
+
+
+def test_get_room__with_known_room_id__expect_room(bot, room):
+    bot._client.rooms = {room.room_id: room}
+
+    result = bot.get_room(room.room_id)
+
+    assert isinstance(result, Room)
+    assert result.matrix_room is room
+
+
+def test_get_room__with_unknown_room_id__expect_none(bot):
+    bot._client.rooms = {}
+
+    assert bot.get_room("!missing:id") is None
+
+
+def test_get_rooms__expect_all_known_rooms(bot, room, space_room):
+    bot._client.rooms = {room.room_id: room, space_room.room_id: space_room}
+
+    rooms = bot.get_rooms()
+
+    assert len(rooms) == 2
+    assert {r.matrix_room for r in rooms} == {room, space_room}
+    assert all(isinstance(r, Room) for r in rooms)
+
+
+def test_get_space__with_space_room_id__expect_space(bot, space_room):
+    bot._client.rooms = {space_room.room_id: space_room}
+
+    result = bot.get_space(space_room.room_id)
+
+    assert isinstance(result, Space)
+    assert result.matrix_room is space_room
+
+
+def test_get_space__with_non_space_room_id__expect_none(bot, room):
+    bot._client.rooms = {room.room_id: room}
+
+    assert bot.get_space(room.room_id) is None
+
+
+def test_get_space__with_unknown_room_id__expect_none(bot):
+    bot._client.rooms = {}
+
+    assert bot.get_space("!missing:id") is None
+
+
+def test_get_spaces__with_mixed_rooms__expect_only_spaces(bot, room, space_room):
+    bot._client.rooms = {room.room_id: room, space_room.room_id: space_room}
+
+    spaces = bot.get_spaces()
+
+    assert len(spaces) == 1
+    assert isinstance(spaces[0], Space)
+    assert spaces[0].matrix_room is space_room
+
+
+def test_get_spaces__with_no_spaces__expect_empty_list(bot, room):
+    bot._client.rooms = {room.room_id: room}
+
+    assert bot.get_spaces() == []
 
 
 def test_bot_init_with_config():
