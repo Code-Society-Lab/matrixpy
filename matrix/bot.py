@@ -8,6 +8,7 @@ from typing import Optional, Any
 from nio import AsyncClient, Event, MatrixRoom
 
 from .room import Room
+from .space import Space
 from .group import Group
 from .config import Config
 from .context import Context
@@ -87,18 +88,80 @@ class Bot(Registry):
 
         Returns the `Room` object corresponding to `room_id` if it exists in
         the client's known rooms. Returns `None` if the room cannot be found.
+        If the room is a space, a `Space` instance is returned instead.
 
         ## Example
 
         ```python
         room = bot.get_room("!abc123:matrix.org")
+
         if room:
             print(room.name)
         ```
         """
         if matrix_room := self.client.rooms.get(room_id):
-            return Room(matrix_room=matrix_room, client=self.client)
+            room_cls = Space if matrix_room.room_type == "m.space" else Room
+            return room_cls(matrix_room=matrix_room, client=self.client)
         return None
+
+    def get_rooms(self) -> list[Room]:
+        """Retrieve a list of all rooms the bot is aware of.
+
+        This method returns a list of `Room` objects for all rooms currently
+        known to the client. This includes both regular rooms and spaces;
+        spaces are returned as `Space` instances.
+
+        ## Example
+
+        ```python
+        rooms = bot.get_rooms()
+
+        for room in rooms:
+            print(room.name)
+        ```
+        """
+        rooms = []
+
+        for matrix_room in self.client.rooms.values():
+            room_cls = Space if matrix_room.room_type == "m.space" else Room
+            rooms.append(room_cls(matrix_room=matrix_room, client=self.client))
+
+        return rooms
+
+    def get_space(self, space_id: str) -> Space | None:
+        """Retrieve a `Space` instance by its Matrix room ID.
+
+        Returns the `Space` object corresponding to `space_id` if it exists in
+        the client's known rooms and is a space. Returns `None` otherwise.
+
+        ## Example
+
+        ```python
+        space = bot.get_space("!space123:matrix.org")
+
+        if space:
+            print(space.name)
+        ```
+        """
+        room = self.get_room(space_id)
+        return room if isinstance(room, Space) else None
+
+    def get_spaces(self) -> list[Space]:
+        """Retrieve a list of all spaces the bot is aware of.
+
+        This method returns a list of `Space` objects for all rooms currently
+        known to the client that are identified as spaces.
+
+        ## Example
+
+        ```python
+        spaces = bot.get_spaces()
+
+        for space in spaces:
+            print(space.name)
+        ```
+        """
+        return [room for room in self.get_rooms() if isinstance(room, Space)]
 
     def load_extension(self, extension: Extension) -> None:
         self.log.debug(f"Loading extension: '{extension.name}'")
