@@ -109,6 +109,7 @@ nav:
       - Protocols: reference/protocols.md
       - Registry: reference/registry.md
       - Room: reference/room.md
+      - Space: reference/space.md
       - Scheduler: reference/scheduler.md
       - Types: reference/types.md
   - Examples:
