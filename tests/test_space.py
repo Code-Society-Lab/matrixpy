@@ -23,7 +23,9 @@ def space(matrix_space, client):
     return Space(matrix_space, client)
 
 
-def test_get_children__with_room_child__expect_room_instance(space, matrix_space, client):
+def test_get_children__with_room_child__expect_room_instance(
+    space, matrix_space, client
+):
     child = MatrixRoom(room_id="!child:example.com", own_user_id="@bot:example.com")
     child.name = "Child Room"
     matrix_space.children = {"!child:example.com"}
@@ -36,7 +38,9 @@ def test_get_children__with_room_child__expect_room_instance(space, matrix_space
     assert result[0].room_id == "!child:example.com"
 
 
-def test_get_children__with_space_child__expect_space_instance(space, matrix_space, client):
+def test_get_children__with_space_child__expect_space_instance(
+    space, matrix_space, client
+):
     child = MatrixRoom(room_id="!subspace:example.com", own_user_id="@bot:example.com")
     child.name = "Sub Space"
     child.room_type = "m.space"
@@ -50,7 +54,9 @@ def test_get_children__with_space_child__expect_space_instance(space, matrix_spa
     assert result[0].room_id == "!subspace:example.com"
 
 
-def test_get_children__with_unjoined_child__expect_child_skipped(space, matrix_space, client):
+def test_get_children__with_unjoined_child__expect_child_skipped(
+    space, matrix_space, client
+):
     matrix_space.children = {"!unknown:example.com"}
     client.rooms = {}
 
@@ -68,7 +74,9 @@ def test_get_children__with_no_children__expect_empty_list(space, matrix_space, 
     assert result == []
 
 
-def test_get_children__with_mixed_children__expect_correct_types(space, matrix_space, client):
+def test_get_children__with_mixed_children__expect_correct_types(
+    space, matrix_space, client
+):
     room_child = MatrixRoom(room_id="!room:example.com", own_user_id="@bot:example.com")
     space_child = MatrixRoom(room_id="!sub:example.com", own_user_id="@bot:example.com")
     space_child.room_type = "m.space"

@@ -17,7 +17,6 @@ from matrix.content import (
 )
 from matrix.types import File, Image, Audio, Video
 
-
 _registry: dict[str, type["Room"]] = {}
 
 
