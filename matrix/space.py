@@ -1,9 +1,7 @@
-from __future__ import annotations
-
-from .room import Room
+from matrix.room import Room, make_room
 
 
-class Space(Room):
+class Space(Room, room_type="m.space"):
     def get_children(self) -> list[Room]:
         """Return the child rooms and spaces of this space.
 
@@ -24,7 +22,6 @@ class Space(Room):
             if not matrix_room:
                 continue
 
-            room_cls = Space if matrix_room.room_type == "m.space" else Room
-            children.append(room_cls(matrix_room, self._client))
+            children.append(make_room(matrix_room, self._client))
 
         return children

@@ -18,8 +18,21 @@ from matrix.content import (
 from matrix.types import File, Image, Audio, Video
 
 
+_registry: dict[str, type["Room"]] = {}
+
+
+def make_room(matrix_room: MatrixRoom, client: AsyncClient) -> "Room":
+    room_cls = _registry.get(matrix_room.room_type, Room)
+    return room_cls(matrix_room, client)
+
+
 class Room:
     """Represents a Matrix room and provides methods to interact with it."""
+
+    def __init_subclass__(cls, room_type: str | None = None, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if room_type:
+            _registry[room_type] = cls
 
     def __init__(self, matrix_room: MatrixRoom, client: AsyncClient) -> None:
         self._matrix_room: MatrixRoom = matrix_room
