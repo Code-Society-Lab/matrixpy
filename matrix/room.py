@@ -31,6 +31,10 @@ class Room:
     def __init_subclass__(cls, room_type: str | None = None, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if room_type:
+            if room_type in _registry:
+                raise ValueError(
+                    f"Room type '{room_type}' is already registered by {_registry[room_type].__name__}"
+                )
             _registry[room_type] = cls
 
     def __init__(self, matrix_room: MatrixRoom, client: AsyncClient) -> None:

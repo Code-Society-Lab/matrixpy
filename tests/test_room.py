@@ -420,3 +420,10 @@ def test_make_room__with_unknown_room_type__expect_room_instance(client):
     result = make_room(matrix_room, client)
 
     assert type(result) is Room
+
+
+def test_room_duplicate_room_type__expect_value_error():
+    with pytest.raises(ValueError):
+
+        class DuplicateSpace(Room, room_type="m.space"):
+            pass
