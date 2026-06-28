@@ -3,7 +3,9 @@ from matrix.room import Room, make_room
 
 class Space(Room, room_type="m.space"):
     def get_children(self) -> list[Room]:
-        """Return the child rooms and spaces of this space.
+        """Return the child rooms and spaces of this space that the bot has joined.
+
+        Children the bot has not joined are silently omitted.
 
         ## Example
 

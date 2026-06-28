@@ -88,7 +88,7 @@ class Bot(Registry):
 
         Returns the `Room` object corresponding to `room_id` if it exists in
         the client's known rooms. Returns `None` if the room cannot be found.
-        If the room is a space, a `Space` instance is returned instead.
+        Returns a typed subclass if the room type is registered (e.g. `Space` for m.space rooms).
 
         ## Example
 
