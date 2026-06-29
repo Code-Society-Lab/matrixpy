@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from nio import MatrixRoom, RoomMessageText
 
-from matrix.bot import Bot, Config, Extension, Room, Space
+from matrix import Bot, Config, Extension, Room, Space
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,

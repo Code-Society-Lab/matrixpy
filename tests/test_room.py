@@ -2,7 +2,8 @@ import pytest
 from unittest.mock import AsyncMock, Mock, MagicMock
 from nio import MatrixRoom, Event
 from matrix.errors import MatrixError
-from matrix.room import Room
+from matrix.room import Room, make_room
+from matrix.space import Space
 from matrix.message import Message
 
 
@@ -387,3 +388,42 @@ def test_room_client_property__expect_async_client(room, client):
 def test_room_unknown_attribute__expect_attribute_error(room):
     with pytest.raises(AttributeError):
         _ = room.nonexistent_attribute
+
+
+def test_make_room__with_regular_room__expect_room_instance(client):
+    matrix_room = MatrixRoom(
+        room_id="!room:example.com", own_user_id="@bot:example.com"
+    )
+
+    result = make_room(matrix_room, client)
+
+    assert type(result) is Room
+
+
+def test_make_room__with_space_room__expect_space_instance(client):
+    matrix_room = MatrixRoom(
+        room_id="!space:example.com", own_user_id="@bot:example.com"
+    )
+    matrix_room.room_type = "m.space"
+
+    result = make_room(matrix_room, client)
+
+    assert type(result) is Space
+
+
+def test_make_room__with_unknown_room_type__expect_room_instance(client):
+    matrix_room = MatrixRoom(
+        room_id="!room:example.com", own_user_id="@bot:example.com"
+    )
+    matrix_room.room_type = "m.unknown"
+
+    result = make_room(matrix_room, client)
+
+    assert type(result) is Room
+
+
+def test_room_duplicate_room_type__expect_value_error():
+    with pytest.raises(ValueError):
+
+        class DuplicateSpace(Room, room_type="m.space"):
+            pass

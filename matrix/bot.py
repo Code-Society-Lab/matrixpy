@@ -7,7 +7,7 @@ from typing import Optional, Any
 
 from nio import AsyncClient, Event, MatrixRoom
 
-from .room import Room
+from .room import Room, make_room
 from .space import Space
 from .group import Group
 from .config import Config
@@ -88,7 +88,7 @@ class Bot(Registry):
 
         Returns the `Room` object corresponding to `room_id` if it exists in
         the client's known rooms. Returns `None` if the room cannot be found.
-        If the room is a space, a `Space` instance is returned instead.
+        Returns a typed subclass if the room type is registered (e.g. `Space` for m.space rooms).
 
         ## Example
 
@@ -100,8 +100,7 @@ class Bot(Registry):
         ```
         """
         if matrix_room := self.client.rooms.get(room_id):
-            room_cls = Space if matrix_room.room_type == "m.space" else Room
-            return room_cls(matrix_room=matrix_room, client=self.client)
+            return make_room(matrix_room, self.client)
         return None
 
     def get_rooms(self) -> list[Room]:
@@ -123,8 +122,7 @@ class Bot(Registry):
         rooms = []
 
         for matrix_room in self.client.rooms.values():
-            room_cls = Space if matrix_room.room_type == "m.space" else Room
-            rooms.append(room_cls(matrix_room=matrix_room, client=self.client))
+            rooms.append(make_room(matrix_room, self.client))
 
         return rooms
 
