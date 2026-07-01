@@ -368,6 +368,26 @@ async def test_kick_user_with_error__expect_matrix_error(room, client):
         await room.kick_user("@troublemaker:example.com")
 
 
+# LEAVE
+
+
+@pytest.mark.asyncio
+async def test_leave__expect_room_leave_called(room, client):
+    client.room_leave = AsyncMock()
+
+    await room.leave()
+
+    client.room_leave.assert_awaited_once_with(room_id="!room:example.com")
+
+
+@pytest.mark.asyncio
+async def test_leave_with_error__expect_matrix_error(room, client):
+    client.room_leave = AsyncMock(side_effect=Exception("Not in room"))
+
+    with pytest.raises(MatrixError, match="Failed to leave room"):
+        await room.leave()
+
+
 def test_room_properties__expect_correct_delegation_to_matrix_room(room, matrix_room):
     assert room.room_id == "!room:example.com"
     assert room.name == "Test Room"
