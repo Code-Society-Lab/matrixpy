@@ -260,6 +260,51 @@ async def test_fetch_message_with_error__expect_matrix_error(room, client):
         await room.fetch_message("$event123")
 
 
+# SET NAME / SET TOPIC
+
+
+@pytest.mark.asyncio
+async def test_set_name__expect_room_state_updated(room, client):
+    client.room_put_state = AsyncMock()
+
+    await room.set_name("General")
+
+    client.room_put_state.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_type="m.room.name",
+        content={"name": "General"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_set_name_with_error__expect_matrix_error(room, client):
+    client.room_put_state = AsyncMock(side_effect=Exception("Insufficient permissions"))
+
+    with pytest.raises(MatrixError, match="Failed to set room name"):
+        await room.set_name("General")
+
+
+@pytest.mark.asyncio
+async def test_set_topic__expect_room_state_updated(room, client):
+    client.room_put_state = AsyncMock()
+
+    await room.set_topic("Last updated: 13:00 UTC")
+
+    client.room_put_state.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_type="m.room.topic",
+        content={"topic": "Last updated: 13:00 UTC"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_set_topic_with_error__expect_matrix_error(room, client):
+    client.room_put_state = AsyncMock(side_effect=Exception("Insufficient permissions"))
+
+    with pytest.raises(MatrixError, match="Failed to set room topic"):
+        await room.set_topic("Last updated: 13:00 UTC")
+
+
 # INVITE
 
 
