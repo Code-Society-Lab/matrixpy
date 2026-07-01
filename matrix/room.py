@@ -473,7 +473,7 @@ class Room:
         ```python
                 members = await room.get_members()
                 print(f"{len(members)} members: {', '.join(members)}")
-        ```
+            ```
         """
         try:
             response = await self.client.joined_members(self.room_id)
