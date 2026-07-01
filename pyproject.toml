@@ -21,7 +21,7 @@ dependencies = [
     "logger",
     "PyYAML==6.0.3",
     "markdown==3.10.2",
-    "APScheduler==3.11.2",
+    "APScheduler==3.11.3",
     "envyaml==1.10.211231",
 ]
 
