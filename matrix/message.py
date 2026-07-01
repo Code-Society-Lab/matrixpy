@@ -176,6 +176,21 @@ class Message:
         except Exception as e:
             raise MatrixError(f"Failed to delete message: {e}")
 
+    async def _fetch_pinned(self) -> list[str]:
+        response = await self.client.room_get_state_event(
+            room_id=self.room.room_id,
+            event_type="m.room.pinned_events",
+        )
+
+        if isinstance(response, RoomGetStateEventResponse):
+            return list(response.content["pinned"])
+        if isinstance(response, RoomGetStateEventError):
+            if response.status_code == "404":
+                return []
+            raise MatrixError(f"Failed to fetch pinned events: {response.message}")
+
+        raise MatrixError("Unexpected response type when fetching pinned events")
+
     async def pin(self) -> None:
         """Pin this message to the room.
 
@@ -186,35 +201,24 @@ class Message:
             await ctx.message.pin()
         ```
         """
+        pinned = await self._fetch_pinned()
+
+        if self.event_id in pinned:
+            return
+
+        pinned.append(self.event_id)
+
         try:
-            response = await self.client.room_get_state_event(
+            put_response = await self.client.room_put_state(
                 room_id=self.room.room_id,
                 event_type="m.room.pinned_events",
+                content={"pinned": pinned},
             )
-
-            if isinstance(response, RoomGetStateEventResponse):
-                pinned = list(response.content.get("pinned", []))
-            elif isinstance(response, RoomGetStateEventError):
-                if response.status_code == "404":
-                    pinned = []
-                else:
-                    raise MatrixError(f"Failed to fetch pinned events: {response.message}")
-            else:
-                raise MatrixError("Unexpected response type when fetching pinned events")
-
-            if self.event_id not in pinned:
-                pinned.append(self.event_id)
-                put_response = await self.client.room_put_state(
-                    room_id=self.room.room_id,
-                    event_type="m.room.pinned_events",
-                    content={"pinned": pinned},
-                )
-                if isinstance(put_response, RoomPutStateError):
-                    raise MatrixError(f"Failed to pin message: {put_response.message}")
-        except MatrixError:
-            raise
         except Exception as e:
             raise MatrixError(f"Failed to pin message: {e}")
+
+        if isinstance(put_response, RoomPutStateError):
+            raise MatrixError(f"Failed to pin message: {put_response.message}")
 
     async def unpin(self) -> None:
         """Unpin this message from the room.
@@ -226,32 +230,21 @@ class Message:
             await ctx.message.unpin()
         ```
         """
+        pinned = await self._fetch_pinned()
+
+        if self.event_id not in pinned:
+            return
+
+        pinned.remove(self.event_id)
+
         try:
-            response = await self.client.room_get_state_event(
+            put_response = await self.client.room_put_state(
                 room_id=self.room.room_id,
                 event_type="m.room.pinned_events",
+                content={"pinned": pinned},
             )
-
-            if isinstance(response, RoomGetStateEventResponse):
-                pinned = list(response.content.get("pinned", []))
-            elif isinstance(response, RoomGetStateEventError):
-                if response.status_code == "404":
-                    pinned = []
-                else:
-                    raise MatrixError(f"Failed to fetch pinned events: {response.message}")
-            else:
-                raise MatrixError("Unexpected response type when fetching pinned events")
-
-            if self.event_id in pinned:
-                pinned.remove(self.event_id)
-                put_response = await self.client.room_put_state(
-                    room_id=self.room.room_id,
-                    event_type="m.room.pinned_events",
-                    content={"pinned": pinned},
-                )
-                if isinstance(put_response, RoomPutStateError):
-                    raise MatrixError(f"Failed to unpin message: {put_response.message}")
-        except MatrixError:
-            raise
         except Exception as e:
             raise MatrixError(f"Failed to unpin message: {e}")
+
+        if isinstance(put_response, RoomPutStateError):
+            raise MatrixError(f"Failed to unpin message: {put_response.message}")
