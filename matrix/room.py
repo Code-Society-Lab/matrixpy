@@ -465,15 +465,15 @@ class Room:
     async def get_members(self) -> list[str]:
         """Fetch the list of user IDs currently joined to the room.
 
-                This queries the Matrix server directly for the current membership,
-                which may include members not yet reflected in local room state.
+        This queries the Matrix server directly for the current membership,
+        which may include members not yet reflected in local room state.
 
-                ## Example
+        ## Example
 
         ```python
-                members = await room.get_members()
-                print(f"{len(members)} members: {', '.join(members)}")
-            ```
+        members = await room.get_members()
+        print(f"{len(members)} members: {', '.join(members)}")
+        ```
         """
         try:
             response = await self.client.joined_members(self.room_id)
