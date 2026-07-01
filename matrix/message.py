@@ -1,6 +1,13 @@
 from typing import TYPE_CHECKING, Self
 
-from nio import AsyncClient, Event
+from nio import (
+    AsyncClient,
+    Event,
+    RoomGetStateEventError,
+    RoomGetStateEventResponse,
+    RoomPutStateError,
+    RoomPutStateResponse,
+)
 
 from matrix.types import Reaction
 from matrix.content import ReactionContent, EditContent
@@ -168,3 +175,83 @@ class Message:
             )
         except Exception as e:
             raise MatrixError(f"Failed to delete message: {e}")
+
+    async def pin(self) -> None:
+        """Pin this message to the room.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def pin(ctx: Context):
+            await ctx.message.pin()
+        ```
+        """
+        try:
+            response = await self.client.room_get_state_event(
+                room_id=self.room.room_id,
+                event_type="m.room.pinned_events",
+            )
+
+            if isinstance(response, RoomGetStateEventResponse):
+                pinned = list(response.content.get("pinned", []))
+            elif isinstance(response, RoomGetStateEventError):
+                if response.status_code == "404":
+                    pinned = []
+                else:
+                    raise MatrixError(f"Failed to fetch pinned events: {response.message}")
+            else:
+                raise MatrixError("Unexpected response type when fetching pinned events")
+
+            if self.event_id not in pinned:
+                pinned.append(self.event_id)
+                put_response = await self.client.room_put_state(
+                    room_id=self.room.room_id,
+                    event_type="m.room.pinned_events",
+                    content={"pinned": pinned},
+                )
+                if isinstance(put_response, RoomPutStateError):
+                    raise MatrixError(f"Failed to pin message: {put_response.message}")
+        except MatrixError:
+            raise
+        except Exception as e:
+            raise MatrixError(f"Failed to pin message: {e}")
+
+    async def unpin(self) -> None:
+        """Unpin this message from the room.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def unpin(ctx: Context):
+            await ctx.message.unpin()
+        ```
+        """
+        try:
+            response = await self.client.room_get_state_event(
+                room_id=self.room.room_id,
+                event_type="m.room.pinned_events",
+            )
+
+            if isinstance(response, RoomGetStateEventResponse):
+                pinned = list(response.content.get("pinned", []))
+            elif isinstance(response, RoomGetStateEventError):
+                if response.status_code == "404":
+                    pinned = []
+                else:
+                    raise MatrixError(f"Failed to fetch pinned events: {response.message}")
+            else:
+                raise MatrixError("Unexpected response type when fetching pinned events")
+
+            if self.event_id in pinned:
+                pinned.remove(self.event_id)
+                put_response = await self.client.room_put_state(
+                    room_id=self.room.room_id,
+                    event_type="m.room.pinned_events",
+                    content={"pinned": pinned},
+                )
+                if isinstance(put_response, RoomPutStateError):
+                    raise MatrixError(f"Failed to unpin message: {put_response.message}")
+        except MatrixError:
+            raise
+        except Exception as e:
+            raise MatrixError(f"Failed to unpin message: {e}")
