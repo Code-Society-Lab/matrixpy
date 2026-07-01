@@ -461,3 +461,21 @@ class Room:
             )
         except Exception as e:
             raise MatrixError(f"Failed to kick user: {e}")
+
+    async def leave(self) -> None:
+        """Leave the room.
+
+        The bot will leave the room and will no longer receive events from it.
+        This is useful for bots that join rooms temporarily or need to decline
+        invitations after inspection.
+
+        ## Example
+
+        ```python
+        await room.leave()
+        ```
+        """
+        try:
+            await self.client.room_leave(room_id=self.room_id)
+        except Exception as e:
+            raise MatrixError(f"Failed to leave room: {e}")
