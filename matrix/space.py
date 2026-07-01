@@ -1,5 +1,9 @@
+import asyncio
+
+from matrix.message import Message
 from matrix.room import Room, make_room
 
+from matrix.types import File
 
 class Space(Room, room_type="m.space"):
     def get_children(self) -> list[Room]:
@@ -27,3 +31,37 @@ class Space(Room, room_type="m.space"):
             children.append(make_room(matrix_room, self._client))
 
         return children
+
+    async def broadcast(
+        self,
+        content: str | None = None,
+        *,
+        raw: bool = False,
+        notice: bool = False,
+        file: File | None = None,
+    ) -> list[Message]:
+        """Broadcasts a message to the room.
+
+        Supports text messages (with optional markdown formatting)
+        and file uploads (including images, videos, and audio).
+
+        ## Example
+
+        ```python
+        # Broadcast a markdown-formatted text message
+        await space.broadcast("Hello **world**!")
+
+        # Broadcast a notice message
+        await space.broadcast("Event started", notice=True)
+
+        # Broadcast a file
+        file = File(path="mxc://...", filename="document.pdf", mimetype="application/pdf")
+        await space.broadcast(file=file)
+
+        # Broadcast an image
+        image = Image(path="mxc://...", filename="photo.jpg", mimetype="image/jpeg", width=800, height=600)
+        await space.broadcast(file=image)
+        ```
+        """
+        async_send = [room.send(content, raw=raw, notice=notice, file=file) for room in self.get_children()]
+        return await asyncio.gather(*async_send)
