@@ -1,6 +1,12 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, Mock
-from nio import MatrixRoom, AsyncClient, Event
+from nio import (
+    MatrixRoom,
+    AsyncClient,
+    Event,
+    RoomSendError,
+    RoomRedactError,
+)
 from matrix.errors import MatrixError
 from matrix.message import Message
 from matrix.room import Room
@@ -91,6 +97,16 @@ async def test_react_with_error__expect_matrix_error(message, client):
 
 
 @pytest.mark.asyncio
+async def test_react_with_api_error__expect_matrix_error(message, client):
+    client.room_send = AsyncMock(
+        return_value=RoomSendError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to add reaction"):
+        await message.react("😀")
+
+
+@pytest.mark.asyncio
 async def test_edit__expect_message_updated(message, client):
     client.room_send = AsyncMock()
 
@@ -112,6 +128,18 @@ async def test_edit_with_error__expect_matrix_error(message, client):
 
     with pytest.raises(MatrixError, match="Failed to edit message"):
         await message.edit("New content")
+
+
+@pytest.mark.asyncio
+async def test_edit_with_api_error__expect_local_body_unchanged(message, client):
+    client.room_send = AsyncMock(
+        return_value=RoomSendError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to edit message"):
+        await message.edit("New content")
+
+    assert message.body == "Hello world!"
 
 
 @pytest.mark.asyncio
@@ -141,6 +169,16 @@ async def test_delete_with_reason__expect_reason_passed(message, client):
 @pytest.mark.asyncio
 async def test_delete_with_error__expect_matrix_error(message, client):
     client.room_redact = AsyncMock(side_effect=Exception("Failed to redact"))
+
+    with pytest.raises(MatrixError, match="Failed to delete message"):
+        await message.delete()
+
+
+@pytest.mark.asyncio
+async def test_delete_with_api_error__expect_matrix_error(message, client):
+    client.room_redact = AsyncMock(
+        return_value=RoomRedactError("not allowed", "M_FORBIDDEN")
+    )
 
     with pytest.raises(MatrixError, match="Failed to delete message"):
         await message.delete()
