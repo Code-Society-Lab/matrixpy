@@ -121,7 +121,20 @@ async def test_delete__expect_message_redacted(message, client):
     await message.delete()
 
     client.room_redact.assert_awaited_once_with(
-        room_id="!room:example.com", event_id="$event123"
+        room_id="!room:example.com", event_id="$event123", reason=None
+    )
+
+
+@pytest.mark.asyncio
+async def test_delete_with_reason__expect_reason_passed(message, client):
+    client.room_redact = AsyncMock()
+
+    await message.delete(reason="Violated room rules")
+
+    client.room_redact.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_id="$event123",
+        reason="Violated room rules",
     )
 
 

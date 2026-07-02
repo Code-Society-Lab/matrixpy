@@ -260,6 +260,30 @@ async def test_fetch_message_with_error__expect_matrix_error(room, client):
         await room.fetch_message("$event123")
 
 
+# MARK AS READ
+
+
+@pytest.mark.asyncio
+async def test_mark_as_read__expect_read_markers_sent(room, client):
+    client.room_read_markers = AsyncMock()
+
+    await room.mark_as_read("$event123")
+
+    client.room_read_markers.assert_awaited_once_with(
+        room_id="!room:example.com",
+        fully_read_event="$event123",
+        read_event="$event123",
+    )
+
+
+@pytest.mark.asyncio
+async def test_mark_as_read_with_error__expect_matrix_error(room, client):
+    client.room_read_markers = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to mark as read"):
+        await room.mark_as_read("$event123")
+
+
 # INVITE
 
 
@@ -366,6 +390,34 @@ async def test_kick_user_with_error__expect_matrix_error(room, client):
 
     with pytest.raises(MatrixError, match="Failed to kick user"):
         await room.kick_user("@troublemaker:example.com")
+
+
+# GET MEMBERS
+
+
+@pytest.mark.asyncio
+async def test_get_members__expect_list_of_user_ids(room, client):
+    member1 = Mock()
+    member1.user_id = "@alice:example.com"
+    member2 = Mock()
+    member2.user_id = "@bob:example.com"
+
+    response = Mock()
+    response.members = [member1, member2]
+    client.joined_members = AsyncMock(return_value=response)
+
+    result = await room.get_members()
+
+    client.joined_members.assert_awaited_once_with("!room:example.com")
+    assert result == ["@alice:example.com", "@bob:example.com"]
+
+
+@pytest.mark.asyncio
+async def test_get_members_with_error__expect_matrix_error(room, client):
+    client.joined_members = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to get members"):
+        await room.get_members()
 
 
 def test_room_properties__expect_correct_delegation_to_matrix_room(room, matrix_room):
