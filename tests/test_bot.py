@@ -1,13 +1,14 @@
 import pytest
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from nio import MatrixRoom, RoomMessageText
+from nio import MatrixRoom, RoomMessageText, LoginError
 
 from matrix import Bot, Config, Extension, Room, Space
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,
     AlreadyRegisteredError,
+    MatrixError,
 )
 
 
@@ -553,6 +554,21 @@ async def test_run_with_username_and_password(bot):
 
     bot._client.login.assert_awaited_once_with("grace1234")
     bot._on_ready.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_with_login_api_error__expect_matrix_error(bot):
+    bot._client.login = AsyncMock(
+        return_value=LoginError("bad credentials", "M_FORBIDDEN")
+    )
+    bot._client.sync_forever = AsyncMock()
+    bot._on_ready = AsyncMock()
+
+    with pytest.raises(MatrixError, match="Failed to log in"):
+        await bot.run()
+
+    bot._client.sync_forever.assert_not_called()
+    bot._on_ready.assert_not_called()
 
 
 def test_start_handles_keyboard_interrupt(caplog):

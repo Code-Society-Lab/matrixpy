@@ -112,6 +112,62 @@ def test_get_children__with_mixed_children__expect_correct_types(
     assert types["!sub:example.com"] is Space
 
 
+def test_get_children__with_negative_depth__expect_value_error(space, matrix_space):
+    with pytest.raises(ValueError, match="depth must be a non-negative integer"):
+        space.get_children(depth=-1)
+
+
+def test_get_children__with_depth_zero__expect_empty_list(space, matrix_space, client):
+    child = MatrixRoom(room_id="!child:example.com", own_user_id="@bot:example.com")
+    matrix_space.children = {"!child:example.com"}
+    client.rooms = {"!child:example.com": child}
+
+    result = space.get_children(depth=0)
+
+    assert result == []
+
+
+def test_get_children__with_depth_one__expect_no_recursion(space, matrix_space, client):
+    subspace = MatrixRoom(
+        room_id="!subspace:example.com", own_user_id="@bot:example.com"
+    )
+    subspace.room_type = "m.space"
+    nested = MatrixRoom(room_id="!nested:example.com", own_user_id="@bot:example.com")
+    subspace.children = {"!nested:example.com"}
+    matrix_space.children = {"!subspace:example.com"}
+    client.rooms = {
+        "!subspace:example.com": subspace,
+        "!nested:example.com": nested,
+    }
+
+    result = space.get_children(depth=1)
+
+    assert len(result) == 1
+    assert result[0].room_id == "!subspace:example.com"
+
+
+def test_get_children__with_depth_two__expect_recursive_children(
+    space, matrix_space, client
+):
+    subspace = MatrixRoom(
+        room_id="!subspace:example.com", own_user_id="@bot:example.com"
+    )
+    subspace.room_type = "m.space"
+    nested = MatrixRoom(room_id="!nested:example.com", own_user_id="@bot:example.com")
+    subspace.children = {"!nested:example.com"}
+    matrix_space.children = {"!subspace:example.com"}
+    client.rooms = {
+        "!subspace:example.com": subspace,
+        "!nested:example.com": nested,
+    }
+
+    result = space.get_children(depth=2)
+
+    assert len(result) == 2
+    ids = [r.room_id for r in result]
+    assert "!subspace:example.com" in ids
+    assert "!nested:example.com" in ids
+
 @pytest.mark.asyncio
 async def test_broadcast__expect_message_sent_to_all_children(
     space, matrix_space, client, mock_send_response

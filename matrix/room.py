@@ -2,7 +2,7 @@ from typing import Any
 
 from nio import AsyncClient, MatrixRoom, Event
 
-from matrix.errors import MatrixError
+from matrix.api import matrix_call
 from matrix.message import Message
 from matrix.content import (
     BaseMessageContent,
@@ -21,7 +21,7 @@ _registry: dict[str, type["Room"]] = {}
 
 
 def make_room(matrix_room: MatrixRoom, client: AsyncClient) -> "Room":
-    room_cls = _registry.get(matrix_room.room_type, Room)
+    room_cls = _registry.get(str(matrix_room.room_type), Room)
     return room_cls(matrix_room, client)
 
 
@@ -329,21 +329,21 @@ class Room:
 
     async def _send_payload(self, payload: BaseMessageContent) -> Message:
         """Send a BaseMessageContent payload and return a Message object."""
-        try:
-            resp = await self.client.room_send(
+        resp = await matrix_call(
+            self.client.room_send(
                 room_id=self.room_id,
                 message_type="m.room.message",
                 content=payload.build(),
-            )
-            event = await self.fetch_event(resp.event_id)
+            ),
+            error_message="Failed to send message",
+        )
+        event = await self.fetch_event(resp.event_id)
 
-            return Message(
-                room=self,
-                event=event,
-                client=self.client,
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to send message: {e}")
+        return Message(
+            room=self,
+            event=event,
+            client=self.client,
+        )
 
     async def fetch_event(self, event_id: str) -> Event:
         """Fetch a Matrix event by its ID.
@@ -354,14 +354,11 @@ class Room:
             print(event.sender)
         ```
         """
-        try:
-            response = await self.client.room_get_event(
-                room_id=self.room_id,
-                event_id=event_id,
-            )
-            return response.event
-        except Exception as e:
-            raise MatrixError(f"Failed to get event: {e}")
+        response = await matrix_call(
+            self.client.room_get_event(room_id=self.room_id, event_id=event_id),
+            error_message="Failed to get event",
+        )
+        return response.event
 
     async def fetch_message(self, event_id: str) -> Message:
         """Fetch a Message by its event ID.
@@ -379,6 +376,29 @@ class Room:
             client=self.client,
         )
 
+    async def mark_as_read(self, event_id: str) -> None:
+        """Send a read receipt for the given event.
+
+        Signals to other clients that the bot has read up to this event. Useful
+        for bots that process messages silently without sending a reply.
+
+        ## Example
+
+        ```python
+        @bot.event
+        async def on_message(room: Room, event: Event):
+            await room.mark_as_read(event.event_id)
+        ```
+        """
+        await matrix_call(
+            self.client.room_read_markers(
+                room_id=self.room_id,
+                fully_read_event=event_id,
+                read_event=event_id,
+            ),
+            error_message="Failed to mark as read",
+        )
+
     async def invite_user(self, user_id: str) -> None:
         """Invite a user to the room.
 
@@ -392,10 +412,10 @@ class Room:
         await room.invite_user("@alice:example.com")
         ```
         """
-        try:
-            await self.client.room_invite(room_id=self.room_id, user_id=user_id)
-        except Exception as e:
-            raise MatrixError(f"Failed to invite user: {e}")
+        await matrix_call(
+            self.client.room_invite(room_id=self.room_id, user_id=user_id),
+            error_message="Failed to invite user",
+        )
 
     async def ban_user(self, user_id: str, reason: str | None = None) -> None:
         """Ban a user from the room.
@@ -413,12 +433,10 @@ class Room:
         await room.ban_user("@spammer:example.com", reason="Spam and harassment")
         ```
         """
-        try:
-            await self.client.room_ban(
-                room_id=self.room_id, user_id=user_id, reason=reason
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to ban user: {e}")
+        await matrix_call(
+            self.client.room_ban(room_id=self.room_id, user_id=user_id, reason=reason),
+            error_message="Failed to ban user",
+        )
 
     async def unban_user(self, user_id: str) -> None:
         """Unban a user from the room.
@@ -433,10 +451,10 @@ class Room:
         await room.unban_user("@alice:example.com")
         ```
         """
-        try:
-            await self.client.room_unban(room_id=self.room_id, user_id=user_id)
-        except Exception as e:
-            raise MatrixError(f"Failed to unban user: {e}")
+        await matrix_call(
+            self.client.room_unban(room_id=self.room_id, user_id=user_id),
+            error_message="Failed to unban user",
+        )
 
     async def kick_user(self, user_id: str, reason: str | None = None) -> None:
         """Kick a user from the room.
@@ -455,9 +473,26 @@ class Room:
         await room.kick_user("@troublemaker:example.com", reason="Violating room rules")
         ```
         """
-        try:
-            await self.client.room_kick(
-                room_id=self.room_id, user_id=user_id, reason=reason
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to kick user: {e}")
+        await matrix_call(
+            self.client.room_kick(room_id=self.room_id, user_id=user_id, reason=reason),
+            error_message="Failed to kick user",
+        )
+
+    async def get_members(self) -> list[str]:
+        """Fetch the list of user IDs currently joined to the room.
+
+        This queries the Matrix server directly for the current membership,
+        which may include members not yet reflected in local room state.
+
+        ## Example
+
+        ```python
+        members = await room.get_members()
+        print(f"{len(members)} members: {', '.join(members)}")
+        ```
+        """
+        response = await matrix_call(
+            self.client.joined_members(self.room_id),
+            error_message="Failed to get members",
+        )
+        return [member.user_id for member in response.members]
