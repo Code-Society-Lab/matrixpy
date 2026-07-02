@@ -156,8 +156,10 @@ class Message:
         except Exception as e:
             raise MatrixError(f"Failed to edit message: {e}")
 
-    async def delete(self) -> None:
+    async def delete(self, reason: str | None = None) -> None:
         """Removes the message content from the room. This action cannot be undone.
+
+        Optionally provide a reason that will be visible to room moderators.
 
         ## Example
 
@@ -166,12 +168,16 @@ class Message:
         async def oops(ctx: Context):
             msg = await ctx.reply("Secret info!")
             await msg.delete()
+
+        # Delete with a reason
+        await message.delete(reason="Violated room rules")
         ```
         """
         try:
             await self.client.room_redact(
                 room_id=self.room.room_id,
                 event_id=self.event_id,
+                reason=reason,
             )
         except Exception as e:
             raise MatrixError(f"Failed to delete message: {e}")
