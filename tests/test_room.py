@@ -1,6 +1,17 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, MagicMock
-from nio import MatrixRoom, Event
+from nio import (
+    MatrixRoom,
+    Event,
+    RoomSendError,
+    RoomGetEventError,
+    RoomReadMarkersError,
+    RoomInviteError,
+    RoomBanError,
+    RoomUnbanError,
+    RoomKickError,
+    JoinedMembersError,
+)
 from matrix.errors import MatrixError
 from matrix.room import Room, make_room
 from matrix.space import Space
@@ -109,6 +120,16 @@ async def test_send_no_content__expect_value_error(room):
 @pytest.mark.asyncio
 async def test_send_message_with_network_error__expect_matrix_error(room, client):
     client.room_send = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to send message"):
+        await room.send("Hello, world!")
+
+
+@pytest.mark.asyncio
+async def test_send_message_with_api_error__expect_matrix_error(room, client):
+    client.room_send = AsyncMock(
+        return_value=RoomSendError("not allowed", "M_FORBIDDEN")
+    )
 
     with pytest.raises(MatrixError, match="Failed to send message"):
         await room.send("Hello, world!")
@@ -234,6 +255,16 @@ async def test_fetch_event_with_error__expect_matrix_error(room, client):
         await room.fetch_event("$event123")
 
 
+@pytest.mark.asyncio
+async def test_fetch_event_with_api_error__expect_matrix_error(room, client):
+    client.room_get_event = AsyncMock(
+        return_value=RoomGetEventError("not found", "M_NOT_FOUND")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to get event"):
+        await room.fetch_event("$event123")
+
+
 # FETCH MESSAGE
 
 
@@ -284,6 +315,16 @@ async def test_mark_as_read_with_error__expect_matrix_error(room, client):
         await room.mark_as_read("$event123")
 
 
+@pytest.mark.asyncio
+async def test_mark_as_read_with_api_error__expect_matrix_error(room, client):
+    client.room_read_markers = AsyncMock(
+        return_value=RoomReadMarkersError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to mark as read"):
+        await room.mark_as_read("$event123")
+
+
 # INVITE
 
 
@@ -301,6 +342,16 @@ async def test_invite_user__expect_successful_invitation(room, client):
 @pytest.mark.asyncio
 async def test_invite_user_with_error__expect_matrix_error(room, client):
     client.room_invite = AsyncMock(side_effect=Exception("User not found"))
+
+    with pytest.raises(MatrixError, match="Failed to invite user"):
+        await room.invite_user("@alice:example.com")
+
+
+@pytest.mark.asyncio
+async def test_invite_user_with_api_error__expect_matrix_error(room, client):
+    client.room_invite = AsyncMock(
+        return_value=RoomInviteError("not allowed", "M_FORBIDDEN")
+    )
 
     with pytest.raises(MatrixError, match="Failed to invite user"):
         await room.invite_user("@alice:example.com")
@@ -342,6 +393,14 @@ async def test_ban_user_with_error__expect_matrix_error(room, client):
 
 
 @pytest.mark.asyncio
+async def test_ban_user_with_api_error__expect_matrix_error(room, client):
+    client.room_ban = AsyncMock(return_value=RoomBanError("not allowed", "M_FORBIDDEN"))
+
+    with pytest.raises(MatrixError, match="Failed to ban user"):
+        await room.ban_user("@spammer:example.com")
+
+
+@pytest.mark.asyncio
 async def test_unban_user__expect_successful_unban(room, client):
     client.room_unban = AsyncMock()
 
@@ -355,6 +414,16 @@ async def test_unban_user__expect_successful_unban(room, client):
 @pytest.mark.asyncio
 async def test_unban_user_with_error__expect_matrix_error(room, client):
     client.room_unban = AsyncMock(side_effect=Exception("User not banned"))
+
+    with pytest.raises(MatrixError, match="Failed to unban user"):
+        await room.unban_user("@alice:example.com")
+
+
+@pytest.mark.asyncio
+async def test_unban_user_with_api_error__expect_matrix_error(room, client):
+    client.room_unban = AsyncMock(
+        return_value=RoomUnbanError("not allowed", "M_FORBIDDEN")
+    )
 
     with pytest.raises(MatrixError, match="Failed to unban user"):
         await room.unban_user("@alice:example.com")
@@ -392,6 +461,16 @@ async def test_kick_user_with_error__expect_matrix_error(room, client):
         await room.kick_user("@troublemaker:example.com")
 
 
+@pytest.mark.asyncio
+async def test_kick_user_with_api_error__expect_matrix_error(room, client):
+    client.room_kick = AsyncMock(
+        return_value=RoomKickError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to kick user"):
+        await room.kick_user("@troublemaker:example.com")
+
+
 # GET MEMBERS
 
 
@@ -415,6 +494,16 @@ async def test_get_members__expect_list_of_user_ids(room, client):
 @pytest.mark.asyncio
 async def test_get_members_with_error__expect_matrix_error(room, client):
     client.joined_members = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to get members"):
+        await room.get_members()
+
+
+@pytest.mark.asyncio
+async def test_get_members_with_api_error__expect_matrix_error(room, client):
+    client.joined_members = AsyncMock(
+        return_value=JoinedMembersError("not allowed", "M_FORBIDDEN")
+    )
 
     with pytest.raises(MatrixError, match="Failed to get members"):
         await room.get_members()
