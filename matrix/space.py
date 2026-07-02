@@ -24,6 +24,9 @@ class Space(Room, room_type="m.space"):
         """
         children: list[Room | Self] = []
 
+        if depth < 0:
+            raise ValueError(f"depth must be a non-negative integer, got {depth}")
+
         if depth == 0:
             return []
 

@@ -94,6 +94,11 @@ def test_get_children__with_mixed_children__expect_correct_types(
     assert types["!sub:example.com"] is Space
 
 
+def test_get_children__with_negative_depth__expect_value_error(space, matrix_space):
+    with pytest.raises(ValueError, match="depth must be a non-negative integer"):
+        space.get_children(depth=-1)
+
+
 def test_get_children__with_depth_zero__expect_empty_list(space, matrix_space, client):
     child = MatrixRoom(room_id="!child:example.com", own_user_id="@bot:example.com")
     matrix_space.children = {"!child:example.com"}
