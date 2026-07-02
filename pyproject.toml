@@ -21,13 +21,13 @@ dependencies = [
     "logger",
     "PyYAML==6.0.3",
     "markdown==3.10.2",
-    "APScheduler==3.11.2",
+    "APScheduler==3.11.3",
     "envyaml==1.10.211231",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "black==26.5.1",
     "mypy==2.1.0",

@@ -484,3 +484,22 @@ class Room:
             )
         except Exception as e:
             raise MatrixError(f"Failed to kick user: {e}")
+
+    async def get_members(self) -> list[str]:
+        """Fetch the list of user IDs currently joined to the room.
+
+        This queries the Matrix server directly for the current membership,
+        which may include members not yet reflected in local room state.
+
+        ## Example
+
+        ```python
+        members = await room.get_members()
+        print(f"{len(members)} members: {', '.join(members)}")
+        ```
+        """
+        try:
+            response = await self.client.joined_members(self.room_id)
+            return [member.user_id for member in response.members]
+        except Exception as e:
+            raise MatrixError(f"Failed to get members: {e}")
