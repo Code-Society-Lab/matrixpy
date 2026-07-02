@@ -239,7 +239,9 @@ async def test_pin_no_existing_pinned_events__expect_state_updated(message, clie
 
 
 @pytest.mark.asyncio
-async def test_pin_with_existing_pinned_events__expect_appended_state_updated(message, client):
+async def test_pin_with_existing_pinned_events__expect_appended_state_updated(
+    message, client
+):
     mock_get_resp = MagicMock(spec=RoomGetStateEventResponse)
     mock_get_resp.content = {"pinned": ["$other_event"]}
     client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
@@ -290,7 +292,9 @@ async def test_pin_with_put_error__expect_matrix_error(message, client):
     mock_put_error.message = "Failed to update state"
     client.room_put_state = AsyncMock(return_value=mock_put_error)
 
-    with pytest.raises(MatrixError, match="Failed to pin message: Failed to update state"):
+    with pytest.raises(
+        MatrixError, match="Failed to pin message: Failed to update state"
+    ):
         await message.pin()
 
 
@@ -348,5 +352,7 @@ async def test_unpin_with_put_error__expect_matrix_error(message, client):
     mock_put_error.message = "Failed to update state"
     client.room_put_state = AsyncMock(return_value=mock_put_error)
 
-    with pytest.raises(MatrixError, match="Failed to unpin message: Failed to update state"):
+    with pytest.raises(
+        MatrixError, match="Failed to unpin message: Failed to update state"
+    ):
         await message.unpin()

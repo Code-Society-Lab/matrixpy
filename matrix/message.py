@@ -183,7 +183,7 @@ class Message:
         )
 
         if isinstance(response, RoomGetStateEventResponse):
-            return list(response.content["pinned"])
+            return list(response.content.get("pinned", []))
         if isinstance(response, RoomGetStateEventError):
             if response.status_code == "404":
                 return []
