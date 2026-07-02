@@ -413,6 +413,34 @@ async def test_kick_user_with_error__expect_matrix_error(room, client):
         await room.kick_user("@troublemaker:example.com")
 
 
+# GET MEMBERS
+
+
+@pytest.mark.asyncio
+async def test_get_members__expect_list_of_user_ids(room, client):
+    member1 = Mock()
+    member1.user_id = "@alice:example.com"
+    member2 = Mock()
+    member2.user_id = "@bob:example.com"
+
+    response = Mock()
+    response.members = [member1, member2]
+    client.joined_members = AsyncMock(return_value=response)
+
+    result = await room.get_members()
+
+    client.joined_members.assert_awaited_once_with("!room:example.com")
+    assert result == ["@alice:example.com", "@bob:example.com"]
+
+
+@pytest.mark.asyncio
+async def test_get_members_with_error__expect_matrix_error(room, client):
+    client.joined_members = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to get members"):
+        await room.get_members()
+
+
 def test_room_properties__expect_correct_delegation_to_matrix_room(room, matrix_room):
     assert room.room_id == "!room:example.com"
     assert room.name == "Test Room"
