@@ -345,6 +345,42 @@ class Room:
         except Exception as e:
             raise MatrixError(f"Failed to send message: {e}")
 
+    async def set_name(self, name: str) -> None:
+        """Set the room's display name.
+
+        ## Example
+
+        ```python
+        await room.set_name("General")
+        ```
+        """
+        try:
+            await self.client.room_put_state(
+                room_id=self.room_id,
+                event_type="m.room.name",
+                content={"name": name},
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to set room name: {e}")
+
+    async def set_topic(self, topic: str) -> None:
+        """Set the room's topic.
+
+        ## Example
+
+        ```python
+        await room.set_topic("Last updated: 13:00 UTC")
+        ```
+        """
+        try:
+            await self.client.room_put_state(
+                room_id=self.room_id,
+                event_type="m.room.topic",
+                content={"topic": topic},
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to set room topic: {e}")
+
     async def fetch_event(self, event_id: str) -> Event:
         """Fetch a Matrix event by its ID.
 
