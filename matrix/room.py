@@ -379,6 +379,29 @@ class Room:
             client=self.client,
         )
 
+    async def mark_as_read(self, event_id: str) -> None:
+        """Send a read receipt for the given event.
+
+        Signals to other clients that the bot has read up to this event. Useful
+        for bots that process messages silently without sending a reply.
+
+        ## Example
+
+        ```python
+        @bot.event
+        async def on_message(room: Room, event: Event):
+            await room.mark_as_read(event.event_id)
+        ```
+        """
+        try:
+            await self.client.room_read_markers(
+                room_id=self.room_id,
+                fully_read_event=event_id,
+                read_event=event_id,
+            )
+        except Exception as e:
+            raise MatrixError(f"Failed to mark as read: {e}")
+
     async def invite_user(self, user_id: str) -> None:
         """Invite a user to the room.
 

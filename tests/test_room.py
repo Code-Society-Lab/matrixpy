@@ -260,6 +260,30 @@ async def test_fetch_message_with_error__expect_matrix_error(room, client):
         await room.fetch_message("$event123")
 
 
+# MARK AS READ
+
+
+@pytest.mark.asyncio
+async def test_mark_as_read__expect_read_markers_sent(room, client):
+    client.room_read_markers = AsyncMock()
+
+    await room.mark_as_read("$event123")
+
+    client.room_read_markers.assert_awaited_once_with(
+        room_id="!room:example.com",
+        fully_read_event="$event123",
+        read_event="$event123",
+    )
+
+
+@pytest.mark.asyncio
+async def test_mark_as_read_with_error__expect_matrix_error(room, client):
+    client.room_read_markers = AsyncMock(side_effect=Exception("Network error"))
+
+    with pytest.raises(MatrixError, match="Failed to mark as read"):
+        await room.mark_as_read("$event123")
+
+
 # INVITE
 
 
