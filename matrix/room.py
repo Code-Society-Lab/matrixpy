@@ -21,7 +21,7 @@ _registry: dict[str, type["Room"]] = {}
 
 
 def make_room(matrix_room: MatrixRoom, client: AsyncClient) -> "Room":
-    room_cls = _registry.get(matrix_room.room_type, Room)
+    room_cls = _registry.get(str(matrix_room.room_type), Room)
     return room_cls(matrix_room, client)
 
 
