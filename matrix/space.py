@@ -55,11 +55,16 @@ class Space(Room, room_type="m.space"):
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
+        depth: int = 1
     ) -> list[Message]:
-        """Broadcasts a message to the room.
+        """Broadcasts a message to all rooms in this space.
 
         Supports text messages (with optional markdown formatting)
         and file uploads (including images, videos, and audio).
+
+        Children the bot has not joined are silently omitted. Use `depth` to
+        recursively broadcast to children of sub-spaces. `depth=1` broadcasts
+        to direct children only (default).
 
         ## Example
 
@@ -77,7 +82,11 @@ class Space(Room, room_type="m.space"):
         # Broadcast an image
         image = Image(path="mxc://...", filename="photo.jpg", mimetype="image/jpeg", width=800, height=600)
         await space.broadcast(file=image)
+
+        # Broadcast a notice message to space's rooms and the rooms of its subspaces
+        await space.broadcast("New Announcement", notice=True, depth=2)
         ```
         """
-        async_send = [room.send(content, raw=raw, notice=notice, file=file) for room in self.get_children()]
+        rooms = filter(lambda room: not isinstance(room, Space), self.get_children(depth=depth))
+        async_send = [room.send(content, raw=raw, notice=notice, file=file) for room in rooms]
         return await asyncio.gather(*async_send)
