@@ -7,6 +7,9 @@ from typing import Optional, Any
 
 from nio import AsyncClient, Event, MatrixRoom
 
+from matrix.message import Message
+from matrix.types import File
+
 from .room import Room, make_room
 from .space import Space
 from .group import Group
@@ -423,3 +426,42 @@ class Bot(Registry):
             ctx.command = cmd
 
         return ctx
+
+    # ROOMS
+
+    async def broadcast(
+        self,
+        rooms: list[Room],
+        content: str | None = None,
+        *,
+        raw: bool = False,
+        notice: bool = False,
+        file: File | None = None,
+    ) -> list[Message]:
+        """Broadcasts a message to the specified rooms.
+
+        Supports text messages (with optional markdown formatting)
+        and file uploads (including images, videos, and audio).
+        If a space is provided, it is silently skipped.
+
+        ## Example
+
+        ```python
+        # Broadcast a markdown-formatted text message
+        await bot.broadcast([room1, room2, ...], "Hello **world**!")
+
+        # Broadcast a notice message
+        await bot.broadcast([room1, room2, ...], "Event started", notice=True)
+
+        # Broadcast a file
+        file = File(path="mxc://...", filename="document.pdf", mimetype="application/pdf")
+        await bot.broadcast([room1, room2, ...], file=file)
+
+        # Broadcast an image
+        image = Image(path="mxc://...", filename="photo.jpg", mimetype="image/jpeg", width=800, height=600)
+        await bot.broadcast([room1, room2, ...], file=image)
+        ```
+        """
+        rooms = filter(lambda child: not isinstance(child, Space), rooms)
+        async_send = [room.send(content, raw=raw, notice=notice, file=file) for room in rooms]
+        return await asyncio.gather(*async_send)
