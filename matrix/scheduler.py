@@ -51,3 +51,7 @@ class Scheduler:
     def start(self) -> None:
         """Start the scheduler."""
         self.scheduler.start()
+
+    def unschedule(self, name: str) -> None:
+        """Remove a registered job by its name."""
+        self.jobs = [job for job in self.jobs if job.name != name]
