@@ -5,6 +5,7 @@ from nio import AsyncClient, Event
 from matrix.types import Reaction
 from matrix.content import ReactionContent, EditContent
 from matrix.errors import MatrixError
+from matrix.api import matrix_call
 
 if TYPE_CHECKING:
     from .room import Room  # pragma: no cover
@@ -116,14 +117,14 @@ class Message:
         """
         content = ReactionContent(event_id=self.event_id, emoji=emoji)
 
-        try:
-            await self.client.room_send(
+        await matrix_call(
+            self.client.room_send(
                 room_id=self.room.room_id,
                 message_type="m.reaction",
                 content=content.build(),
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to add reaction: {e}")
+            ),
+            error_message="Failed to add reaction",
+        )
 
     async def edit(self, new_body: str) -> None:
         """Updates the message content to the new text.
@@ -139,15 +140,15 @@ class Message:
         """
         content = EditContent(new_body, original_event_id=self.event_id)
 
-        try:
-            await self.client.room_send(
+        await matrix_call(
+            self.client.room_send(
                 room_id=self.room.room_id,
                 message_type="m.room.message",
                 content=content.build(),
-            )
-            self._body = new_body
-        except Exception as e:
-            raise MatrixError(f"Failed to edit message: {e}")
+            ),
+            error_message="Failed to edit message",
+        )
+        self._body = new_body
 
     async def delete(self, reason: str | None = None) -> None:
         """Removes the message content from the room. This action cannot be undone.
@@ -166,11 +167,11 @@ class Message:
         await message.delete(reason="Violated room rules")
         ```
         """
-        try:
-            await self.client.room_redact(
+        await matrix_call(
+            self.client.room_redact(
                 room_id=self.room.room_id,
                 event_id=self.event_id,
                 reason=reason,
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to delete message: {e}")
+            ),
+            error_message="Failed to delete message",
+        )

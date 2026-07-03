@@ -22,6 +22,7 @@ from .errors import (
     CheckError,
     RoomNotFoundError,
 )
+from .api import matrix_call
 
 
 class Bot(Registry):
@@ -328,7 +329,10 @@ class Bot(Registry):
         if self.config.token:
             self.client.access_token = self.config.token
         else:
-            login_resp = await self.client.login(self.config.password)
+            login_resp = await matrix_call(
+                self.client.login(self.config.password),
+                error_message="Failed to log in",
+            )
             self.log.info("logged in: %s", login_resp)
 
         sync_task = asyncio.create_task(self.client.sync_forever(timeout=30_000))
