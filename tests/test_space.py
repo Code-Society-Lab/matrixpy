@@ -293,9 +293,144 @@ async def test_broadcast__with_mixed_children__expect_message_to_all(
 
     results = await space.broadcast("Hello!")
 
+    assert len(results) == 1
+    assert client.room_send.await_count == 1
+    sent_room_ids = {
+        call.kwargs["room_id"] for call in client.room_send.await_args_list
+    }
+    assert sent_room_ids == {"!room:example.com"}
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_mixed_children_and_nested_room__expect_only_top_level_room_at_depth_one(
+    space, matrix_space, client, mock_send_response
+):
+    room_child = MatrixRoom(room_id="!room:example.com", own_user_id="@bot:example.com")
+    room_child.name = "Room Child"
+    space_child = MatrixRoom(room_id="!sub:example.com", own_user_id="@bot:example.com")
+    space_child.name = "Sub Space"
+    space_child.room_type = "m.space"
+    nested = MatrixRoom(room_id="!nested:example.com", own_user_id="@bot:example.com")
+    nested.name = "Nested Room"
+    space_child.children = {"!nested:example.com"}
+    matrix_space.children = {"!room:example.com", "!sub:example.com"}
+    client.rooms = {
+        "!room:example.com": room_child,
+        "!sub:example.com": space_child,
+        "!nested:example.com": nested,
+    }
+
+    results = await space.broadcast("Hello!", depth=1)
+
+    assert len(results) == 1
+    assert client.room_send.await_count == 1
+    sent_room_ids = {
+        call.kwargs["room_id"] for call in client.room_send.await_args_list
+    }
+    assert sent_room_ids == {"!room:example.com"}
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_depth_two__expect_message_to_nested_children(
+    space, matrix_space, client, mock_send_response
+):
+    subspace = MatrixRoom(
+        room_id="!subspace:example.com", own_user_id="@bot:example.com"
+    )
+    subspace.name = "Sub Space"
+    subspace.room_type = "m.space"
+    nested = MatrixRoom(room_id="!nested:example.com", own_user_id="@bot:example.com")
+    nested.name = "Nested Room"
+    subspace.children = {"!nested:example.com"}
+    matrix_space.children = {"!subspace:example.com"}
+    client.rooms = {
+        "!subspace:example.com": subspace,
+        "!nested:example.com": nested,
+    }
+
+    results = await space.broadcast("Hello!", depth=2)
+
+    assert len(results) == 1
+    assert client.room_send.await_count == 1
+    sent_room_ids = {
+        call.kwargs["room_id"] for call in client.room_send.await_args_list
+    }
+    assert sent_room_ids == {"!nested:example.com"}
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_depth_two_and_top_level_room__expect_both_rooms(
+    space, matrix_space, client, mock_send_response
+):
+    room_child = MatrixRoom(room_id="!room:example.com", own_user_id="@bot:example.com")
+    room_child.name = "Room Child"
+    subspace = MatrixRoom(
+        room_id="!subspace:example.com", own_user_id="@bot:example.com"
+    )
+    subspace.name = "Sub Space"
+    subspace.room_type = "m.space"
+    nested = MatrixRoom(room_id="!nested:example.com", own_user_id="@bot:example.com")
+    nested.name = "Nested Room"
+    subspace.children = {"!nested:example.com"}
+    matrix_space.children = {"!room:example.com", "!subspace:example.com"}
+    client.rooms = {
+        "!room:example.com": room_child,
+        "!subspace:example.com": subspace,
+        "!nested:example.com": nested,
+    }
+
+    results = await space.broadcast("Hello!", depth=2)
+
     assert len(results) == 2
     assert client.room_send.await_count == 2
     sent_room_ids = {
         call.kwargs["room_id"] for call in client.room_send.await_args_list
     }
-    assert sent_room_ids == {"!room:example.com", "!sub:example.com"}
+    assert sent_room_ids == {"!room:example.com", "!nested:example.com"}
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_depth_one__expect_no_nested_children(
+    space, matrix_space, client, mock_send_response
+):
+    subspace = MatrixRoom(
+        room_id="!subspace:example.com", own_user_id="@bot:example.com"
+    )
+    subspace.name = "Sub Space"
+    subspace.room_type = "m.space"
+    nested = MatrixRoom(room_id="!nested:example.com", own_user_id="@bot:example.com")
+    nested.name = "Nested Room"
+    subspace.children = {"!nested:example.com"}
+    matrix_space.children = {"!subspace:example.com"}
+    client.rooms = {
+        "!subspace:example.com": subspace,
+        "!nested:example.com": nested,
+    }
+
+    results = await space.broadcast("Hello!", depth=1)
+
+    assert results == []
+    client.room_send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_depth_zero__expect_no_messages(
+    space, matrix_space, client, mock_send_response
+):
+    child = MatrixRoom(room_id="!child:example.com", own_user_id="@bot:example.com")
+    child.name = "Child"
+    matrix_space.children = {"!child:example.com"}
+    client.rooms = {"!child:example.com": child}
+
+    results = await space.broadcast("Hello!", depth=0)
+
+    assert results == []
+    client.room_send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_negative_depth__expect_value_error(
+    space, matrix_space, client
+):
+    with pytest.raises(ValueError, match="depth must be a non-negative integer"):
+        await space.broadcast("Hello!", depth=-1)
