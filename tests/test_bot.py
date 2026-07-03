@@ -1,9 +1,11 @@
 import pytest
 
-from unittest.mock import AsyncMock, MagicMock, patch
-from nio import MatrixRoom, RoomMessageText, LoginError
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from nio import MatrixRoom, RoomMessageText, LoginError, Event
 
 from matrix import Bot, Config, Extension, Room, Space
+from matrix.message import Message
+from matrix.types import File
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,
@@ -970,3 +972,129 @@ def test_unload_extension_removes_only_its_jobs(bot: Bot):
     job_names = [j.name for j in bot.scheduler.jobs]
 
     assert "task" in job_names
+
+
+@pytest.fixture
+def mock_send_response(bot):
+    """Set up client to return a mock event after room_send and fetch_event."""
+    send_response = Mock()
+    send_response.event_id = "$event123"
+    bot._client.room_send = AsyncMock(return_value=send_response)
+
+    mock_event = MagicMock(spec=Event)
+    mock_event.event_id = "$event123"
+
+    get_event_response = Mock()
+    get_event_response.event = mock_event
+    bot._client.room_get_event = AsyncMock(return_value=get_event_response)
+
+    return send_response
+
+
+@pytest.fixture
+def make_room(bot):
+    """Factory that creates a Room instance for a given room ID."""
+    def _make(room_id):
+        matrix_room = MatrixRoom(room_id=room_id, own_user_id="grace")
+        matrix_room.name = room_id
+        bot._client.rooms = {**bot._client.rooms, room_id: matrix_room}
+        return Room(matrix_room, bot.client)
+
+    return _make
+
+
+@pytest.mark.asyncio
+async def test_broadcast__expect_message_sent_to_all_rooms(
+    bot, make_room, mock_send_response
+):
+    room1 = make_room("!room1:example.com")
+    room2 = make_room("!room2:example.com")
+
+    results = await bot.broadcast([room1, room2], "Hello!")
+
+    assert len(results) == 2
+    assert all(isinstance(msg, Message) for msg in results)
+    assert bot._client.room_send.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_empty_list__expect_no_messages(
+    bot, mock_send_response
+):
+    results = await bot.broadcast([], "Hello!")
+
+    assert results == []
+    bot._client.room_send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_broadcast__with_space_in_list__expect_space_skipped(
+    bot, make_room, mock_send_response
+):
+    room = make_room("!room:example.com")
+    space_matrix = MatrixRoom(
+        room_id="!space:example.com", own_user_id="grace"
+    )
+    space_matrix.name = "Test Space"
+    space_matrix.room_type = "m.space"
+    bot._client.rooms = {**bot._client.rooms, "!space:example.com": space_matrix}
+    space = Space(space_matrix, bot.client)
+
+    results = await bot.broadcast([room, space], "Hello!")
+
+    assert len(results) == 1
+    assert bot._client.room_send.await_count == 1
+    sent_room_ids = {
+        call.kwargs["room_id"] for call in bot._client.room_send.await_args_list
+    }
+    assert sent_room_ids == {"!room:example.com"}
+
+
+@pytest.mark.asyncio
+async def test_broadcast_raw__expect_unformatted_messages(
+    bot, make_room, mock_send_response
+):
+    room = make_room("!room:example.com")
+
+    await bot.broadcast([room], "Hello world!", raw=True)
+
+    call_args = bot._client.room_send.call_args
+    content = call_args.kwargs["content"]
+    assert content["msgtype"] == "m.text"
+    assert content["body"] == "Hello world!"
+    assert "formatted_body" not in content
+
+
+@pytest.mark.asyncio
+async def test_broadcast_notice__expect_notice_message_type(
+    bot, make_room, mock_send_response
+):
+    room = make_room("!room:example.com")
+
+    await bot.broadcast([room], "Special Event started!", notice=True)
+
+    call_args = bot._client.room_send.call_args
+    content = call_args.kwargs["content"]
+    assert content["msgtype"] == "m.notice"
+    assert content["body"] == "Special Event started!"
+
+
+@pytest.mark.asyncio
+async def test_broadcast_file__expect_file_message(
+    bot, make_room, mock_send_response
+):
+    room = make_room("!room:example.com")
+
+    file = File(
+        path="mxc://example.com/abc123",
+        filename="document.pdf",
+        mimetype="application/pdf",
+    )
+
+    await bot.broadcast([room], file=file)
+
+    call_args = bot._client.room_send.call_args
+    content = call_args.kwargs["content"]
+    assert content["msgtype"] == "m.file"
+    assert content["body"] == "document.pdf"
+    assert content["url"] == "mxc://example.com/abc123"
