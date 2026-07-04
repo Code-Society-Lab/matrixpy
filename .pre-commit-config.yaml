@@ -24,27 +24,14 @@ repos:
       - id: black
         name: black
         entry: python -m black
-        language: python
-        additional_dependencies:
-          - black==26.5.1
+        language: system
         stages: [pre-commit]
         types_or: [python, pyi]
 
       - id: mypy
         name: mypy
-        entry: python -m mypy matrix tests
-        language: python
-        additional_dependencies:
-          - .
-          - matrix-nio==0.25.2
-          - logger
-          - PyYAML==6.0.3
-          - markdown==3.10.2
-          - APScheduler==3.11.3
-          - envyaml==1.10.211231
-          - mypy==2.1.0
-          - types-PyYAML==6.0.12.20260518
-          - types-Markdown==3.10.2.20260518
+        entry: python -m mypy matrix
+        language: system
         pass_filenames: false
         stages: [pre-commit]
         types_or: [python, pyi]
@@ -52,16 +39,6 @@ repos:
       - id: pytest
         name: pytest
         entry: python -m pytest
-        language: python
-        additional_dependencies:
-          - .
-          - matrix-nio==0.25.2
-          - logger
-          - PyYAML==6.0.3
-          - markdown==3.10.2
-          - APScheduler==3.11.3
-          - envyaml==1.10.211231
-          - pytest==9.1.1
-          - pytest-asyncio==1.4.0
+        language: system
         pass_filenames: false
-        stages: [pre-push]
+        stages: [pre-commit]
