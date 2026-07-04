@@ -2,7 +2,7 @@
 Thank you for your interest in contributing to the matrix.py! As an open source project, many kinds of contributions are welcome.
 
 ## How can you contribute?
-You can contribute to this project in the follwing ways
+You can contribute to this project in the following ways
 
 - Report Bugs
 - Add new features
@@ -12,25 +12,26 @@ You can contribute to this project in the follwing ways
 **Warning:** Non-trivial pull requests must have an [issue](https://github.com/Code-Society-Lab/matrixpy/issues) proposing the changes.
 
 ## Setup
-1. Clone the Textual repository
-2. Create a virtual enviroment
-3. Install the dependencies
-
-Install the development dependencies and enable the git hooks:
+1. Clone the matrix.py repository
+2. Create and activate a virtual environment
+3. Install the development dependencies and enable the Git hooks.
 
 ```bash
 pip install -e ".[dev]"
 pre-commit install
-pre-commit install --hook-type pre-push
 ```
 
-After installation, the hooks run automatically when you commit or push.
+
+After installation, the Git hooks run automatically before each commit to check formatting, typing, and tests.
+The hooks include running:
+- black
+- mypy
+- pytest
 
 Run the full hook suite manually with:
 
 ```bash
 pre-commit run --all-files
-pre-commit run --hook-stage pre-push --all-files
 ```
 
 ## Guidelines
@@ -39,8 +40,8 @@ Read any issue instructions carefully. Feel free to ask for clarification if any
 Add docstrings to all of your code (functions, methods, classes, ...). The codebase should have enough examples for you to copy from.
 
 Write tests for your code.
-    If you are fixing a bug, make sure to add regression tests that link to the original issue.
-    If you are implementing new features, make sure to add tests
+- If you are fixing a bug, add a regression test that references the original issue.
+- If you are implementing a new feature, add tests covering the new functionality.
 
 ## Before opening a PR
 
