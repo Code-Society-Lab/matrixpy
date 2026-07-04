@@ -168,6 +168,7 @@ def test_get_children__with_depth_two__expect_recursive_children(
     assert "!subspace:example.com" in ids
     assert "!nested:example.com" in ids
 
+
 @pytest.mark.asyncio
 async def test_broadcast__expect_message_sent_to_all_children(
     space, matrix_space, client, mock_send_response

@@ -463,5 +463,7 @@ class Bot(Registry):
         ```
         """
         rooms = filter(lambda child: not isinstance(child, Space), rooms)
-        async_send = [room.send(content, raw=raw, notice=notice, file=file) for room in rooms]
+        async_send = [
+            room.send(content, raw=raw, notice=notice, file=file) for room in rooms
+        ]
         return await asyncio.gather(*async_send)
