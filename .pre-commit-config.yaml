@@ -1,0 +1,67 @@
+default_language_version:
+  python: python3
+
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        stages: [pre-commit]
+      - id: check-toml
+        stages: [pre-commit]
+      - id: check-yaml
+        exclude: ^docs/mkdocs\.yml$
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: python -m black
+        language: python
+        additional_dependencies:
+          - black==26.5.1
+        stages: [pre-commit]
+        types_or: [python, pyi]
+
+      - id: mypy
+        name: mypy
+        entry: python -m mypy matrix tests
+        language: python
+        additional_dependencies:
+          - .
+          - matrix-nio==0.25.2
+          - logger
+          - PyYAML==6.0.3
+          - markdown==3.10.2
+          - APScheduler==3.11.3
+          - envyaml==1.10.211231
+          - mypy==2.1.0
+          - types-PyYAML==6.0.12.20260518
+          - types-Markdown==3.10.2.20260518
+        pass_filenames: false
+        stages: [pre-commit]
+        types_or: [python, pyi]
+
+      - id: pytest
+        name: pytest
+        entry: python -m pytest
+        language: python
+        additional_dependencies:
+          - .
+          - matrix-nio==0.25.2
+          - logger
+          - PyYAML==6.0.3
+          - markdown==3.10.2
+          - APScheduler==3.11.3
+          - envyaml==1.10.211231
+          - pytest==9.1.1
+          - pytest-asyncio==1.4.0
+        pass_filenames: false
+        stages: [pre-push]

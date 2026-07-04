@@ -16,6 +16,23 @@ You can contribute to this project in the follwing ways
 2. Create a virtual enviroment
 3. Install the dependencies
 
+Install the development dependencies and enable the git hooks:
+
+```bash
+pip install -e ".[dev]"
+pre-commit install
+pre-commit install --hook-type pre-push
+```
+
+After installation, the hooks run automatically when you commit or push.
+
+Run the full hook suite manually with:
+
+```bash
+pre-commit run --all-files
+pre-commit run --hook-stage pre-push --all-files
+```
+
 ## Guidelines
 Read any issue instructions carefully. Feel free to ask for clarification if any details are missing.
 
