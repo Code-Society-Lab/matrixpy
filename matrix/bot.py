@@ -462,7 +462,7 @@ class Bot(Registry):
         await bot.broadcast([room1, room2, ...], file=image)
         ```
         """
-        rooms = filter(lambda child: not isinstance(child, Space), rooms)
+        rooms = list(filter(lambda child: not isinstance(child, Space), rooms))
         async_send = [
             room.send(content, raw=raw, notice=notice, file=file) for room in rooms
         ]
