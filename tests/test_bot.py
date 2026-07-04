@@ -994,6 +994,7 @@ def mock_send_response(bot):
 @pytest.fixture
 def make_room(bot):
     """Factory that creates a Room instance for a given room ID."""
+
     def _make(room_id):
         matrix_room = MatrixRoom(room_id=room_id, own_user_id="grace")
         matrix_room.name = room_id
@@ -1018,9 +1019,7 @@ async def test_broadcast__expect_message_sent_to_all_rooms(
 
 
 @pytest.mark.asyncio
-async def test_broadcast__with_empty_list__expect_no_messages(
-    bot, mock_send_response
-):
+async def test_broadcast__with_empty_list__expect_no_messages(bot, mock_send_response):
     results = await bot.broadcast([], "Hello!")
 
     assert results == []
@@ -1032,9 +1031,7 @@ async def test_broadcast__with_space_in_list__expect_space_skipped(
     bot, make_room, mock_send_response
 ):
     room = make_room("!room:example.com")
-    space_matrix = MatrixRoom(
-        room_id="!space:example.com", own_user_id="grace"
-    )
+    space_matrix = MatrixRoom(room_id="!space:example.com", own_user_id="grace")
     space_matrix.name = "Test Space"
     space_matrix.room_type = "m.space"
     bot._client.rooms = {**bot._client.rooms, "!space:example.com": space_matrix}
@@ -1080,9 +1077,7 @@ async def test_broadcast_notice__expect_notice_message_type(
 
 
 @pytest.mark.asyncio
-async def test_broadcast_file__expect_file_message(
-    bot, make_room, mock_send_response
-):
+async def test_broadcast_file__expect_file_message(bot, make_room, mock_send_response):
     room = make_room("!room:example.com")
 
     file = File(

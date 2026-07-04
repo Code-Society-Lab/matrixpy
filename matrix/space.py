@@ -6,6 +6,7 @@ from matrix.room import Room, make_room
 
 from matrix.types import File
 
+
 class Space(Room, room_type="m.space"):
     def get_children(self, depth: int = 1) -> list[Room | Self]:
         """Return the child rooms and spaces of this space that the bot has joined.
@@ -55,7 +56,7 @@ class Space(Room, room_type="m.space"):
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
-        depth: int = 1
+        depth: int = 1,
     ) -> list[Message]:
         """Broadcasts a message to all rooms in this space.
 
@@ -87,6 +88,10 @@ class Space(Room, room_type="m.space"):
         await space.broadcast("New Announcement", notice=True, depth=2)
         ```
         """
-        rooms = filter(lambda room: not isinstance(room, Space), self.get_children(depth=depth))
-        async_send = [room.send(content, raw=raw, notice=notice, file=file) for room in rooms]
+        rooms = filter(
+            lambda room: not isinstance(room, Space), self.get_children(depth=depth)
+        )
+        async_send = [
+            room.send(content, raw=raw, notice=notice, file=file) for room in rooms
+        ]
         return await asyncio.gather(*async_send)
