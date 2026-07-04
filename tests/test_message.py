@@ -6,7 +6,6 @@ from nio import (
     Event,
     RoomGetStateEventResponse,
     RoomGetStateEventError,
-    RoomPutStateResponse,
     RoomPutStateError,
     RoomSendError,
     RoomRedactError,
@@ -269,8 +268,7 @@ async def test_pin_no_existing_pinned_events__expect_state_updated(message, clie
     mock_get_error.status_code = "404"
     client.room_get_state_event = AsyncMock(return_value=mock_get_error)
 
-    mock_put_resp = MagicMock(spec=RoomPutStateResponse)
-    client.room_put_state = AsyncMock(return_value=mock_put_resp)
+    client.room_put_state = AsyncMock(return_value=MagicMock())
 
     await message.pin()
 
@@ -293,8 +291,7 @@ async def test_pin_with_existing_pinned_events__expect_appended_state_updated(
     mock_get_resp.content = {"pinned": ["$other_event"]}
     client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
 
-    mock_put_resp = MagicMock(spec=RoomPutStateResponse)
-    client.room_put_state = AsyncMock(return_value=mock_put_resp)
+    client.room_put_state = AsyncMock(return_value=MagicMock())
 
     await message.pin()
 
@@ -335,13 +332,11 @@ async def test_pin_with_put_error__expect_matrix_error(message, client):
     mock_get_error.status_code = "404"
     client.room_get_state_event = AsyncMock(return_value=mock_get_error)
 
-    mock_put_error = MagicMock(spec=RoomPutStateError)
-    mock_put_error.message = "Failed to update state"
-    client.room_put_state = AsyncMock(return_value=mock_put_error)
+    client.room_put_state = AsyncMock(
+        return_value=RoomPutStateError("not allowed", "M_FORBIDDEN")
+    )
 
-    with pytest.raises(
-        MatrixError, match="Failed to pin message: Failed to update state"
-    ):
+    with pytest.raises(MatrixError, match="Failed to pin message: .*M_FORBIDDEN"):
         await message.pin()
 
 
@@ -351,8 +346,7 @@ async def test_unpin_event_is_pinned__expect_state_updated(message, client):
     mock_get_resp.content = {"pinned": ["$other_event", "$event123"]}
     client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
 
-    mock_put_resp = MagicMock(spec=RoomPutStateResponse)
-    client.room_put_state = AsyncMock(return_value=mock_put_resp)
+    client.room_put_state = AsyncMock(return_value=MagicMock())
 
     await message.unpin()
 
@@ -395,11 +389,9 @@ async def test_unpin_with_put_error__expect_matrix_error(message, client):
     mock_get_resp.content = {"pinned": ["$event123"]}
     client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
 
-    mock_put_error = MagicMock(spec=RoomPutStateError)
-    mock_put_error.message = "Failed to update state"
-    client.room_put_state = AsyncMock(return_value=mock_put_error)
+    client.room_put_state = AsyncMock(
+        return_value=RoomPutStateError("not allowed", "M_FORBIDDEN")
+    )
 
-    with pytest.raises(
-        MatrixError, match="Failed to unpin message: Failed to update state"
-    ):
+    with pytest.raises(MatrixError, match="Failed to unpin message: .*M_FORBIDDEN"):
         await message.unpin()

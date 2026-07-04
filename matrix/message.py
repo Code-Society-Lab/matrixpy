@@ -5,8 +5,6 @@ from nio import (
     Event,
     RoomGetStateEventError,
     RoomGetStateEventResponse,
-    RoomPutStateError,
-    RoomPutStateResponse,
 )
 
 from matrix.types import Reaction
@@ -215,17 +213,14 @@ class Message:
 
         pinned.append(self.event_id)
 
-        try:
-            put_response = await self.client.room_put_state(
+        await matrix_call(
+            self.client.room_put_state(
                 room_id=self.room.room_id,
                 event_type="m.room.pinned_events",
                 content={"pinned": pinned},
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to pin message: {e}")
-
-        if isinstance(put_response, RoomPutStateError):
-            raise MatrixError(f"Failed to pin message: {put_response.message}")
+            ),
+            error_message="Failed to pin message",
+        )
 
     async def unpin(self) -> None:
         """Unpin this message from the room.
@@ -244,14 +239,11 @@ class Message:
 
         pinned.remove(self.event_id)
 
-        try:
-            put_response = await self.client.room_put_state(
+        await matrix_call(
+            self.client.room_put_state(
                 room_id=self.room.room_id,
                 event_type="m.room.pinned_events",
                 content={"pinned": pinned},
-            )
-        except Exception as e:
-            raise MatrixError(f"Failed to unpin message: {e}")
-
-        if isinstance(put_response, RoomPutStateError):
-            raise MatrixError(f"Failed to unpin message: {put_response.message}")
+            ),
+            error_message="Failed to unpin message",
+        )
