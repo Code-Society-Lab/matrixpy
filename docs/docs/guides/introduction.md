@@ -32,7 +32,7 @@ Before installing Matrix.py, it's strongly recommended to create a virtual envir
     ```bash
     source venv/bin/activate
     ```
-    
+
     On Windows (PowerShell):
     ```bash
     venv\Scripts\Activate
@@ -87,7 +87,7 @@ Matrix.py allows you to listen to these events using the `@bot.event` decorator.
 For example, to react whenever a message is sent:
 ```python
 from matrix import Bot, Context
-from matrix.bot import MatrixRoom, RoomMessageText 
+from matrix.bot import MatrixRoom, RoomMessageText
 
 bot = Bot()
 
