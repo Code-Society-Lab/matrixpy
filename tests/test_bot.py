@@ -291,6 +291,44 @@ async def test_on_error_calls_fallback_handler(bot):
 
 
 @pytest.mark.asyncio
+async def test_on_error__with_subclass_error__expect_fallback_handler_called(bot):
+    called_with = None
+
+    @bot.error()
+    async def custom_error_handler(e):
+        nonlocal called_with
+        called_with = e
+
+    error = ValueError("subclass of Exception")
+    await bot._on_error(error)
+
+    assert called_with is error, "Fallback handler should catch Exception subclasses"
+
+
+@pytest.mark.asyncio
+async def test_on_error__with_specific_and_fallback_handlers__expect_specific_handler_called(
+    bot,
+):
+    fallback_called = False
+    specific_called = False
+
+    @bot.error()
+    async def fallback_handler(e):
+        nonlocal fallback_called
+        fallback_called = True
+
+    @bot.error(ValueError)
+    async def specific_handler(e):
+        nonlocal specific_called
+        specific_called = True
+
+    await bot._on_error(ValueError("test error"))
+
+    assert specific_called, "Specific handler should be used when available"
+    assert not fallback_called, "Fallback handler should not run when a specific one matches"
+
+
+@pytest.mark.asyncio
 async def test_on_error_logs_when_no_handler(bot):
     error = Exception("test")
 
@@ -377,6 +415,37 @@ async def test_bot_does_not_execute_command_when_global_check_fails(bot):
     assert not called
     bot._on_command_error.assert_awaited_once()
     assert isinstance(bot._on_command_error.call_args[0][1], CheckError)
+
+
+@pytest.mark.asyncio
+async def test_command_error_handler__with_error_raised_in_command_body__expect_handler_called(
+    bot,
+):
+    handled = None
+
+    @bot.error(ValueError, context=True)
+    async def on_value_error(ctx, error):
+        nonlocal handled
+        handled = error
+
+    @bot.command()
+    async def boom(ctx):
+        raise ValueError("kaboom")
+
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "!boom", "msgtype": "m.text"},
+            "event_id": "$ev3",
+            "origin_server_ts": 1234567890,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
+
+    room = MatrixRoom("!roomid", "alias")
+    await bot._process_commands(room, event)
+
+    assert isinstance(handled, ValueError)
 
 
 @pytest.mark.asyncio

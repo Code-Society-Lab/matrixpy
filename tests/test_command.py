@@ -10,6 +10,9 @@ class DummyBot:
     async def on_command_error(self, _ctx, _error):
         return None
 
+    async def _on_command_error(self, ctx, error):
+        return await self.on_command_error(ctx, error)
+
 
 class DummyContext:
     def __init__(self, args=None):
@@ -143,6 +146,30 @@ async def test_error_handler():
 
     await cmd(ctx)
     assert called
+
+
+@pytest.mark.asyncio
+async def test_error_handler__with_exception_subclass__expect_handler_called():
+    class BaseCustomError(Exception):
+        pass
+
+    class SubCustomError(BaseCustomError):
+        pass
+
+    async def failing_command(ctx):
+        raise SubCustomError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    handled = None
+
+    @cmd.error(BaseCustomError)
+    async def handler(_ctx, error):
+        nonlocal handled
+        handled = error
+
+    await cmd(ctx)
+    assert isinstance(handled, SubCustomError)
 
 
 @pytest.mark.asyncio

@@ -285,12 +285,18 @@ class Command:
         """
         Executes the registered error handler if present.
         """
+        handler = None
 
-        if handler := self._error_handlers.get(type(error)):
+        for cls in inspect.getmro(type(error)):
+            if cls in self._error_handlers:
+                handler = self._error_handlers[cls]
+                break
+
+        if handler:
             await handler(ctx, error)
             return
 
-        await ctx.bot.on_command_error(ctx, error)
+        await ctx.bot._on_command_error(ctx, error)
 
         if self._on_error:
             await self._on_error(ctx, error)

@@ -242,7 +242,7 @@ class Bot(Registry):
         self.log.exception("Unhandled error: '%s'", error)
 
     async def _on_error(self, error: Exception) -> None:
-        if handler := self._error_handlers.get(type(error)):
+        if handler := self.resolve_handler(self._error_handlers, error):
             await handler(error)
             return
 
@@ -267,7 +267,7 @@ class Bot(Registry):
         If a specific error handler is registered for the type of the
         exception, it will be invoked with the current context and error.
         """
-        if handler := self._command_error_handlers.get(type(error)):
+        if handler := self.resolve_handler(self._command_error_handlers, error):
             await handler(ctx, error)
             return
 
