@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from nio import MatrixRoom, RoomMessageText, LoginError
 
-from matrix import Bot, Config, Extension, Room, Space
+from matrix import Bot, Config, Context, Extension, Room, Space
 from matrix.errors import (
     CheckError,
     CommandNotFoundError,
@@ -325,7 +325,9 @@ async def test_on_error__with_specific_and_fallback_handlers__expect_specific_ha
     await bot._on_error(ValueError("test error"))
 
     assert specific_called, "Specific handler should be used when available"
-    assert not fallback_called, "Fallback handler should not run when a specific one matches"
+    assert (
+        not fallback_called
+    ), "Fallback handler should not run when a specific one matches"
 
 
 @pytest.mark.asyncio
@@ -334,6 +336,24 @@ async def test_on_error_logs_when_no_handler(bot):
 
     await bot.on_error(error)
     bot.log.exception.assert_called_once_with("Unhandled error: '%s'", error)
+
+
+@pytest.mark.asyncio
+async def test_on_command_error__with_matching_handler__expect_returns_true(bot):
+    @bot.error(ValueError, context=True)
+    async def handler(ctx, error):
+        pass
+
+    result = await bot._on_command_error(MagicMock(), ValueError("boom"))
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_on_command_error__with_no_matching_handler__expect_returns_false(bot):
+    result = await bot._on_command_error(MagicMock(), ValueError("boom"))
+
+    assert result is False
 
 
 @pytest.mark.asyncio
@@ -443,9 +463,12 @@ async def test_command_error_handler__with_error_raised_in_command_body__expect_
     )
 
     room = MatrixRoom("!roomid", "alias")
-    await bot._process_commands(room, event)
+
+    with patch.object(Context, "send_help", new_callable=AsyncMock) as mock_send_help:
+        await bot._process_commands(room, event)
 
     assert isinstance(handled, ValueError)
+    mock_send_help.assert_not_called()
 
 
 @pytest.mark.asyncio

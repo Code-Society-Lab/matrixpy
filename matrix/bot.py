@@ -259,19 +259,23 @@ class Bot(Registry):
         """Override this in a subclass."""
         self.log.exception("Unhandled error: '%s'", error)
 
-    async def _on_command_error(self, ctx: Context, error: Exception) -> None:
+    async def _on_command_error(self, ctx: Context, error: Exception) -> bool:
         """
         Handles errors raised during command invocation.
 
         This method is called automatically when a command error occurs.
         If a specific error handler is registered for the type of the
         exception, it will be invoked with the current context and error.
+
+        Returns True if a specific handler was found and invoked, False if
+        it fell through to the default dispatch/log path.
         """
         if handler := self.resolve_handler(self._command_error_handlers, error):
             await handler(ctx, error)
-            return
+            return True
 
         await self._dispatch("on_command_error", ctx, error)
+        return False
 
     # ENTRYPOINT
 

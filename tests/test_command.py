@@ -1,7 +1,7 @@
 import pytest
 import inspect
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from matrix.errors import MissingArgumentError
 from matrix.command import Command
 
@@ -11,7 +11,8 @@ class DummyBot:
         return None
 
     async def _on_command_error(self, ctx, error):
-        return await self.on_command_error(ctx, error)
+        await self.on_command_error(ctx, error)
+        return False
 
 
 class DummyContext:
@@ -170,6 +171,38 @@ async def test_error_handler__with_exception_subclass__expect_handler_called():
 
     await cmd(ctx)
     assert isinstance(handled, SubCustomError)
+
+
+@pytest.mark.asyncio
+async def test_on_error__with_bot_handler_matched__expect_no_fallback_help():
+    async def failing_command(ctx):
+        raise ValueError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    ctx.bot._on_command_error = AsyncMock(return_value=True)
+    ctx.send_help = AsyncMock()
+
+    await cmd(ctx)
+
+    ctx.send_help.assert_not_called()
+    ctx.logger.exception.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_on_error__with_no_bot_handler_matched__expect_fallback_help():
+    async def failing_command(ctx):
+        raise ValueError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    ctx.bot._on_command_error = AsyncMock(return_value=False)
+    ctx.send_help = AsyncMock()
+
+    await cmd(ctx)
+
+    ctx.send_help.assert_awaited_once()
+    ctx.logger.exception.assert_called_once()
 
 
 @pytest.mark.asyncio

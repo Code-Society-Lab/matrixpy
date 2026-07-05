@@ -296,7 +296,8 @@ class Command:
             await handler(ctx, error)
             return
 
-        await ctx.bot._on_command_error(ctx, error)
+        if await ctx.bot._on_command_error(ctx, error):
+            return
 
         if self._on_error:
             await self._on_error(ctx, error)
