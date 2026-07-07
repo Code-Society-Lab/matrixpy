@@ -43,7 +43,7 @@ jobs:
     environment:
       name: release
       url: https://pypi.org/project/matrix-python/${{ github.event.release.tag_name }}
-    
+
     steps:
       - name: Retrieve release distributions
         uses: actions/download-artifact@v4

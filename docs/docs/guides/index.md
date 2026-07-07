@@ -69,7 +69,7 @@ bot.start(config=Config(
 ```
 - Now your bot will:
 - Log all messages
-- Reply to `!ping` with `Pong!` 
+- Reply to `!ping` with `Pong!`
 - Echo messages with `!say <text>`
 
 # Resources

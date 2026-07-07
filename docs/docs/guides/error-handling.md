@@ -1,5 +1,5 @@
 # Handling Errors
-Errors happen! A user might provide invalid input, your API might fail, or someone might misuse a command. Let's make your bot handle these gracefully through error handlers. 
+Errors happen! A user might provide invalid input, your API might fail, or someone might misuse a command. Let's make your bot handle these gracefully through error handlers.
 
 Error handlers can handle any type of exception, built-in by Python, from matrix.py or any other libraries. See the [`errors`](../reference/errors.md) reference for the full list of built-in error types.
 
