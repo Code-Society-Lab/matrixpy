@@ -97,6 +97,27 @@ async def test_is_moderator_check__respects_power_level_boundaries(
     assert await check(ctx) is expected
 
 
+@pytest.mark.asyncio
+async def test_checks__fall_back_to_default_level_for_unlisted_sender(bot, client):
+    """A sender absent from power_levels.users gets users_default (0)."""
+    matrix_room = Mock(spec=MatrixRoom)
+    matrix_room.room_id = "!room:example.com"
+    matrix_room.power_levels = PowerLevels()
+
+    room = Room(matrix_room, client)
+    ctx = Context(bot, room, make_event("@user:example.com"))
+
+    for factory in (is_admin, is_moderator):
+
+        async def my_command(ctx):
+            pass
+
+        cmd = Command(my_command)
+        factory()(cmd)
+
+        assert await cmd.checks[-1](ctx) is False
+
+
 def test_is_admin__returns_the_same_command():
     async def my_command(ctx):
         pass
