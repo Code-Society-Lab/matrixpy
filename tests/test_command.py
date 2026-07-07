@@ -174,6 +174,33 @@ async def test_error_handler__with_exception_subclass__expect_handler_called():
 
 
 @pytest.mark.asyncio
+async def test_error_handler__with_grandparent_exception_class__expect_handler_called():
+    class GrandparentError(Exception):
+        pass
+
+    class ParentError(GrandparentError):
+        pass
+
+    class ChildError(ParentError):
+        pass
+
+    async def failing_command(ctx):
+        raise ChildError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    handled = None
+
+    @cmd.error(GrandparentError)
+    async def handler(_ctx, error):
+        nonlocal handled
+        handled = error
+
+    await cmd(ctx)
+    assert isinstance(handled, ChildError)
+
+
+@pytest.mark.asyncio
 async def test_on_error__with_bot_handler_matched__expect_no_fallback_help():
     async def failing_command(ctx):
         raise ValueError("boom")

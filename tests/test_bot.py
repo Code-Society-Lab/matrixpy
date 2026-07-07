@@ -472,6 +472,44 @@ async def test_command_error_handler__with_error_raised_in_command_body__expect_
 
 
 @pytest.mark.asyncio
+async def test_command_error_handler__with_extension_handler__expect_handler_called_for_command_body_error(
+    bot,
+):
+    handled = None
+
+    ext = Extension(name="errors_ext", prefix="!")
+
+    @ext.error(ValueError, context=True)
+    async def on_value_error(ctx, error):
+        nonlocal handled
+        handled = error
+
+    @ext.command()
+    async def boom(ctx):
+        raise ValueError("kaboom")
+
+    bot.load_extension(ext)
+
+    event = RoomMessageText.from_dict(
+        {
+            "content": {"body": "!boom", "msgtype": "m.text"},
+            "event_id": "$ev4",
+            "origin_server_ts": 1234567890,
+            "sender": "@user:matrix.org",
+            "type": "m.room.message",
+        }
+    )
+
+    room = MatrixRoom("!roomid", "alias")
+
+    with patch.object(Context, "send_help", new_callable=AsyncMock) as mock_send_help:
+        await bot._process_commands(room, event)
+
+    assert isinstance(handled, ValueError)
+    mock_send_help.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_command_executes(bot):
     called = False
 
