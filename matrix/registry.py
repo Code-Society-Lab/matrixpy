@@ -458,13 +458,3 @@ class Registry:
         if not exception:
             exception = Exception
         self._command_error_handlers[exception] = func
-
-    @staticmethod
-    def resolve_handler(
-        handlers: Dict[type[Exception], F], error: Exception
-    ) -> Optional[F]:
-        """Look up the handler registered for the error's type or nearest base class."""
-        for cls in inspect.getmro(type(error)):
-            if cls in handlers:
-                return handlers[cls]
-        return None

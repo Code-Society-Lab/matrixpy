@@ -16,6 +16,7 @@ from typing import (
 )
 
 from .errors import MissingArgumentError, CheckError, CooldownError
+from ._error_handler import resolve_error_handler
 from time import monotonic
 from collections import defaultdict, deque
 
@@ -285,12 +286,7 @@ class Command:
         """
         Executes the registered error handler if present.
         """
-        handler = None
-
-        for cls in inspect.getmro(type(error)):
-            if cls in self._error_handlers:
-                handler = self._error_handlers[cls]
-                break
+        handler = resolve_error_handler(self._error_handlers, error)
 
         if handler:
             await handler(ctx, error)

@@ -16,6 +16,7 @@ from .extension import Extension
 from .registry import Registry
 from .help import HelpCommand, DefaultHelpCommand
 from .scheduler import Scheduler
+from ._error_handler import resolve_error_handler
 from .errors import (
     AlreadyRegisteredError,
     CommandNotFoundError,
@@ -242,7 +243,7 @@ class Bot(Registry):
         self.log.exception("Unhandled error: '%s'", error)
 
     async def _on_error(self, error: Exception) -> None:
-        if handler := self.resolve_handler(self._error_handlers, error):
+        if handler := resolve_error_handler(self._error_handlers, error):
             await handler(error)
             return
 
@@ -270,7 +271,7 @@ class Bot(Registry):
         Returns True if a specific handler was found and invoked, False if
         it fell through to the default dispatch/log path.
         """
-        if handler := self.resolve_handler(self._command_error_handlers, error):
+        if handler := resolve_error_handler(self._command_error_handlers, error):
             await handler(ctx, error)
             return True
 
