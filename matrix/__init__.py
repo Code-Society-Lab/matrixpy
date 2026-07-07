@@ -13,7 +13,7 @@ from .config import Config
 from .context import Context
 from .command import Command
 from .help import HelpCommand
-from .checks import cooldown
+from .checks import cooldown, is_admin, is_moderator
 from .room import Room
 from .space import Space
 from .message import Message
@@ -28,6 +28,8 @@ __all__ = [
     "Context",
     "HelpCommand",
     "cooldown",
+    "is_admin",
+    "is_moderator",
     "Room",
     "Space",
     "Message",
