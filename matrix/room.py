@@ -135,7 +135,7 @@ class Room:
 
         ```python
         # Send component-formatted message
-        table = MatrixTable(title="Los Angeles")
+        table = Table(title="Los Angeles")
         await room.send(component=table)
 
         # Send a markdown-formatted text message
@@ -170,7 +170,7 @@ class Room:
 
         ```python
         # Send component-formatted message
-        table = MatrixTable(title="Los Angeles")
+        table = Table(title="Los Angeles")
         await room.send_component(table)
         ```
         """

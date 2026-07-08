@@ -14,7 +14,7 @@ class Component(ABC):
         pass
 
 
-class MatrixTable(Component):
+class Table(Component):
     def __init__(self, *, title: str, columns: int = 2) -> None:
         self.title: str = title
         self.columns: int = columns
