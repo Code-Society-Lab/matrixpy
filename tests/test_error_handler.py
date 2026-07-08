@@ -1,6 +1,14 @@
 from matrix._error_handler import resolve_error_handler
 
 
+class BaseCustomError(Exception):
+    pass
+
+
+class SubCustomError(BaseCustomError):
+    pass
+
+
 def test_resolve_error_handler_with_exact_type_match__expect_handler_returned():
     def handler(error):
         pass
@@ -11,12 +19,6 @@ def test_resolve_error_handler_with_exact_type_match__expect_handler_returned():
 
 
 def test_resolve_error_handler_with_exception_subclass__expect_base_handler_returned():
-    class BaseCustomError(Exception):
-        pass
-
-    class SubCustomError(BaseCustomError):
-        pass
-
     def handler(error):
         pass
 
@@ -57,12 +59,6 @@ def test_resolve_error_handler_with_empty_handlers__expect_none_returned():
 
 
 def test_resolve_error_handler_with_specific_and_base_registered__expect_specific_handler_returned():
-    class BaseCustomError(Exception):
-        pass
-
-    class SubCustomError(BaseCustomError):
-        pass
-
     def base_handler(error):
         pass
 
