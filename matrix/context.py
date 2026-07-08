@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Optional, Any, List
 from .errors import MatrixError
 from .message import Message
 from .room import Room
-from .types import File, Image
+from .types import File
+from matrix.component import Component
 from .member import Member
 
 if TYPE_CHECKING:
@@ -58,6 +59,7 @@ class Context:
         self,
         content: str | None = None,
         *,
+        component: Component | None = None,
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
@@ -106,6 +108,7 @@ class Context:
         try:
             return await self.room.send(
                 content,
+                component=component,
                 raw=raw,
                 notice=notice,
                 file=file,

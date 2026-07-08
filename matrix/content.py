@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from markdown import markdown
 from typing import Any
+from .component import Component
 
 
 class BaseMessageContent(ABC):
@@ -171,4 +172,18 @@ class ReactionContent(BaseMessageContent):
                 "event_id": self.event_id,
                 "key": self.emoji,
             }
+        }
+
+
+@dataclass
+class ComponentContent(BaseMessageContent):
+    msgtype = "m.text"
+    component: Component
+
+    def build(self) -> dict:
+        return {
+            "msgtype": self.msgtype,
+            "body": self.component.to_plain_text(),
+            "format": "org.matrix.custom.html",
+            "formatted_body": self.component.render(),
         }

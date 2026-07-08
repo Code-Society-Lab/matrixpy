@@ -8,6 +8,7 @@ from nio import (
     RoomGetStateEventError,
 )
 
+from matrix.component import Component
 from matrix.api import matrix_call
 from matrix.message import Message
 from matrix.content import (
@@ -20,6 +21,7 @@ from matrix.content import (
     ImageContent,
     AudioContent,
     VideoContent,
+    ComponentContent,
 )
 from matrix.types import File, Image, Audio, Video
 
@@ -115,6 +117,7 @@ class Room:
         self,
         content: str | None = None,
         *,
+        component: Component | None = None,
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
@@ -131,6 +134,10 @@ class Room:
         ## Example
 
         ```python
+        # Send component-formatted message
+        table = MatrixTable(title="Los Angeles")
+        await room.send(component=table)
+
         # Send a markdown-formatted text message
         await room.send("Hello **world**!")
 
@@ -143,12 +150,33 @@ class Room:
         await room.send(file=image)
         ```
         """
+        if component:
+            return await self.send_component(component)
+
         if content:
             return await self.send_text(content, raw=raw, notice=notice)
 
         if file:
             return await self.send_file(file)
         raise ValueError("You must provide content or file.")
+
+    async def send_component(
+        self,
+        component: Component,
+    ) -> Message:
+        """Send a component-formatted message to the room.
+
+        ## Example
+
+        ```python
+        # Send component-formatted message
+        table = MatrixTable(title="Los Angeles")
+        await room.send_component(table)
+        ```
+        """
+        payload: ComponentContent = ComponentContent(component=component)
+
+        return await self._send_payload(payload)
 
     async def send_text(
         self,
