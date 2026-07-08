@@ -1,7 +1,7 @@
 import pytest
 import inspect
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from matrix.errors import MissingArgumentError
 from matrix.command import Command
 
@@ -9,6 +9,10 @@ from matrix.command import Command
 class DummyBot:
     async def on_command_error(self, _ctx, _error):
         return None
+
+    async def _on_command_error(self, ctx, error):
+        await self.on_command_error(ctx, error)
+        return False
 
 
 class DummyContext:
@@ -143,6 +147,89 @@ async def test_error_handler():
 
     await cmd(ctx)
     assert called
+
+
+@pytest.mark.asyncio
+async def test_error_handler__with_exception_subclass__expect_handler_called():
+    class BaseCustomError(Exception):
+        pass
+
+    class SubCustomError(BaseCustomError):
+        pass
+
+    async def failing_command(ctx):
+        raise SubCustomError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    handled = None
+
+    @cmd.error(BaseCustomError)
+    async def handler(_ctx, error):
+        nonlocal handled
+        handled = error
+
+    await cmd(ctx)
+    assert isinstance(handled, SubCustomError)
+
+
+@pytest.mark.asyncio
+async def test_error_handler__with_grandparent_exception_class__expect_handler_called():
+    class GrandparentError(Exception):
+        pass
+
+    class ParentError(GrandparentError):
+        pass
+
+    class ChildError(ParentError):
+        pass
+
+    async def failing_command(ctx):
+        raise ChildError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    handled = None
+
+    @cmd.error(GrandparentError)
+    async def handler(_ctx, error):
+        nonlocal handled
+        handled = error
+
+    await cmd(ctx)
+    assert isinstance(handled, ChildError)
+
+
+@pytest.mark.asyncio
+async def test_on_error__with_bot_handler_matched__expect_no_fallback_help():
+    async def failing_command(ctx):
+        raise ValueError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    ctx.bot._on_command_error = AsyncMock(return_value=True)
+    ctx.send_help = AsyncMock()
+
+    await cmd(ctx)
+
+    ctx.send_help.assert_not_called()
+    ctx.logger.exception.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_on_error__with_no_bot_handler_matched__expect_fallback_help():
+    async def failing_command(ctx):
+        raise ValueError("boom")
+
+    cmd = Command(failing_command)
+    ctx = DummyContext(args=[])
+    ctx.bot._on_command_error = AsyncMock(return_value=False)
+    ctx.send_help = AsyncMock()
+
+    await cmd(ctx)
+
+    ctx.send_help.assert_awaited_once()
+    ctx.logger.exception.assert_called_once()
 
 
 @pytest.mark.asyncio

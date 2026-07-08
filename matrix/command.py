@@ -16,6 +16,7 @@ from typing import (
 )
 
 from .errors import MissingArgumentError, CheckError, CooldownError
+from ._error_handler import resolve_error_handler
 from time import monotonic
 from collections import defaultdict, deque
 
@@ -285,12 +286,14 @@ class Command:
         """
         Executes the registered error handler if present.
         """
+        handler = resolve_error_handler(self._error_handlers, error)
 
-        if handler := self._error_handlers.get(type(error)):
+        if handler:
             await handler(ctx, error)
             return
 
-        await ctx.bot.on_command_error(ctx, error)
+        if await ctx.bot._on_command_error(ctx, error):
+            return
 
         if self._on_error:
             await self._on_error(ctx, error)
