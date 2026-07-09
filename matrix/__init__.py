@@ -18,6 +18,7 @@ from .room import Room
 from .space import Space
 from .message import Message
 from .extension import Extension
+from .component import Table
 
 __all__ = [
     "Bot",
@@ -32,4 +33,5 @@ __all__ = [
     "Space",
     "Message",
     "Extension",
+    "Table",
 ]
