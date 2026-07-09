@@ -1,6 +1,15 @@
 from matrix.room import Room
 from nio import AsyncClient
 from matrix.api import matrix_call
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class MemberProfile:
+    displayname: str | None
+    avatar_url: str | None
+    other_info: dict[Any, Any]
 
 
 class Member:
@@ -26,7 +35,7 @@ class Member:
         """
         return f"[{self._user_id}](https://matrix.to/#/{self._user_id})"
 
-    async def get_profile(self) -> dict | None:
+    async def get_profile(self) -> MemberProfile | None:
         """Get the profile information for this member.
 
         ## Example
@@ -41,7 +50,13 @@ class Member:
             self._client.get_profile(self._user_id),
             error_message=f"Failed to get profile for user {self._user_id}",
         )
-        return profile if profile else None
+        if profile:
+            return MemberProfile(
+                displayname=profile.displayname,
+                avatar_url=profile.avatar_url,
+                other_info=profile.other_info,
+            )
+        return None
 
     async def get_display_name(self) -> str | None:
         """Get the display name for this member.

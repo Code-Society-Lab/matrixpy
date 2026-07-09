@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock
 
 from nio import AsyncClient
-from matrix.member import Member
+from matrix.member import Member, MemberProfile
 from matrix.room import Room
 
 
@@ -49,7 +49,11 @@ async def test_get_profile__expect_profile_returned(member, client):
     result = await member.get_profile()
 
     client.get_profile.assert_awaited_once_with("@user:matrix.org")
-    assert result is mock_profile
+    assert result == MemberProfile(
+        displayname="Alice",
+        avatar_url="mxc://matrix.org/avatar",
+        other_info={"chat.commet.profile_status": "Online"},
+    )
 
 
 @pytest.mark.asyncio
