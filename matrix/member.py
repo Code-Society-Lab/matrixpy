@@ -1,5 +1,6 @@
 from matrix.room import Room
 from nio import AsyncClient
+from matrix.api import matrix_call
 
 
 class Member:
@@ -7,9 +8,23 @@ class Member:
         self._user_id: str = user_id
         self._client: AsyncClient = client
 
+    def __str__(self) -> str:
+        return self.mention()
+
     @property
     def user_id(self) -> str:
         return self._user_id
+
+    def mention(self) -> str:
+        """Get a Markdown-formatted mention link (matrix.to pill) for this member.
+
+        ## Example
+
+        ```python
+        await ctx.reply(f"Welcome {member.mention()}!")
+        ```
+        """
+        return f"[{self._user_id}](https://matrix.to/#/{self._user_id})"
 
     async def get_profile(self) -> dict | None:
         """Get the profile information for this member.
@@ -22,7 +37,10 @@ class Member:
             print(f"{key}: {value}")
         ```
         """
-        profile = await self._client.get_profile(self._user_id)
+        profile = await matrix_call(
+            self._client.get_profile(self._user_id),
+            error_message=f"Failed to get profile for user {self._user_id}",
+        )
         return profile if profile else None
 
     async def get_display_name(self) -> str | None:
@@ -35,7 +53,10 @@ class Member:
         print(f"Display name: {display_name}")
         ```
         """
-        display_name = await self._client.get_displayname(self._user_id)
+        display_name = await matrix_call(
+            self._client.get_displayname(self._user_id),
+            error_message=f"Failed to get display name for user {self._user_id}",
+        )
         return display_name.displayname if display_name else None
 
     async def get_avatar_url(self) -> str | None:
@@ -51,26 +72,6 @@ class Member:
         avatar = await self._client.get_avatar(self._user_id)
         return await self._client.mxc_to_http(avatar.avatar_url) if avatar else None
 
-    async def get_room_power_level(self, room: Room) -> int:
-        """Get the power level for this member in a specific room.
-
-        ## Example
-
-        ```python
-        level = await member.get_room_power_level(ctx.room)
-        print(f"Power level in room {room.room_id}: {level}")
-        ```
-        """
-        power_level = await self._client.room_get_state_event(
-            room.room_id, "m.room.power_levels", ""
-        )
-
-        content = getattr(power_level, "content", {}) or {}
-        users = content.get("users", {})
-        default = content.get("users_default", 0)
-
-        return int(users.get(self._user_id, default))
-
     async def get_presence(self) -> str | None:
         """Get the presence status for this member.
 
@@ -81,26 +82,47 @@ class Member:
         print(f"Presence status: {presence}")
         ```
         """
-        presence = await self._client.get_presence(self._user_id)
+        presence = await matrix_call(
+            self._client.get_presence(self._user_id),
+            error_message=f"Failed to get presence for user {self._user_id}",
+        )
         return presence.presence if presence else None
 
-    async def has_permission(self, room: Room, permission: str) -> bool:
+    async def get_room_power_level(self, room: Room) -> int:
+        """Get the power level for this member in a specific room.
+
+        ## Example
+
+        ```python
+        level = await member.get_room_power_level(ctx.room)
+        print(f"Power level in room {room.room_id}: {level}")
+        ```
+        """
+        power_level = await room.get_state_event("m.room.power_levels", "")
+
+        content = getattr(power_level, "content", {}) or {}
+        users = content.get("users", {})
+        default = content.get("users_default", 0)
+
+        return int(users.get(self._user_id, default))
+
+    async def has_room_permission(self, room: Room, permission: str) -> bool:
         """Check if this member has a specific permission in a room.
 
         ## Example
 
         ```python
-        has_permission = await member.has_permission(ctx.room, "ban")
+        has_permission = await member.has_room_permission(ctx.room, "ban")
         print(f"Has ban permission: {has_permission}")
         ```
         """
         power_level = await self.get_room_power_level(room)
-        power_levels_event = await self._client.room_get_state_event(
-            room.room_id, "m.room.power_levels", ""
-        )
+        power_levels_event = await room.get_state_event("m.room.power_levels", "")
 
         content = getattr(power_levels_event, "content", {}) or {}
-        required_level = content.get(permission, 0)
+        required_level = content.get(permission)
+        if required_level is None:
+            return False  # Permission not defined in the room's power levels
 
         return bool(power_level >= required_level)
 
@@ -115,9 +137,7 @@ class Member:
         ```
         """
         power_level = await self.get_room_power_level(room)
-        power_levels_event = await self._client.room_get_state_event(
-            room.room_id, "m.room.power_levels", ""
-        )
+        power_levels_event = await room.get_state_event("m.room.power_levels", "")
 
         content = getattr(power_levels_event, "content", {}) or {}
         events = content.get("events", {})

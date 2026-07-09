@@ -27,6 +27,16 @@ def test_member_user_id__expect_correct_value(member):
     assert member.user_id == "@user:matrix.org"
 
 
+def test_member_mention__expect_matrix_to_link(member):
+    assert (
+        member.mention() == "[@user:matrix.org](https://matrix.to/#/@user:matrix.org)"
+    )
+
+
+def test_member_str__expect_mention(member):
+    assert str(member) == "[@user:matrix.org](https://matrix.to/#/@user:matrix.org)"
+
+
 @pytest.mark.asyncio
 async def test_get_profile__expect_profile_returned(member, client):
     mock_profile = Mock()
@@ -93,38 +103,60 @@ async def test_get_avatar_url_empty__expect_none(member, client):
 
     result = await member.get_avatar_url()
 
+    client.mxc_to_http.assert_not_awaited()
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_get_room_power_level__expect_user_power_level(member, client, room):
+async def test_get_room_power_level__expect_user_power_level(member, room):
     response = Mock()
     response.content = {
         "users": {"@user:matrix.org": 50},
         "users_default": 0,
     }
-    client.room_get_state_event = AsyncMock(return_value=response)
+    room.get_state_event = AsyncMock(return_value=response)
 
     result = await member.get_room_power_level(room)
 
-    client.room_get_state_event.assert_awaited_once_with(
-        "!room:example.com", "m.room.power_levels", ""
-    )
+    room.get_state_event.assert_awaited_once_with("m.room.power_levels", "")
     assert result == 50
 
 
 @pytest.mark.asyncio
-async def test_get_room_power_level_missing_user__expect_default(member, client, room):
+async def test_get_room_power_level_missing_user__expect_default(member, room):
     response = Mock()
     response.content = {
         "users": {},
         "users_default": 10,
     }
-    client.room_get_state_event = AsyncMock(return_value=response)
+    room.get_state_event = AsyncMock(return_value=response)
 
     result = await member.get_room_power_level(room)
 
     assert result == 10
+
+
+@pytest.mark.asyncio
+async def test_get_room_power_level_missing_content__expect_zero(member, room):
+    response = Mock()
+    response.content = None
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.get_room_power_level(room)
+
+    assert result == 0
+
+
+@pytest.mark.asyncio
+async def test_get_room_power_level_missing_event_content_attr__expect_zero(
+    member, room
+):
+    response = object()
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.get_room_power_level(room)
+
+    assert result == 0
 
 
 @pytest.mark.asyncio
@@ -149,31 +181,59 @@ async def test_get_presence_empty__expect_none(member, client):
 
 
 @pytest.mark.asyncio
-async def test_has_permission__expect_true(member, client, room):
+async def test_has_room_permission__expect_true(member, client, room):
     response = Mock()
     response.content = {
         "users": {"@user:matrix.org": 50},
         "users_default": 0,
         "ban": 50,
     }
-    client.room_get_state_event = AsyncMock(return_value=response)
+    room.get_state_event = AsyncMock(return_value=response)
 
-    result = await member.has_permission(room, "ban")
+    result = await member.has_room_permission(room, "ban")
 
+    assert room.get_state_event.await_count == 2
     assert result is True
 
 
 @pytest.mark.asyncio
-async def test_has_permission__expect_false(member, client, room):
+async def test_has_room_permission__expect_false(member, client, room):
     response = Mock()
     response.content = {
         "users": {"@user:matrix.org": 10},
         "users_default": 0,
         "ban": 50,
     }
-    client.room_get_state_event = AsyncMock(return_value=response)
+    room.get_state_event = AsyncMock(return_value=response)
 
-    result = await member.has_permission(room, "ban")
+    result = await member.has_room_permission(room, "ban")
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_has_room_permission_missing_permission__expect_false(
+    member, client, room
+):
+    response = Mock()
+    response.content = {
+        "users": {"@user:matrix.org": 100},
+        "users_default": 0,
+    }
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.has_room_permission(room, "ban")
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_has_room_permission_missing_content__expect_false(member, client, room):
+    response = Mock()
+    response.content = None
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.has_room_permission(room, "ban")
 
     assert result is False
 
@@ -186,10 +246,11 @@ async def test_has_event_permission__expect_true(member, client, room):
         "users_default": 0,
         "events": {"m.room.message": 0},
     }
-    client.room_get_state_event = AsyncMock(return_value=response)
+    room.get_state_event = AsyncMock(return_value=response)
 
     result = await member.has_event_permission(room, "m.room.message")
 
+    assert room.get_state_event.await_count == 2
     assert result is True
 
 
@@ -201,8 +262,36 @@ async def test_has_event_permission__expect_false(member, client, room):
         "users_default": 0,
         "events": {"m.room.power_levels": 100},
     }
-    client.room_get_state_event = AsyncMock(return_value=response)
+    room.get_state_event = AsyncMock(return_value=response)
 
     result = await member.has_event_permission(room, "m.room.power_levels")
 
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_has_event_permission_missing_event_level__expect_true(
+    member, client, room
+):
+    response = Mock()
+    response.content = {
+        "users": {"@user:matrix.org": 0},
+        "users_default": 0,
+        "events": {},
+    }
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.has_event_permission(room, "m.room.message")
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_has_event_permission_missing_content__expect_true(member, client, room):
+    response = Mock()
+    response.content = None
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.has_event_permission(room, "m.room.message")
+
+    assert result is True
