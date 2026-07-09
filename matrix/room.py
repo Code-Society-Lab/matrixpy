@@ -1,6 +1,12 @@
-from typing import Any
+from typing import Any, Union
 
-from nio import AsyncClient, MatrixRoom, Event
+from nio import (
+    AsyncClient,
+    MatrixRoom,
+    Event,
+    RoomGetStateEventResponse,
+    RoomGetStateEventError,
+)
 
 from matrix.api import matrix_call
 from matrix.message import Message
@@ -96,6 +102,14 @@ class Room:
     def encrypted(self) -> bool:
         """Whether the room is encrypted."""
         return self._matrix_room.encrypted  # type: ignore[no-any-return]
+
+    async def get_state_event(
+        self, event_type: str, state_key: str = ""
+    ) -> Union[RoomGetStateEventResponse, RoomGetStateEventError]:
+        return await matrix_call(
+            self._client.room_get_state_event(self.room_id, event_type, state_key),
+            error_message=f"Failed to get state event for room {self._matrix_room.room_id}",
+        )
 
     async def send(
         self,
