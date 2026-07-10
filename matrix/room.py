@@ -117,10 +117,10 @@ class Room:
         self,
         content: str | None = None,
         *,
-        component: Component | None = None,
         raw: bool = False,
         notice: bool = False,
         file: File | None = None,
+        component: Component | None = None,
     ) -> Message:
         """Send a message to the room.
 
