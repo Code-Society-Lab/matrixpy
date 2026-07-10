@@ -76,11 +76,13 @@ class Member:
         print(f"Display name: {display_name}")
         ```
         """
-        display_name = await matrix_call(
+        response = await matrix_call(
             self._client.get_displayname(self._user_id),
             error_message=f"Failed to get display name for user {self._user_id}",
         )
-        return display_name.displayname if display_name.displayname else None
+
+        displayname: str | None = response.displayname
+        return displayname
 
     async def get_avatar_url(self) -> str | None:
         """Get the avatar URL for this member.
@@ -92,15 +94,15 @@ class Member:
         print(f"Avatar URL: {avatar_url}")
         ```
         """
-        avatar = await matrix_call(
+        response = await matrix_call(
             self._client.get_avatar(self._user_id),
             error_message=f"Failed to get avatar for user {self._user_id}",
         )
-        return (
-            await self._client.mxc_to_http(avatar.avatar_url)
-            if avatar.avatar_url
-            else None
-        )
+        if not response.avatar_url:
+            return None
+
+        avatar_url: str | None = await self._client.mxc_to_http(response.avatar_url)
+        return avatar_url
 
     async def get_presence(self) -> MemberPresence:
         """Get the presence status for this member.
@@ -109,7 +111,10 @@ class Member:
 
         ```python
         presence = await member.get_presence()
-        print(f"Presence status: {presence}")
+        print(f"State: {presence.presence}")
+        print(f"Currently active: {presence.currently_active}")
+        print(f"Last active: {presence.last_active_ago} ms ago")
+        print(f"Status: {presence.status_msg}")
         ```
         """
         presence = await matrix_call(

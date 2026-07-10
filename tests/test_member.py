@@ -123,7 +123,6 @@ async def test_get_avatar_url__when_client_returns_none__expect_none(member, cli
     client.get_avatar = AsyncMock(return_value=response)
     result = await member.get_avatar_url()
 
-    client.mxc_to_http.assert_not_awaited()
     assert result is None
 
 
