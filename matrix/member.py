@@ -84,7 +84,10 @@ class Member:
         print(f"Avatar URL: {avatar_url}")
         ```
         """
-        avatar = await self._client.get_avatar(self._user_id)
+        avatar = await matrix_call(
+            self._client.get_avatar(self._user_id),
+            error_message=f"Failed to get avatar for user {self._user_id}",
+        )
         return await self._client.mxc_to_http(avatar.avatar_url) if avatar else None
 
     async def get_presence(self) -> str | None:
@@ -114,8 +117,10 @@ class Member:
         ```
         """
         power_level = await room.get_state_event("m.room.power_levels", "")
+        if power_level is None:
+            return 0
 
-        content = getattr(power_level, "content", {}) or {}
+        content = power_level.content
         users = content.get("users", {})
         default = content.get("users_default", 0)
 
@@ -133,8 +138,10 @@ class Member:
         """
         power_level = await self.get_room_power_level(room)
         power_levels_event = await room.get_state_event("m.room.power_levels", "")
+        if power_levels_event is None:
+            return False
 
-        content = getattr(power_levels_event, "content", {}) or {}
+        content = power_levels_event.content
         required_level = content.get(permission)
         if required_level is None:
             return False  # Permission not defined in the room's power levels
@@ -153,8 +160,10 @@ class Member:
         """
         power_level = await self.get_room_power_level(room)
         power_levels_event = await room.get_state_event("m.room.power_levels", "")
+        if power_levels_event is None:
+            return False
 
-        content = getattr(power_levels_event, "content", {}) or {}
+        content = power_levels_event.content
         events = content.get("events", {})
         required_level = events.get(event_type, 0)
 
