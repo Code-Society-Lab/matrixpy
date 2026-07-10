@@ -35,7 +35,7 @@ class Member:
         """
         return f"[{self._user_id}](https://matrix.to/#/{self._user_id})"
 
-    async def get_profile(self) -> MemberProfile | None:
+    async def get_profile(self) -> MemberProfile:
         """Get the profile information for this member.
 
         ## Example
@@ -50,13 +50,12 @@ class Member:
             self._client.get_profile(self._user_id),
             error_message=f"Failed to get profile for user {self._user_id}",
         )
-        if profile:
-            return MemberProfile(
-                displayname=profile.displayname,
-                avatar_url=profile.avatar_url,
-                other_info=profile.other_info,
-            )
-        return None
+
+        return MemberProfile(
+            displayname=profile.displayname,
+            avatar_url=profile.avatar_url,
+            other_info=profile.other_info,
+        )
 
     async def get_display_name(self) -> str | None:
         """Get the display name for this member.
@@ -117,8 +116,6 @@ class Member:
         ```
         """
         power_level = await room.get_state_event("m.room.power_levels", "")
-        if power_level is None:
-            return 0
 
         content = power_level.content
         users = content.get("users", {})
@@ -136,15 +133,16 @@ class Member:
         print(f"Has ban permission: {has_permission}")
         ```
         """
-        power_level = await self.get_room_power_level(room)
         power_levels_event = await room.get_state_event("m.room.power_levels", "")
-        if power_levels_event is None:
-            return False
 
         content = power_levels_event.content
-        required_level = content.get(permission)
-        if required_level is None:
+        if permission not in content:
             return False  # Permission not defined in the room's power levels
+
+        users = content.get("users", {})
+        default = content.get("user_default", 0)
+        power_level = int(users.get(self._user_id, default))
+        required_level = content.get(permission)
 
         return bool(power_level >= required_level)
 
@@ -160,11 +158,11 @@ class Member:
         """
         power_level = await self.get_room_power_level(room)
         power_levels_event = await room.get_state_event("m.room.power_levels", "")
-        if power_levels_event is None:
-            return False
 
         content = power_levels_event.content
         events = content.get("events", {})
-        required_level = events.get(event_type, 0)
 
-        return bool(power_level >= required_level)
+        if event_type not in events:
+            return False
+
+        return bool(power_level >= events[event_type])

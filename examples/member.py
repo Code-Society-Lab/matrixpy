@@ -12,7 +12,9 @@ async def profile(ctx):
     level = await member.get_room_power_level(ctx.room)
     presence = await member.get_presence()
     has_permission = await member.has_room_permission(ctx.room, "ban")
-    has_event_permission = await member.has_event_permission(ctx.room, "m.room.message")
+    has_event_permission = await member.has_event_permission(
+        ctx.room, "m.room.history_visibility"
+    )
 
     await ctx.reply(
         f"Welcome {member.mention()}!\n"
@@ -21,7 +23,7 @@ async def profile(ctx):
         f"Power level: {level}\n"
         f"Presence: {presence}\n"
         f"Has permission to ban users: {has_permission}\n"
-        f"Has permission to send messages: {has_event_permission}"
+        f"Has permission to see history: {has_event_permission}"
     )
 
 

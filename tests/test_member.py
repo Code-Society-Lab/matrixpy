@@ -75,15 +75,6 @@ async def test_get_profile__with_profile_response__expect_member_profile(
 
 
 @pytest.mark.asyncio
-async def test_get_profile__when_client_returns_none__expect_none(member, client):
-    client.get_profile = AsyncMock(return_value=None)
-
-    result = await member.get_profile()
-
-    assert result is None
-
-
-@pytest.mark.asyncio
 async def test_get_display_name__with_display_name__expect_value(member, client):
     response = ProfileGetDisplayNameResponse(displayname="Alice")
     client.get_displayname = AsyncMock(return_value=response)
@@ -171,8 +162,9 @@ async def test_get_room_power_level__when_content_empty__expect_zero(member, roo
 
 
 @pytest.mark.asyncio
-async def test_get_room_power_level__when_event_is_none__expect_zero(member, room):
-    room.get_state_event = AsyncMock(return_value=None)
+async def test_get_room_power_level__when_users_is_empty__expect_zero(member, room):
+    response = power_levels_response({"users": {}, "users_default": 0})
+    room.get_state_event = AsyncMock(return_value=response)
 
     result = await member.get_room_power_level(room)
 
@@ -220,7 +212,6 @@ async def test_has_room_permission__with_user_level_meeting_requirement__expect_
 
     result = await member.has_room_permission(room, "ban")
 
-    assert room.get_state_event.await_count == 2
     assert result is True
 
 
@@ -292,7 +283,7 @@ async def test_has_event_permission__with_user_level_too_low__expect_false(
 
 
 @pytest.mark.asyncio
-async def test_has_event_permission__when_event_level_not_defined__expect_true(
+async def test_has_event_permission__when_event_level_not_defined__expect_false(
     member, room
 ):
     response = power_levels_response(
@@ -306,4 +297,4 @@ async def test_has_event_permission__when_event_level_not_defined__expect_true(
 
     result = await member.has_event_permission(room, "m.room.message")
 
-    assert result is True
+    assert result is False
