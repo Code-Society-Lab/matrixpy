@@ -48,12 +48,10 @@ class Table(Component):
 
             rows += f"<tr>{''.join(row_cells)}</tr>"
 
-        return f"""<blockquote>
-    <h2>{escape(self.title)}</h2>
+        return f"""<h2>{escape(self.title)}</h2>
     <table>
         <tbody>
             {rows}
         </tbody>
     </table>
-</blockquote>
 """.strip()
