@@ -12,6 +12,15 @@ class MemberProfile:
     other_info: dict[Any, Any]
 
 
+@dataclass
+class MemberPresence:
+    user_id: str
+    presence: str
+    last_active_ago: int | None
+    currently_active: bool | None
+    status_msg: str | None
+
+
 class Member:
     def __init__(self, user_id: str, client: AsyncClient) -> None:
         self._user_id: str = user_id
@@ -71,7 +80,7 @@ class Member:
             self._client.get_displayname(self._user_id),
             error_message=f"Failed to get display name for user {self._user_id}",
         )
-        return display_name.displayname if display_name else None
+        return display_name.displayname if display_name.displayname else None
 
     async def get_avatar_url(self) -> str | None:
         """Get the avatar URL for this member.
@@ -87,9 +96,13 @@ class Member:
             self._client.get_avatar(self._user_id),
             error_message=f"Failed to get avatar for user {self._user_id}",
         )
-        return await self._client.mxc_to_http(avatar.avatar_url) if avatar else None
+        return (
+            await self._client.mxc_to_http(avatar.avatar_url)
+            if avatar.avatar_url
+            else None
+        )
 
-    async def get_presence(self) -> str | None:
+    async def get_presence(self) -> MemberPresence:
         """Get the presence status for this member.
 
         ## Example
@@ -103,7 +116,14 @@ class Member:
             self._client.get_presence(self._user_id),
             error_message=f"Failed to get presence for user {self._user_id}",
         )
-        return presence.presence if presence else None
+
+        return MemberPresence(
+            user_id=presence.user_id,
+            presence=presence.presence,
+            last_active_ago=presence.last_active_ago,
+            currently_active=presence.currently_active,
+            status_msg=presence.status_msg,
+        )
 
     async def get_room_power_level(self, room: Room) -> int:
         """Get the power level for this member in a specific room.
@@ -140,7 +160,7 @@ class Member:
             return False  # Permission not defined in the room's power levels
 
         users = content.get("users", {})
-        default = content.get("user_default", 0)
+        default = content.get("users_default", 0)
         power_level = int(users.get(self._user_id, default))
         required_level = content.get(permission)
 

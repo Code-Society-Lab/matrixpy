@@ -9,7 +9,7 @@ from nio import (
     ProfileGetResponse,
     RoomGetStateEventResponse,
 )
-from matrix.member import Member, MemberProfile
+from matrix.member import Member, MemberProfile, MemberPresence
 from matrix.room import Room
 
 
@@ -96,7 +96,8 @@ async def test_get_display_name__without_display_name__expect_none(member, clien
 
 @pytest.mark.asyncio
 async def test_get_display_name__when_client_returns_none__expect_none(member, client):
-    client.get_displayname = AsyncMock(return_value=None)
+    response = ProfileGetDisplayNameResponse(displayname=None)
+    client.get_displayname = AsyncMock(return_value=response)
 
     result = await member.get_display_name()
 
@@ -118,8 +119,8 @@ async def test_get_avatar_url__with_mxc_avatar__expect_http_url(member, client):
 
 @pytest.mark.asyncio
 async def test_get_avatar_url__when_client_returns_none__expect_none(member, client):
-    client.get_avatar = AsyncMock(return_value=None)
-
+    response = ProfileGetAvatarResponse(avatar_url=None)
+    client.get_avatar = AsyncMock(return_value=response)
     result = await member.get_avatar_url()
 
     client.mxc_to_http.assert_not_awaited()
@@ -172,12 +173,33 @@ async def test_get_room_power_level__when_users_is_empty__expect_zero(member, ro
 
 
 @pytest.mark.asyncio
-async def test_get_presence__with_online_presence__expect_online(member, client):
+async def test_get_presence__with_all_values__expect_all_values(member, client):
+    response = PresenceGetResponse(
+        user_id="@user:matrix.org",
+        presence="online",
+        last_active_ago=1000,
+        currently_active=True,
+        status_msg="Available",
+    )
+    client.get_presence = AsyncMock(return_value=response)
+
+    result = await member.get_presence()
+
+    client.get_presence.assert_awaited_once_with("@user:matrix.org")
+    assert result.user_id == "@user:matrix.org"
+    assert result.presence == "online"
+    assert result.last_active_ago == 1000
+    assert result.currently_active is True
+    assert result.status_msg == "Available"
+
+
+@pytest.mark.asyncio
+async def test_get_presence__without_optional_values__expect_none(member, client):
     response = PresenceGetResponse(
         user_id="@user:matrix.org",
         presence="online",
         last_active_ago=None,
-        currently_active=True,
+        currently_active=None,
         status_msg=None,
     )
     client.get_presence = AsyncMock(return_value=response)
@@ -185,16 +207,11 @@ async def test_get_presence__with_online_presence__expect_online(member, client)
     result = await member.get_presence()
 
     client.get_presence.assert_awaited_once_with("@user:matrix.org")
-    assert result == "online"
-
-
-@pytest.mark.asyncio
-async def test_get_presence__when_client_returns_none__expect_none(member, client):
-    client.get_presence = AsyncMock(return_value=None)
-
-    result = await member.get_presence()
-
-    assert result is None
+    assert result.user_id == "@user:matrix.org"
+    assert result.presence == "online"
+    assert result.last_active_ago is None
+    assert result.currently_active is None
+    assert result.status_msg is None
 
 
 @pytest.mark.asyncio
