@@ -3,14 +3,16 @@ from unittest.mock import AsyncMock, Mock
 
 from nio import (
     AsyncClient,
+    ErrorResponse,
     PresenceGetResponse,
     ProfileGetAvatarResponse,
     ProfileGetDisplayNameResponse,
     ProfileGetResponse,
     RoomGetStateEventResponse,
 )
-from matrix.member import Member, MemberProfile, MemberPresence
+from matrix.member import Member, MemberProfile
 from matrix.room import Room
+from matrix.errors import MatrixError
 
 
 @pytest.fixture
@@ -314,3 +316,25 @@ async def test_has_event_permission__when_event_level_not_defined__expect_false(
     result = await member.has_event_permission(room, "m.room.message")
 
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_get_profile__when_client_returns_error__expect_matrix_error(
+    member, client
+):
+    client.get_profile = AsyncMock(return_value=ErrorResponse("not found"))
+
+    with pytest.raises(MatrixError, match="Failed to get profile"):
+        await member.get_profile()
+
+
+@pytest.mark.asyncio
+async def test_has_room_permission__when_state_event_fails__expect_matrix_error(
+    member, room
+):
+    room.get_state_event = AsyncMock(
+        side_effect=MatrixError("Failed to get state event for room !room:example.com")
+    )
+
+    with pytest.raises(MatrixError):
+        await member.has_room_permission(room, "ban")
