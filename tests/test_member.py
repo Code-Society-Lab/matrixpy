@@ -258,6 +258,36 @@ async def test_has_room_permission__when_permission_not_defined__expect_false(
     )
     room.get_state_event = AsyncMock(return_value=response)
 
+    result = await member.has_room_permission(room, "my.custom.permission")
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_has_room_permission__when_ban_not_explicitly_set__expect_spec_default(
+    member, room
+):
+    # "ban" defaults to power level 50 per the Matrix spec, even when not
+    # explicitly present in the room's power levels event content.
+    response = power_levels_response(
+        {"users": {"@user:matrix.org": 50}, "users_default": 0}
+    )
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.has_room_permission(room, "ban")
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_has_room_permission__when_ban_not_explicitly_set_and_level_too_low__expect_false(
+    member, room
+):
+    response = power_levels_response(
+        {"users": {"@user:matrix.org": 10}, "users_default": 0}
+    )
+    room.get_state_event = AsyncMock(return_value=response)
+
     result = await member.has_room_permission(room, "ban")
 
     assert result is False
@@ -278,7 +308,7 @@ async def test_has_event_permission__with_user_level_meeting_requirement__expect
 
     result = await member.has_event_permission(room, "m.room.message")
 
-    assert room.get_state_event.await_count == 2
+    assert room.get_state_event.await_count == 1
     assert result is True
 
 
@@ -301,7 +331,28 @@ async def test_has_event_permission__with_user_level_too_low__expect_false(
 
 
 @pytest.mark.asyncio
-async def test_has_event_permission__when_event_level_not_defined__expect_false(
+async def test_has_event_permission__when_event_not_listed__falls_back_to_events_default__expect_true(
+    member, room
+):
+    # "m.room.message" is a regular message event and is typically never
+    # listed in "events"; it should fall back to "events_default" (0 here).
+    response = power_levels_response(
+        {
+            "users": {"@user:matrix.org": 0},
+            "users_default": 0,
+            "events": {},
+            "events_default": 0,
+        }
+    )
+    room.get_state_event = AsyncMock(return_value=response)
+
+    result = await member.has_event_permission(room, "m.room.message")
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_has_event_permission__when_event_not_listed_and_below_events_default__expect_false(
     member, room
 ):
     response = power_levels_response(
@@ -309,6 +360,7 @@ async def test_has_event_permission__when_event_level_not_defined__expect_false(
             "users": {"@user:matrix.org": 0},
             "users_default": 0,
             "events": {},
+            "events_default": 50,
         }
     )
     room.get_state_event = AsyncMock(return_value=response)

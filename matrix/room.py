@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 from nio import (
     AsyncClient,
@@ -105,7 +105,7 @@ class Room:
 
     async def get_state_event(
         self, event_type: str, state_key: str = ""
-    ) -> Union[RoomGetStateEventResponse, RoomGetStateEventError]:
+    ) -> RoomGetStateEventResponse | RoomGetStateEventError:
         return await matrix_call(
             self._client.room_get_state_event(self.room_id, event_type, state_key),
             error_message=f"Failed to get state event for room {self._matrix_room.room_id}",

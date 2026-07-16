@@ -4,12 +4,25 @@ from matrix.api import matrix_call
 from dataclasses import dataclass
 from typing import Any
 
+# Defaults defined by the Matrix spec for m.room.power_levels content,
+# used when a key isn't explicitly set in the room's power levels event.
+# https://spec.matrix.org/latest/client-server-api/#mroompower_levels
+_POWER_LEVEL_DEFAULTS = {
+    "ban": 50,
+    "kick": 50,
+    "redact": 50,
+    "invite": 0,
+    "state_default": 50,
+    "events_default": 0,
+    "users_default": 0,
+}
+
 
 @dataclass
 class MemberProfile:
     displayname: str | None
     avatar_url: str | None
-    other_info: dict[Any, Any]
+    other_info: dict[str, Any]
 
 
 @dataclass
@@ -130,6 +143,11 @@ class Member:
             status_msg=presence.status_msg,
         )
 
+    def _user_power_level(self, content: dict[str, Any]) -> int:
+        users = content.get("users", {})
+        default = content.get("users_default", _POWER_LEVEL_DEFAULTS["users_default"])
+        return int(users.get(self._user_id, default))
+
     async def get_room_power_level(self, room: Room) -> int:
         """Get the power level for this member in a specific room.
 
@@ -140,16 +158,17 @@ class Member:
         print(f"Power level in room {room.room_id}: {level}")
         ```
         """
-        power_level = await room.get_state_event("m.room.power_levels", "")
-
-        content = power_level.content
-        users = content.get("users", {})
-        default = content.get("users_default", 0)
-
-        return int(users.get(self._user_id, default))
+        power_levels = await room.get_state_event("m.room.power_levels", "")
+        return self._user_power_level(power_levels.content)
 
     async def has_room_permission(self, room: Room, permission: str) -> bool:
         """Check if this member has a specific permission in a room.
+
+        Permissions not explicitly set in the room's power levels event fall
+        back to the defaults defined by the Matrix spec (e.g. `ban`/`kick`
+        default to 50). Unrecognized/custom permission keys not present in
+        the room's power levels event are treated as undefined and deny
+        access.
 
         ## Example
 
@@ -158,21 +177,25 @@ class Member:
         print(f"Has ban permission: {has_permission}")
         ```
         """
-        power_levels_event = await room.get_state_event("m.room.power_levels", "")
+        power_levels = await room.get_state_event("m.room.power_levels", "")
+        content = power_levels.content
 
-        content = power_levels_event.content
-        if permission not in content:
-            return False  # Permission not defined in the room's power levels
+        if permission not in content and permission not in _POWER_LEVEL_DEFAULTS:
+            return False
 
-        users = content.get("users", {})
-        default = content.get("users_default", 0)
-        power_level = int(users.get(self._user_id, default))
-        required_level = content.get(permission)
+        power_level = self._user_power_level(content)
+        required_level = content.get(
+            permission, _POWER_LEVEL_DEFAULTS.get(permission, 0)
+        )
 
         return bool(power_level >= required_level)
 
     async def has_event_permission(self, room: Room, event_type: str) -> bool:
         """Check if this member has permission to send a specific event type in a room.
+
+        Event types not explicitly listed in the room's power levels event
+        fall back to `events_default` (spec default 0), which covers regular
+        message events such as `m.room.message`.
 
         ## Example
 
@@ -181,13 +204,14 @@ class Member:
         print(f"Can send messages: {can_send_message}")
         ```
         """
-        power_level = await self.get_room_power_level(room)
-        power_levels_event = await room.get_state_event("m.room.power_levels", "")
+        power_levels = await room.get_state_event("m.room.power_levels", "")
+        content = power_levels.content
+        power_level = self._user_power_level(content)
 
-        content = power_levels_event.content
         events = content.get("events", {})
+        events_default = content.get(
+            "events_default", _POWER_LEVEL_DEFAULTS["events_default"]
+        )
+        required_level = events.get(event_type, events_default)
 
-        if event_type not in events:
-            return False
-
-        return bool(power_level >= events[event_type])
+        return bool(power_level >= required_level)
