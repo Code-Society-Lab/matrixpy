@@ -7,6 +7,7 @@ from .errors import MatrixError
 from .message import Message
 from .room import Room
 from .types import File, Image
+from .member import Member
 
 if TYPE_CHECKING:
     from .bot import Bot  # pragma: no cover
@@ -23,6 +24,7 @@ class Context:
         self.bot = bot
         self.room = room
         self.event = event
+        self.member = Member(event.sender, bot.client)
 
         self.body: str = getattr(event, "body", "")
         self.sender: str = event.sender
