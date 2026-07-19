@@ -265,7 +265,7 @@ def test_message_repr__expect_formatted_string(message):
 @pytest.mark.asyncio
 async def test_pin_no_existing_pinned_events__expect_state_updated(message, client):
     mock_get_error = MagicMock(spec=RoomGetStateEventError)
-    mock_get_error.status_code = "404"
+    mock_get_error.status_code = "M_NOT_FOUND"
     client.room_get_state_event = AsyncMock(return_value=mock_get_error)
 
     client.room_put_state = AsyncMock(return_value=MagicMock())
@@ -318,7 +318,7 @@ async def test_pin_already_pinned__expect_no_state_update(message, client):
 @pytest.mark.asyncio
 async def test_pin_with_forbidden_error__expect_matrix_error(message, client):
     mock_get_error = MagicMock(spec=RoomGetStateEventError)
-    mock_get_error.status_code = "403"
+    mock_get_error.status_code = "M_FORBIDDEN"
     mock_get_error.message = "Forbidden"
     client.room_get_state_event = AsyncMock(return_value=mock_get_error)
 
@@ -329,7 +329,7 @@ async def test_pin_with_forbidden_error__expect_matrix_error(message, client):
 @pytest.mark.asyncio
 async def test_pin_with_put_error__expect_matrix_error(message, client):
     mock_get_error = MagicMock(spec=RoomGetStateEventError)
-    mock_get_error.status_code = "404"
+    mock_get_error.status_code = "M_NOT_FOUND"
     client.room_get_state_event = AsyncMock(return_value=mock_get_error)
 
     client.room_put_state = AsyncMock(
@@ -373,7 +373,7 @@ async def test_unpin_event_not_pinned__expect_no_state_update(message, client):
 @pytest.mark.asyncio
 async def test_unpin_no_pinned_events__expect_no_state_update(message, client):
     mock_get_error = MagicMock(spec=RoomGetStateEventError)
-    mock_get_error.status_code = "404"
+    mock_get_error.status_code = "M_NOT_FOUND"
     client.room_get_state_event = AsyncMock(return_value=mock_get_error)
 
     client.room_put_state = AsyncMock()
