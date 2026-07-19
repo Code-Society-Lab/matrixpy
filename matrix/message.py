@@ -190,7 +190,7 @@ class Message:
         if isinstance(response, RoomGetStateEventResponse):
             return list(response.content.get("pinned", []))
         if isinstance(response, RoomGetStateEventError):
-            if response.status_code == "404":
+            if response.status_code == "M_NOT_FOUND":
                 return []
             raise MatrixError(f"Failed to fetch pinned events: {response.message}")
 
