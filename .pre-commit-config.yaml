@@ -1,0 +1,44 @@
+default_language_version:
+  python: python3
+
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        stages: [pre-commit]
+      - id: check-toml
+        stages: [pre-commit]
+      - id: check-yaml
+        exclude: ^docs/mkdocs\.yml$
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: python -m black
+        language: system
+        stages: [pre-commit]
+        types_or: [python, pyi]
+
+      - id: mypy
+        name: mypy
+        entry: python -m mypy matrix
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        types_or: [python, pyi]
+
+      - id: pytest
+        name: pytest
+        entry: python -m pytest
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

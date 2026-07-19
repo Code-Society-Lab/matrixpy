@@ -1,0 +1,217 @@
+from matrix.room import Room
+from nio import AsyncClient
+from matrix.api import matrix_call
+from dataclasses import dataclass
+from typing import Any
+
+# Defaults defined by the Matrix spec for m.room.power_levels content,
+# used when a key isn't explicitly set in the room's power levels event.
+# https://spec.matrix.org/latest/client-server-api/#mroompower_levels
+_POWER_LEVEL_DEFAULTS = {
+    "ban": 50,
+    "kick": 50,
+    "redact": 50,
+    "invite": 0,
+    "state_default": 50,
+    "events_default": 0,
+    "users_default": 0,
+}
+
+
+@dataclass
+class MemberProfile:
+    displayname: str | None
+    avatar_url: str | None
+    other_info: dict[str, Any]
+
+
+@dataclass
+class MemberPresence:
+    user_id: str
+    presence: str
+    last_active_ago: int | None
+    currently_active: bool | None
+    status_msg: str | None
+
+
+class Member:
+    def __init__(self, user_id: str, client: AsyncClient) -> None:
+        self._user_id: str = user_id
+        self._client: AsyncClient = client
+
+    def __str__(self) -> str:
+        return self.mention()
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    def mention(self) -> str:
+        """Get a Markdown-formatted mention link (matrix.to pill) for this member.
+
+        ## Example
+
+        ```python
+        await ctx.reply(f"Welcome {member.mention()}!")
+        ```
+        """
+        return f"[{self._user_id}](https://matrix.to/#/{self._user_id})"
+
+    async def get_profile(self) -> MemberProfile:
+        """Get the profile information for this member.
+
+        ## Example
+
+        ```python
+        profile = await member.get_profile()
+        for key, value in profile.other_info.items():
+            print(f"{key}: {value}")
+        ```
+        """
+        profile = await matrix_call(
+            self._client.get_profile(self._user_id),
+            error_message=f"Failed to get profile for user {self._user_id}",
+        )
+
+        return MemberProfile(
+            displayname=profile.displayname,
+            avatar_url=profile.avatar_url,
+            other_info=profile.other_info,
+        )
+
+    async def get_display_name(self) -> str | None:
+        """Get the display name for this member.
+
+        ## Example
+
+        ```python
+        display_name = await member.get_display_name()
+        print(f"Display name: {display_name}")
+        ```
+        """
+        response = await matrix_call(
+            self._client.get_displayname(self._user_id),
+            error_message=f"Failed to get display name for user {self._user_id}",
+        )
+
+        displayname: str | None = response.displayname
+        return displayname
+
+    async def get_avatar_url(self) -> str | None:
+        """Get the avatar URL for this member.
+
+        ## Example
+
+        ```python
+        avatar_url = await member.get_avatar_url()
+        print(f"Avatar URL: {avatar_url}")
+        ```
+        """
+        response = await matrix_call(
+            self._client.get_avatar(self._user_id),
+            error_message=f"Failed to get avatar for user {self._user_id}",
+        )
+        if not response.avatar_url:
+            return None
+
+        avatar_url: str | None = await self._client.mxc_to_http(response.avatar_url)
+        return avatar_url
+
+    async def get_presence(self) -> MemberPresence:
+        """Get the presence status for this member.
+
+        ## Example
+
+        ```python
+        presence = await member.get_presence()
+        print(f"State: {presence.presence}")
+        print(f"Currently active: {presence.currently_active}")
+        print(f"Last active: {presence.last_active_ago} ms ago")
+        print(f"Status: {presence.status_msg}")
+        ```
+        """
+        presence = await matrix_call(
+            self._client.get_presence(self._user_id),
+            error_message=f"Failed to get presence for user {self._user_id}",
+        )
+
+        return MemberPresence(
+            user_id=presence.user_id,
+            presence=presence.presence,
+            last_active_ago=presence.last_active_ago,
+            currently_active=presence.currently_active,
+            status_msg=presence.status_msg,
+        )
+
+    def _user_power_level(self, content: dict[str, Any]) -> int:
+        users = content.get("users", {})
+        default = content.get("users_default", _POWER_LEVEL_DEFAULTS["users_default"])
+        return int(users.get(self._user_id, default))
+
+    async def get_room_power_level(self, room: Room) -> int:
+        """Get the power level for this member in a specific room.
+
+        ## Example
+
+        ```python
+        level = await member.get_room_power_level(ctx.room)
+        print(f"Power level in room {room.room_id}: {level}")
+        ```
+        """
+        power_levels = await room.get_state_event("m.room.power_levels", "")
+        return self._user_power_level(power_levels.content)
+
+    async def has_room_permission(self, room: Room, permission: str) -> bool:
+        """Check if this member has a specific permission in a room.
+
+        Permissions not explicitly set in the room's power levels event fall
+        back to the defaults defined by the Matrix spec (e.g. `ban`/`kick`
+        default to 50). Unrecognized/custom permission keys not present in
+        the room's power levels event are treated as undefined and deny
+        access.
+
+        ## Example
+
+        ```python
+        has_permission = await member.has_room_permission(ctx.room, "ban")
+        print(f"Has ban permission: {has_permission}")
+        ```
+        """
+        power_levels = await room.get_state_event("m.room.power_levels", "")
+        content = power_levels.content
+
+        if permission not in content and permission not in _POWER_LEVEL_DEFAULTS:
+            return False
+
+        power_level = self._user_power_level(content)
+        required_level = content.get(
+            permission, _POWER_LEVEL_DEFAULTS.get(permission, 0)
+        )
+
+        return bool(power_level >= required_level)
+
+    async def has_event_permission(self, room: Room, event_type: str) -> bool:
+        """Check if this member has permission to send a specific event type in a room.
+
+        Event types not explicitly listed in the room's power levels event
+        fall back to `events_default` (spec default 0), which covers regular
+        message events such as `m.room.message`.
+
+        ## Example
+
+        ```python
+        can_send_message = await member.has_event_permission(ctx.room, "m.room.message")
+        print(f"Can send messages: {can_send_message}")
+        ```
+        """
+        power_levels = await room.get_state_event("m.room.power_levels", "")
+        content = power_levels.content
+        power_level = self._user_power_level(content)
+
+        events = content.get("events", {})
+        events_default = content.get(
+            "events_default", _POWER_LEVEL_DEFAULTS["events_default"]
+        )
+        required_level = events.get(event_type, events_default)
+
+        return bool(power_level >= required_level)

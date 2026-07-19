@@ -42,7 +42,7 @@ Make your command clearer by adding a description:
 async def ping(ctx):
     await ctx.reply("Pong 🏓")
 ```
-This description shows up in the help command when users type !help ping. 
+This description shows up in the help command when users type !help ping.
 
 ### Customizing the Command Name
 Sometimes you want the command name to be different from the function name:
@@ -67,14 +67,14 @@ As you saw, every command must have a ctx (context) parameter. The [`Context`](.
 async def whoami(ctx):
     # Who sent the command?
     sender = ctx.sender  # "@alice:example.com"
-    
+
     # What room are we in?
     room_name = ctx.room_name  # "General Chat"
     room_id = ctx.room_id  # "!abc123:example.com"
-    
+
     # What was the message?
     message = ctx.body  # "!whoami"
-    
+
     # Send all this info back
     await ctx.reply(f"You are {sender} in {room_name} ({room_id}) and your message was {message}")
 ```
