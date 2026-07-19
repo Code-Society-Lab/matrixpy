@@ -4,6 +4,9 @@ from nio import (
     MatrixRoom,
     AsyncClient,
     Event,
+    RoomGetStateEventResponse,
+    RoomGetStateEventError,
+    RoomPutStateError,
     RoomSendError,
     RoomRedactError,
 )
@@ -257,3 +260,138 @@ def test_message_client__expect_correct_reference(message, client):
 def test_message_repr__expect_formatted_string(message):
     result = repr(message)
     assert result == "<Message id='$event123' body='Hello world!'>"
+
+
+@pytest.mark.asyncio
+async def test_pin_no_existing_pinned_events__expect_state_updated(message, client):
+    mock_get_error = MagicMock(spec=RoomGetStateEventError)
+    mock_get_error.status_code = "M_NOT_FOUND"
+    client.room_get_state_event = AsyncMock(return_value=mock_get_error)
+
+    client.room_put_state = AsyncMock(return_value=MagicMock())
+
+    await message.pin()
+
+    client.room_get_state_event.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_type="m.room.pinned_events",
+    )
+    client.room_put_state.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_type="m.room.pinned_events",
+        content={"pinned": ["$event123"]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_pin_with_existing_pinned_events__expect_appended_state_updated(
+    message, client
+):
+    mock_get_resp = MagicMock(spec=RoomGetStateEventResponse)
+    mock_get_resp.content = {"pinned": ["$other_event"]}
+    client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
+
+    client.room_put_state = AsyncMock(return_value=MagicMock())
+
+    await message.pin()
+
+    client.room_put_state.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_type="m.room.pinned_events",
+        content={"pinned": ["$other_event", "$event123"]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_pin_already_pinned__expect_no_state_update(message, client):
+    mock_get_resp = MagicMock(spec=RoomGetStateEventResponse)
+    mock_get_resp.content = {"pinned": ["$event123"]}
+    client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
+
+    client.room_put_state = AsyncMock()
+
+    await message.pin()
+
+    client.room_put_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_pin_with_forbidden_error__expect_matrix_error(message, client):
+    mock_get_error = MagicMock(spec=RoomGetStateEventError)
+    mock_get_error.status_code = "M_FORBIDDEN"
+    mock_get_error.message = "Forbidden"
+    client.room_get_state_event = AsyncMock(return_value=mock_get_error)
+
+    with pytest.raises(MatrixError, match="Failed to fetch pinned events: Forbidden"):
+        await message.pin()
+
+
+@pytest.mark.asyncio
+async def test_pin_with_put_error__expect_matrix_error(message, client):
+    mock_get_error = MagicMock(spec=RoomGetStateEventError)
+    mock_get_error.status_code = "M_NOT_FOUND"
+    client.room_get_state_event = AsyncMock(return_value=mock_get_error)
+
+    client.room_put_state = AsyncMock(
+        return_value=RoomPutStateError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to pin message: .*M_FORBIDDEN"):
+        await message.pin()
+
+
+@pytest.mark.asyncio
+async def test_unpin_event_is_pinned__expect_state_updated(message, client):
+    mock_get_resp = MagicMock(spec=RoomGetStateEventResponse)
+    mock_get_resp.content = {"pinned": ["$other_event", "$event123"]}
+    client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
+
+    client.room_put_state = AsyncMock(return_value=MagicMock())
+
+    await message.unpin()
+
+    client.room_put_state.assert_awaited_once_with(
+        room_id="!room:example.com",
+        event_type="m.room.pinned_events",
+        content={"pinned": ["$other_event"]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_unpin_event_not_pinned__expect_no_state_update(message, client):
+    mock_get_resp = MagicMock(spec=RoomGetStateEventResponse)
+    mock_get_resp.content = {"pinned": ["$other_event"]}
+    client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
+
+    client.room_put_state = AsyncMock()
+
+    await message.unpin()
+
+    client.room_put_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_unpin_no_pinned_events__expect_no_state_update(message, client):
+    mock_get_error = MagicMock(spec=RoomGetStateEventError)
+    mock_get_error.status_code = "M_NOT_FOUND"
+    client.room_get_state_event = AsyncMock(return_value=mock_get_error)
+
+    client.room_put_state = AsyncMock()
+
+    await message.unpin()
+
+    client.room_put_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_unpin_with_put_error__expect_matrix_error(message, client):
+    mock_get_resp = MagicMock(spec=RoomGetStateEventResponse)
+    mock_get_resp.content = {"pinned": ["$event123"]}
+    client.room_get_state_event = AsyncMock(return_value=mock_get_resp)
+
+    client.room_put_state = AsyncMock(
+        return_value=RoomPutStateError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to unpin message: .*M_FORBIDDEN"):
+        await message.unpin()
