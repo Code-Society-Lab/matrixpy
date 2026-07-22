@@ -29,7 +29,9 @@ def matrix_room():
 
 @pytest.fixture
 def client():
-    return AsyncMock(spec=AsyncClient)
+    client = AsyncMock(spec=AsyncClient)
+    client.user_id = "@bot:matrix.org"
+    return client
 
 
 @pytest.fixture
@@ -107,6 +109,60 @@ async def test_react_with_api_error__expect_matrix_error(message, client):
 
     with pytest.raises(MatrixError, match="Failed to add reaction"):
         await message.react("😀")
+
+
+@pytest.mark.asyncio
+async def test_unreact__expect_own_matching_reaction_redacted(message, client):
+    own_reaction = MagicMock(event_id="$reaction1", key="👍", sender="@bot:matrix.org")
+    other_reaction = MagicMock(
+        event_id="$reaction2", key="👍", sender="@alice:matrix.org"
+    )
+
+    async def mock_relations(*args, **kwargs):
+        for reaction in [other_reaction, own_reaction]:
+            yield reaction
+
+    client.room_get_event_relations = mock_relations
+    client.room_redact = AsyncMock()
+
+    await message.unreact("👍")
+
+    client.room_redact.assert_awaited_once_with(
+        room_id="!room:example.com", event_id="$reaction1"
+    )
+
+
+@pytest.mark.asyncio
+async def test_unreact_without_matching_reaction__expect_no_redaction(message, client):
+    other_reaction = MagicMock(
+        event_id="$reaction2", key="👍", sender="@alice:matrix.org"
+    )
+
+    async def mock_relations(*args, **kwargs):
+        yield other_reaction
+
+    client.room_get_event_relations = mock_relations
+    client.room_redact = AsyncMock()
+
+    await message.unreact("👍")
+
+    client.room_redact.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_unreact_with_api_error__expect_matrix_error(message, client):
+    own_reaction = MagicMock(event_id="$reaction1", key="👍", sender="@bot:matrix.org")
+
+    async def mock_relations(*args, **kwargs):
+        yield own_reaction
+
+    client.room_get_event_relations = mock_relations
+    client.room_redact = AsyncMock(
+        return_value=RoomRedactError("not allowed", "M_FORBIDDEN")
+    )
+
+    with pytest.raises(MatrixError, match="Failed to remove reaction"):
+        await message.unreact("👍")
 
 
 @pytest.mark.asyncio

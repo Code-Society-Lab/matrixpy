@@ -131,6 +131,48 @@ class Message:
             error_message="Failed to add reaction",
         )
 
+    async def unreact(self, emoji: str) -> None:
+        """Remove this client's reaction emoji from the message.
+
+        If the client has not reacted with the requested emoji, this method
+        does nothing.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def toggle(ctx: Context):
+            msg = await ctx.reply("React to this!")
+            await msg.react("👍")
+            await msg.unreact("👍")
+        ```
+        """
+        reaction_event_id = None
+        try:
+            async for event in self.client.room_get_event_relations(
+                room_id=self.room.room_id,
+                event_id=self.event_id,
+            ):
+                if (
+                    getattr(event, "key", None) == emoji
+                    and getattr(event, "sender", None) == self.client.user_id
+                ):
+                    reaction_event_id = getattr(event, "event_id", None)
+                    if reaction_event_id:
+                        break
+        except Exception as e:
+            raise MatrixError(f"Failed to remove reaction: {e}") from e
+
+        if reaction_event_id is None:
+            return
+
+        await matrix_call(
+            self.client.room_redact(
+                room_id=self.room.room_id,
+                event_id=reaction_event_id,
+            ),
+            error_message="Failed to remove reaction",
+        )
+
     async def edit(self, new_body: str) -> None:
         """Updates the message content to the new text.
 
