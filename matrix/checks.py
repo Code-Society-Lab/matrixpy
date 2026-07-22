@@ -5,6 +5,10 @@ if TYPE_CHECKING:
     from .context import Context
 
 
+ADMIN_POWER_LEVEL: int = 100
+MODERATOR_POWER_LEVEL: int = 50
+
+
 def cooldown(rate: int, period: float) -> Callable:
     """
     Decorator to cooldown a command.
@@ -32,7 +36,8 @@ def cooldown(rate: int, period: float) -> Callable:
 
 def is_admin() -> Callable:
     """
-    Decorator to restrict a command to room admins (power level >= 100).
+    Decorator to restrict a command to room admins
+    (power level >= `ADMIN_POWER_LEVEL`).
 
     ## Example
 
@@ -49,7 +54,8 @@ def is_admin() -> Callable:
     """
 
     async def _is_admin(ctx: "Context") -> bool:
-        return ctx.room.power_levels.get_user_level(ctx.sender) >= 100  # type: ignore[no-any-return]
+        level = ctx.room.power_levels.get_user_level(ctx.sender)
+        return level >= ADMIN_POWER_LEVEL  # type: ignore[no-any-return]
 
     def wrapper(cmd: "Command") -> "Command":
         cmd.check(_is_admin)
@@ -60,7 +66,8 @@ def is_admin() -> Callable:
 
 def is_moderator() -> Callable:
     """
-    Decorator to restrict a command to room moderators (power level >= 50).
+    Decorator to restrict a command to room moderators
+    (power level >= `MODERATOR_POWER_LEVEL`).
 
     ## Example
 
@@ -77,7 +84,8 @@ def is_moderator() -> Callable:
     """
 
     async def _is_moderator(ctx: "Context") -> bool:
-        return ctx.room.power_levels.get_user_level(ctx.sender) >= 50  # type: ignore[no-any-return]
+        level = ctx.room.power_levels.get_user_level(ctx.sender)
+        return level >= MODERATOR_POWER_LEVEL  # type: ignore[no-any-return]
 
     def wrapper(cmd: "Command") -> "Command":
         cmd.check(_is_moderator)

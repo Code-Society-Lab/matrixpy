@@ -3,7 +3,12 @@ import pytest
 from unittest.mock import AsyncMock, Mock
 from nio import MatrixRoom, RoomMessageText, AsyncClient, PowerLevels
 
-from matrix.checks import is_admin, is_moderator
+from matrix.checks import (
+    ADMIN_POWER_LEVEL,
+    MODERATOR_POWER_LEVEL,
+    is_admin,
+    is_moderator,
+)
 from matrix.command import Command
 from matrix.context import Context
 from matrix.errors import CheckError
@@ -51,9 +56,9 @@ def make_context(bot, client, sender: str, level: int) -> Context:
 @pytest.mark.parametrize(
     "level, expected",
     [
-        (100, True),
-        (99, False),
-        (50, False),
+        (ADMIN_POWER_LEVEL, True),
+        (ADMIN_POWER_LEVEL - 1, False),
+        (MODERATOR_POWER_LEVEL, False),
         (0, False),
     ],
 )
@@ -76,9 +81,9 @@ async def test_is_admin_check__respects_power_level_boundaries(
 @pytest.mark.parametrize(
     "level, expected",
     [
-        (100, True),
-        (50, True),
-        (49, False),
+        (ADMIN_POWER_LEVEL, True),
+        (MODERATOR_POWER_LEVEL, True),
+        (MODERATOR_POWER_LEVEL - 1, False),
         (0, False),
     ],
 )
@@ -170,7 +175,13 @@ async def test_is_moderator__allows_command_when_moderator(bot, client):
     cmd = Command(restricted)
     is_moderator()(cmd)
 
-    ctx = make_context(bot, client, "@mod:example.com", 50)
+    ctx = make_context(bot, client, "@mod:example.com", MODERATOR_POWER_LEVEL)
     await cmd(ctx)
 
     assert called is True
+
+
+def test_power_level_constants__match_matrix_defaults():
+    """The thresholds follow the defaults of `m.room.power_levels`."""
+    assert ADMIN_POWER_LEVEL == 100
+    assert MODERATOR_POWER_LEVEL == 50
