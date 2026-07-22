@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Self
 
 from nio import (
@@ -7,7 +8,7 @@ from nio import (
     RoomGetStateEventResponse,
 )
 
-from matrix.types import Reaction
+from matrix.types import Reaction, ReactionEvent
 from matrix.content import ReactionContent, EditContent
 from matrix.errors import MatrixError
 from matrix.api import matrix_call
@@ -76,6 +77,13 @@ class Message:
         """
         raw: dict[str, list[str]] = {}
 
+        async for reaction_event in self._iter_reaction_events():
+            raw.setdefault(reaction_event.emoji, []).append(reaction_event.sender)
+
+        return [Reaction(key=emoji, senders=senders) for emoji, senders in raw.items()]
+
+    async def _iter_reaction_events(self) -> AsyncIterator[ReactionEvent]:
+        """Yield complete reaction relation events for this message."""
         try:
             async for event in self.client.room_get_event_relations(
                 room_id=self.room.room_id,
@@ -83,13 +91,16 @@ class Message:
             ):
                 emoji = getattr(event, "key", None)
                 sender = getattr(event, "sender", None)
+                event_id = getattr(event, "event_id", None)
 
-                if emoji and sender:
-                    raw.setdefault(emoji, []).append(sender)
+                if emoji and sender and event_id:
+                    yield ReactionEvent(
+                        emoji=emoji,
+                        sender=sender,
+                        event_id=event_id,
+                    )
         except Exception as e:
-            raise MatrixError(f"Failed to fetch reactions: {e}")
-
-        return [Reaction(key=emoji, senders=senders) for emoji, senders in raw.items()]
+            raise MatrixError(f"Failed to fetch reactions: {e}") from e
 
     async def reply(self, body: str) -> "Message":
         """Reply to this message.
@@ -147,20 +158,13 @@ class Message:
         ```
         """
         reaction_event_id = None
-        try:
-            async for event in self.client.room_get_event_relations(
-                room_id=self.room.room_id,
-                event_id=self.event_id,
+        async for reaction_event in self._iter_reaction_events():
+            if (
+                reaction_event.emoji == emoji
+                and reaction_event.sender == self.client.user_id
             ):
-                if (
-                    getattr(event, "key", None) == emoji
-                    and getattr(event, "sender", None) == self.client.user_id
-                ):
-                    reaction_event_id = getattr(event, "event_id", None)
-                    if reaction_event_id:
-                        break
-        except Exception as e:
-            raise MatrixError(f"Failed to remove reaction: {e}") from e
+                reaction_event_id = reaction_event.event_id
+                break
 
         if reaction_event_id is None:
             return

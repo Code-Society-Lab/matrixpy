@@ -150,6 +150,18 @@ async def test_unreact_without_matching_reaction__expect_no_redaction(message, c
 
 
 @pytest.mark.asyncio
+async def test_unreact_with_relations_error__expect_matrix_error(message, client):
+    async def mock_relations(*args, **kwargs):
+        raise Exception("Network error")
+        yield
+
+    client.room_get_event_relations = mock_relations
+
+    with pytest.raises(MatrixError, match="Failed to fetch reactions: Network error"):
+        await message.unreact("👍")
+
+
+@pytest.mark.asyncio
 async def test_unreact_with_api_error__expect_matrix_error(message, client):
     own_reaction = MagicMock(event_id="$reaction1", key="👍", sender="@bot:matrix.org")
 
