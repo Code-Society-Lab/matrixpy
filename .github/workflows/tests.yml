@@ -23,13 +23,22 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .[dev]
+          pip install -e .[dev]
       - name: Lint with Black
+        id: black
+        continue-on-error: true
         run: |
           black --check matrix/ tests/ examples/
       - name: Check typing with mypy
+        id: mypy
+        continue-on-error: true
         run: |
           mypy matrix
       - name: Test with pytest
+        id: pytest
+        continue-on-error: true
         run: |
-          pytest -v
+          pytest -v --cov=matrix --cov-report=term-missing --cov-fail-under=90
+      - name: All checks succeeded
+        if: steps.black.outcome == 'failure' || steps.mypy.outcome == 'failure' || steps.pytest.outcome == 'failure'
+        run: exit 1

@@ -1,6 +1,11 @@
 from typing import TYPE_CHECKING, Self
 
-from nio import AsyncClient, Event
+from nio import (
+    AsyncClient,
+    Event,
+    RoomGetStateEventError,
+    RoomGetStateEventResponse,
+)
 
 from matrix.types import Reaction
 from matrix.content import ReactionContent, EditContent
@@ -174,4 +179,71 @@ class Message:
                 reason=reason,
             ),
             error_message="Failed to delete message",
+        )
+
+    async def _fetch_pinned(self) -> list[str]:
+        response = await self.client.room_get_state_event(
+            room_id=self.room.room_id,
+            event_type="m.room.pinned_events",
+        )
+
+        if isinstance(response, RoomGetStateEventResponse):
+            return list(response.content.get("pinned", []))
+        if isinstance(response, RoomGetStateEventError):
+            if response.status_code == "M_NOT_FOUND":
+                return []
+            raise MatrixError(f"Failed to fetch pinned events: {response.message}")
+
+        raise MatrixError("Unexpected response type when fetching pinned events")
+
+    async def pin(self) -> None:
+        """Pin this message to the room.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def pin(ctx: Context):
+            await ctx.message.pin()
+        ```
+        """
+        pinned = await self._fetch_pinned()
+
+        if self.event_id in pinned:
+            return
+
+        pinned.append(self.event_id)
+
+        await matrix_call(
+            self.client.room_put_state(
+                room_id=self.room.room_id,
+                event_type="m.room.pinned_events",
+                content={"pinned": pinned},
+            ),
+            error_message="Failed to pin message",
+        )
+
+    async def unpin(self) -> None:
+        """Unpin this message from the room.
+
+        ## Example
+        ```python
+        @bot.command()
+        async def unpin(ctx: Context):
+            await ctx.message.unpin()
+        ```
+        """
+        pinned = await self._fetch_pinned()
+
+        if self.event_id not in pinned:
+            return
+
+        pinned.remove(self.event_id)
+
+        await matrix_call(
+            self.client.room_put_state(
+                room_id=self.room.room_id,
+                event_type="m.room.pinned_events",
+                content={"pinned": pinned},
+            ),
+            error_message="Failed to unpin message",
         )
