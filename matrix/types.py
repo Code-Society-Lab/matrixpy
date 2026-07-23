@@ -30,3 +30,12 @@ class Video(File):
 class Reaction:
     key: str
     senders: list[str]
+
+
+@dataclass
+class ReactionEvent:
+    """Details for a single reaction relation event."""
+
+    emoji: str
+    sender: str
+    event_id: str
