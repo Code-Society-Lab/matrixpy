@@ -1,5 +1,5 @@
 import asyncio
-from typing import Awaitable, Callable, TypeVar
+from typing import Awaitable, Callable, Iterable, TypeVar
 
 from nio import ErrorResponse, Response
 
@@ -77,3 +77,35 @@ async def with_retry(
             await asyncio.sleep(delay)
 
     raise AssertionError("unreachable")
+
+
+async def bounded_gather(
+    coros: Iterable[Awaitable[R]],
+    /,
+    *,
+    max_concurrent: int = 8,
+) -> list[R]:
+    """Run `coros` concurrently, limited to `max_concurrent` at a time.
+
+    Behaves like `asyncio.gather`, but never runs more than `max_concurrent`
+    awaitables at once. Useful for fanning out many API calls (e.g.
+    broadcasting to many rooms) without overwhelming a shared rate limit by
+    firing every request at once. The first exception raised by any
+    coroutine cancels the rest and propagates immediately, same as
+    `asyncio.gather`'s default behavior.
+
+    ## Example
+
+    ```python
+    messages = await bounded_gather(
+        (room.send(content) for room in rooms), max_concurrent=8
+    )
+    ```
+    """
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def _run(coro: Awaitable[R]) -> R:
+        async with semaphore:
+            return await coro
+
+    return await asyncio.gather(*[_run(coro) for coro in coros])

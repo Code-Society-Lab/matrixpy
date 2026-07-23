@@ -1,10 +1,12 @@
+import asyncio
+import inspect
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from nio import RoomSendResponse, RoomSendError
 
 from matrix.errors import ConfigError, MatrixApiError, MatrixError
-from matrix.api import matrix_call, with_retry
+from matrix.api import bounded_gather, matrix_call, with_retry
 
 
 @pytest.mark.asyncio
@@ -164,3 +166,55 @@ async def test_with_retry_with_retry_after_ms__expect_server_delay_honored():
 def test_with_retry_requires_positional_func__expect_type_error():
     with pytest.raises(TypeError):
         with_retry(func=lambda: None)
+
+
+@pytest.mark.asyncio
+async def test_bounded_gather_with_success__expect_results_in_order():
+    async def value(n):
+        return n
+
+    results = await bounded_gather([value(1), value(2), value(3)])
+
+    assert results == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_bounded_gather_limits_concurrency__expect_never_exceeds_max_concurrent():
+    active = 0
+    peak = 0
+
+    async def task():
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await asyncio.sleep(0.01)
+        active -= 1
+        return "done"
+
+    results = await bounded_gather([task() for _ in range(10)], max_concurrent=3)
+
+    assert results == ["done"] * 10
+    assert peak == 3
+
+
+@pytest.mark.asyncio
+async def test_bounded_gather_with_exception__expect_it_propagates():
+    async def ok():
+        return "ok"
+
+    async def fail():
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        await bounded_gather([ok(), fail(), ok()])
+
+
+def test_bounded_gather_default_max_concurrent__expect_eight():
+    default = inspect.signature(bounded_gather).parameters["max_concurrent"].default
+
+    assert default == 8
+
+
+def test_bounded_gather_requires_positional_coros__expect_type_error():
+    with pytest.raises(TypeError):
+        bounded_gather(coros=[])
