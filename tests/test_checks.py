@@ -8,6 +8,7 @@ from matrix.checks import (
     MODERATOR_POWER_LEVEL,
     is_admin,
     is_moderator,
+    is_room_encrypted,
 )
 from matrix.command import Command
 from matrix.context import Context
@@ -42,11 +43,14 @@ def make_event(sender: str) -> RoomMessageText:
     )
 
 
-def make_context(bot, client, sender: str, level: int) -> Context:
+def make_context(
+    bot, client, sender: str, level: int, encrypted: bool = False
+) -> Context:
     """Builds a real Context whose room reports `level` as the sender's power level."""
     matrix_room = Mock(spec=MatrixRoom)
     matrix_room.room_id = "!room:example.com"
     matrix_room.power_levels = PowerLevels(users={sender: level})
+    matrix_room.encrypted = encrypted
 
     room = Room(matrix_room, client)
     return Context(bot, room, make_event(sender))
@@ -176,6 +180,73 @@ async def test_is_moderator__allows_command_when_moderator(bot, client):
     is_moderator()(cmd)
 
     ctx = make_context(bot, client, "@mod:example.com", MODERATOR_POWER_LEVEL)
+    await cmd(ctx)
+
+    assert called is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("encrypted", [True, False])
+async def test_is_room_encrypted_check__reflects_room_encryption(
+    bot, client, encrypted
+):
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    is_room_encrypted()(cmd)
+
+    check = cmd.checks[-1]
+    ctx = make_context(bot, client, "@user:example.com", 0, encrypted=encrypted)
+
+    assert await check(ctx) is encrypted
+
+
+def test_is_room_encrypted__returns_the_same_command():
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    assert is_room_encrypted()(cmd) is cmd
+
+
+@pytest.mark.asyncio
+async def test_is_room_encrypted__raises_check_error_when_not_encrypted(bot, client):
+    called = False
+
+    async def restricted(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(restricted)
+    is_room_encrypted()(cmd)
+
+    caught: list[Exception] = []
+
+    @cmd.error(CheckError)
+    async def on_check_error(ctx, error):
+        caught.append(error)
+
+    ctx = make_context(bot, client, "@user:example.com", 0, encrypted=False)
+    await cmd(ctx)
+
+    assert called is False
+    assert len(caught) == 1
+    assert isinstance(caught[0], CheckError)
+
+
+@pytest.mark.asyncio
+async def test_is_room_encrypted__allows_command_when_encrypted(bot, client):
+    called = False
+
+    async def restricted(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(restricted)
+    is_room_encrypted()(cmd)
+
+    ctx = make_context(bot, client, "@user:example.com", 0, encrypted=True)
     await cmd(ctx)
 
     assert called is True
