@@ -92,3 +92,31 @@ def is_moderator() -> Callable:
         return cmd
 
     return wrapper
+
+
+def is_room_encrypted() -> Callable:
+    """
+    Decorator to restrict a command to encrypted rooms.
+
+    ## Example
+
+    ```python
+    @is_room_encrypted()
+    @bot.command("secret")
+    async def secret(ctx: Context) -> None:
+        await ctx.reply("This room is encrypted!")
+
+    @secret.error(CheckError)
+    async def secret_error(ctx: Context, error: CheckError) -> None:
+        await ctx.reply("This command can only be used in an encrypted room.")
+    ```
+    """
+
+    async def _is_room_encrypted(ctx: "Context") -> bool:
+        return ctx.room.encrypted
+
+    def wrapper(cmd: "Command") -> "Command":
+        cmd.check(_is_room_encrypted)
+        return cmd
+
+    return wrapper
