@@ -18,6 +18,15 @@ class Scheduler:
     def jobs(self) -> list[Job]:
         return cast(list[Job], self.scheduler.get_jobs())
 
+    def list_jobs(self) -> list[str]:
+        """Return a list of names of all registered jobs."""
+        return [job.name for job in self.jobs]
+        
+    def list_jobs(self) -> list[str]:
+        """Return a list of names of all registered jobs."""
+        return [job.name for job in self.jobs]
+
+
     def _parse_cron(self, cron: str) -> dict:
         """
         Parse a cron string into a dictionary suitable for CronTrigger.
@@ -47,6 +56,13 @@ class Scheduler:
         """
         cron_trigger = CronTrigger(**self._parse_cron(cron))
         self.scheduler.add_job(func, trigger=cron_trigger, name=func.__name__)
+
+    def unschedule(self, name: str) -> None:
+        """Remove a registered job by its name."""
+        for job in self.jobs:
+            if job.name == name:
+                self.scheduler.remove_job(job.id)
+                break
 
     def start(self) -> None:
         """Start the scheduler."""
