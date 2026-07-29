@@ -120,3 +120,34 @@ def is_room_encrypted() -> Callable:
         return cmd
 
     return wrapper
+
+
+def can_redact() -> Callable:
+    """
+    Decorator to restrict a command to users allowed to redact other
+    users' events (power level >= the room's `redact` power level).
+
+    ## Example
+
+    ```python
+    @can_redact()
+    @bot.command("purge")
+    async def purge(ctx: Context, event_id: str) -> None:
+        message = await ctx.room.fetch_message(event_id)
+        await message.delete()
+
+    @purge.error(CheckError)
+    async def purge_error(ctx: Context, error: CheckError) -> None:
+        await ctx.reply("You are not allowed to redact messages in this room.")
+    ```
+    """
+
+    async def _can_redact(ctx: "Context") -> bool:
+        levels = ctx.room.power_levels
+        return levels.can_user_redact(ctx.sender)  # type: ignore[no-any-return]
+
+    def wrapper(cmd: "Command") -> "Command":
+        cmd.check(_can_redact)
+        return cmd
+
+    return wrapper
