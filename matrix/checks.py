@@ -120,3 +120,33 @@ def is_room_encrypted() -> Callable:
         return cmd
 
     return wrapper
+
+
+def can_invite() -> Callable:
+    """
+    Decorator to restrict a command to users allowed to invite others
+    to the room (power level >= the room's `invite` power level).
+
+    ## Example
+
+    ```python
+    @can_invite()
+    @bot.command("invite")
+    async def invite(ctx: Context, user_id: str) -> None:
+        await ctx.room.invite_user(user_id)
+
+    @invite.error(CheckError)
+    async def invite_error(ctx: Context, error: CheckError) -> None:
+        await ctx.reply("You are not allowed to invite users to this room.")
+    ```
+    """
+
+    async def _can_invite(ctx: "Context") -> bool:
+        levels = ctx.room.power_levels
+        return levels.can_user_invite(ctx.sender)  # type: ignore[no-any-return]
+
+    def wrapper(cmd: "Command") -> "Command":
+        cmd.check(_can_invite)
+        return cmd
+
+    return wrapper
