@@ -6,6 +6,7 @@ from nio import MatrixRoom, RoomMessageText, AsyncClient, PowerLevels
 from matrix.checks import (
     ADMIN_POWER_LEVEL,
     MODERATOR_POWER_LEVEL,
+    has_power_level,
     is_admin,
     is_moderator,
     is_room_encrypted,
@@ -247,6 +248,81 @@ async def test_is_room_encrypted__allows_command_when_encrypted(bot, client):
     is_room_encrypted()(cmd)
 
     ctx = make_context(bot, client, "@user:example.com", 0, encrypted=True)
+    await cmd(ctx)
+
+    assert called is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "level, expected",
+    [
+        (75, True),
+        (76, True),
+        (74, False),
+        (0, False),
+    ],
+)
+async def test_has_power_level_check__respects_required_level_boundary(
+    bot, client, level, expected
+):
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    has_power_level(75)(cmd)
+
+    check = cmd.checks[-1]
+    ctx = make_context(bot, client, "@user:example.com", level)
+
+    assert await check(ctx) is expected
+
+
+def test_has_power_level__returns_the_same_command():
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    assert has_power_level(50)(cmd) is cmd
+
+
+@pytest.mark.asyncio
+async def test_has_power_level__raises_check_error_when_below_level(bot, client):
+    called = False
+
+    async def restricted(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(restricted)
+    has_power_level(50)(cmd)
+
+    caught: list[Exception] = []
+
+    @cmd.error(CheckError)
+    async def on_check_error(ctx, error):
+        caught.append(error)
+
+    ctx = make_context(bot, client, "@user:example.com", 49)
+    await cmd(ctx)
+
+    assert called is False
+    assert len(caught) == 1
+    assert isinstance(caught[0], CheckError)
+
+
+@pytest.mark.asyncio
+async def test_has_power_level__allows_command_when_level_is_sufficient(bot, client):
+    called = False
+
+    async def restricted(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(restricted)
+    has_power_level(50)(cmd)
+
+    ctx = make_context(bot, client, "@user:example.com", 50)
     await cmd(ctx)
 
     assert called is True

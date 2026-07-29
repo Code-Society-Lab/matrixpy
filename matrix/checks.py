@@ -120,3 +120,33 @@ def is_room_encrypted() -> Callable:
         return cmd
 
     return wrapper
+
+
+def has_power_level(level: int) -> Callable:
+    """
+    Decorator to restrict a command to users with a power level
+    greater than or equal to `level`.
+
+    ## Example
+
+    ```python
+    @has_power_level(75)
+    @bot.command("pin")
+    async def pin(ctx: Context, event_id: str) -> None:
+        await ctx.reply(f"Pinned {event_id}!")
+
+    @pin.error(CheckError)
+    async def pin_error(ctx: Context, error: CheckError) -> None:
+        await ctx.reply("You don't have the required power level.")
+    ```
+    """
+
+    async def _has_power_level(ctx: "Context") -> bool:
+        user_level = ctx.room.power_levels.get_user_level(ctx.sender)
+        return user_level >= level  # type: ignore[no-any-return]
+
+    def wrapper(cmd: "Command") -> "Command":
+        cmd.check(_has_power_level)
+        return cmd
+
+    return wrapper
