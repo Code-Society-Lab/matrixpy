@@ -1,11 +1,12 @@
 import pytest
 
 from unittest.mock import AsyncMock, Mock
-from nio import MatrixRoom, RoomMessageText, AsyncClient, PowerLevels
+from nio import MatrixRoom, RoomMessageText, AsyncClient, PowerLevels, DefaultLevels
 
 from matrix.checks import (
     ADMIN_POWER_LEVEL,
     MODERATOR_POWER_LEVEL,
+    can_invite,
     is_admin,
     is_moderator,
     is_room_encrypted,
@@ -44,12 +45,19 @@ def make_event(sender: str) -> RoomMessageText:
 
 
 def make_context(
-    bot, client, sender: str, level: int, encrypted: bool = False
+    bot,
+    client,
+    sender: str,
+    level: int,
+    encrypted: bool = False,
+    defaults: DefaultLevels | None = None,
 ) -> Context:
     """Builds a real Context whose room reports `level` as the sender's power level."""
     matrix_room = Mock(spec=MatrixRoom)
     matrix_room.room_id = "!room:example.com"
-    matrix_room.power_levels = PowerLevels(users={sender: level})
+    matrix_room.power_levels = PowerLevels(
+        defaults=defaults or DefaultLevels(), users={sender: level}
+    )
     matrix_room.encrypted = encrypted
 
     room = Room(matrix_room, client)
@@ -247,6 +255,106 @@ async def test_is_room_encrypted__allows_command_when_encrypted(bot, client):
     is_room_encrypted()(cmd)
 
     ctx = make_context(bot, client, "@user:example.com", 0, encrypted=True)
+    await cmd(ctx)
+
+    assert called is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "level, expected",
+    [
+        (50, True),  # nio's default `invite` power level is 50
+        (100, True),
+        (49, False),
+        (0, False),
+    ],
+)
+async def test_can_invite_check__respects_invite_power_level(
+    bot, client, level, expected
+):
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    can_invite()(cmd)
+
+    check = cmd.checks[-1]
+    ctx = make_context(bot, client, "@user:example.com", level)
+
+    assert await check(ctx) is expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("level, expected", [(74, False), (75, True)])
+async def test_can_invite_check__respects_custom_invite_level(
+    bot, client, level, expected
+):
+    """The check follows the room's configured `invite` power level."""
+
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    can_invite()(cmd)
+
+    check = cmd.checks[-1]
+    ctx = make_context(
+        bot,
+        client,
+        "@user:example.com",
+        level,
+        defaults=DefaultLevels(invite=75),
+    )
+
+    assert await check(ctx) is expected
+
+
+def test_can_invite__returns_the_same_command():
+    async def my_command(ctx):
+        pass
+
+    cmd = Command(my_command)
+    assert can_invite()(cmd) is cmd
+
+
+@pytest.mark.asyncio
+async def test_can_invite__raises_check_error_when_cannot_invite(bot, client):
+    called = False
+
+    async def restricted(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(restricted)
+    can_invite()(cmd)
+
+    caught: list[Exception] = []
+
+    @cmd.error(CheckError)
+    async def on_check_error(ctx, error):
+        caught.append(error)
+
+    ctx = make_context(bot, client, "@user:example.com", 0)
+    await cmd(ctx)
+
+    assert called is False
+    assert len(caught) == 1
+    assert isinstance(caught[0], CheckError)
+
+
+@pytest.mark.asyncio
+async def test_can_invite__allows_command_when_can_invite(bot, client):
+    called = False
+
+    async def restricted(ctx):
+        nonlocal called
+        called = True
+
+    cmd = Command(restricted)
+    can_invite()(cmd)
+
+    ctx = make_context(bot, client, "@user:example.com", 50)
     await cmd(ctx)
 
     assert called is True
