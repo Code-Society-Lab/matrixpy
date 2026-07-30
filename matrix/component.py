@@ -1,6 +1,12 @@
 from html import escape
 from abc import ABC, abstractmethod
 
+CELL_TEMPLATE = "<td><strong>{name}</strong><br>{value}</td>"
+
+ROW_TEMPLATE = "<tr>{cells}</tr>"
+
+TABLE_TEMPLATE = "<h2>{title}</h2><table><tbody>{rows}</tbody></table>"
+
 
 class Component(ABC):
     """Base class for message components."""
@@ -32,26 +38,25 @@ class Table(Component):
         )
 
     def render(self) -> str:
-        cells = [f"""
-            <td>
-                <strong>{escape(name)}</strong><br>
-                {escape(value)}
-            </td>
-            """ for name, value in self.fields]
+        cells = []
+        for name, value in self.fields:
+            cells.append(
+                CELL_TEMPLATE.format(
+                    name=escape(name),
+                    value=escape(value),
+                )
+            )
 
-        rows = ""
+        rows = []
         for i in range(0, len(cells), self.columns):
             row_cells = cells[i : i + self.columns]
 
             while len(row_cells) < self.columns:
                 row_cells.append("<td></td>")
 
-            rows += f"<tr>{''.join(row_cells)}</tr>"
+            rows.append(ROW_TEMPLATE.format(cells="".join(row_cells)))
 
-        return f"""<h2>{escape(self.title)}</h2>
-    <table>
-        <tbody>
-            {rows}
-        </tbody>
-    </table>
-""".strip()
+        return TABLE_TEMPLATE.format(
+            title=escape(self.title),
+            rows="".join(rows),
+        )
