@@ -21,6 +21,13 @@ class Component(ABC):
 
 
 class Table(Component):
+    """A component that renders labeled fields as a table.
+
+    Fields are displayed in rows using the configured number of columns.
+    Incomplete rows are padded with empty cells. Field names, values, and the
+    table title are HTML-escaped when rendered.
+    """
+
     def __init__(self, *, title: str, columns: int = 2) -> None:
         self.title: str = title
         self.columns: int = columns
@@ -30,14 +37,51 @@ class Table(Component):
         return self.render()
 
     def add_field(self, name: str, value: str) -> None:
+        """Add a labeled field to the table.
+
+        ## Example
+
+        ```python
+        table = Table(title="User Info")
+        table.add_field("Name", "Astra")
+        ```
+        """
         self.fields.append((name, value))
 
     def to_plain_text(self) -> str:
+        """Render the table as plain text.
+
+        ## Example
+
+        ```python
+        table = Table(title="User Info")
+        table.add_field("Name", "Astra")
+
+        result = table.to_plain_text()
+        # User Info
+        # Name: Astra
+        ```
+        """
         return "\n".join(
             [self.title, *[f"{name}: {value}" for name, value in self.fields]]
         )
 
     def render(self) -> str:
+        """Render the table as HTML with escaped field content.
+
+        Incomplete rows are padded with empty cells based on the configured
+        column count.
+
+        ## Example
+
+        ```python
+        table = Table(title="User Info")
+        table.add_field("Name", "Astra")
+        table.add_field("Role", "Engineer")
+
+        html = table.render()
+        ```
+        """
         cells = []
         for name, value in self.fields:
             cells.append(
