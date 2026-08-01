@@ -17,7 +17,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 
 dependencies = [
-    "matrix-nio==0.25.2",
+    "matrix-nio==0.26.0",
     "logger",
     "PyYAML==6.0.3",
     "markdown==3.10.2",
