@@ -5,7 +5,7 @@ bot = Bot()
 
 @bot.command()
 async def weather(ctx):
-    weather = Table(title="Los Angeles", columns=2)
+    weather = Table(title="Los Angeles")
 
     weather.add_field("Description", "Clear Sky")
     weather.add_field("Visibility", "10000m | 32808ft")
