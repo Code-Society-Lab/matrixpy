@@ -7,6 +7,23 @@ def table():
     return Table(title="User Info")
 
 
+@pytest.mark.parametrize("column_count", [0, -1, -10])
+def test_init__when_column_count_is_less_than_one__expect_value_error(
+    column_count: int,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="column_count must be greater than 0",
+    ):
+        Table(title="User Info", column_count=column_count)
+
+
+def test_init__when_column_count_is_one__expect_column_count_set() -> None:
+    table = Table(title="User Info", column_count=1)
+
+    assert table.column_count == 1
+
+
 def test_to_plain_text__expect_title_and_fields(table):
     table.add_field("Name", "Astra")
     table.add_field("Role", "Engineer")
@@ -50,7 +67,7 @@ def test_render__with_odd_number_of_fields__expect_empty_padding_cell(table):
 
 
 def test_render__with_custom_columns__expect_rows_grouped_by_column_count():
-    table = Table(title="User Info", columns=3)
+    table = Table(title="User Info", column_count=3)
     table.add_field("Name", "Astra")
     table.add_field("Role", "Engineer")
     table.add_field("Location", "CA")

@@ -28,9 +28,12 @@ class Table(Component):
     table title are HTML-escaped when rendered.
     """
 
-    def __init__(self, *, title: str, columns: int = 2) -> None:
+    def __init__(self, *, title: str, column_count: int = 2) -> None:
+        if column_count < 1:
+            raise ValueError("column_count must be greater than 0")
+
         self.title: str = title
-        self.columns: int = columns
+        self.column_count: int = column_count
         self.fields: list[tuple[str, str]] = []
 
     def __str__(self) -> str:
@@ -92,10 +95,10 @@ class Table(Component):
             )
 
         rows = []
-        for i in range(0, len(cells), self.columns):
-            row_cells = cells[i : i + self.columns]
+        for i in range(0, len(cells), self.column_count):
+            row_cells = cells[i : i + self.column_count]
 
-            while len(row_cells) < self.columns:
+            while len(row_cells) < self.column_count:
                 row_cells.append("<td></td>")
 
             rows.append(ROW_TEMPLATE.format(cells="".join(row_cells)))
