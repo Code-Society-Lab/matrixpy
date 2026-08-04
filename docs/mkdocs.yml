@@ -94,12 +94,14 @@ nav:
       - Events: guides/events.md
       - Checks: guides/checks.md
       - Error Handling: guides/error-handling.md
+      - Components: guides/component.md
       - Bigger Bot: guides/bigger-bot.md
   - Reference:
       - Bot: reference/bot.md
       - Checks: reference/checks.md
       - Command: reference/command.md
       - Config: reference/config.md
+      - Component: reference/component.md
       - Content: reference/content.md
       - Context: reference/context.md
       - Errors: reference/errors.md

@@ -23,3 +23,5 @@ async def weather(ctx):
 ```
 
 ::: matrix.component.Component
+
+::: matrix.component.Table
