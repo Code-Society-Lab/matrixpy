@@ -17,7 +17,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 
 dependencies = [
-    "matrix-nio==0.25.2",
+    "matrix-nio==0.26.0",
     "logger",
     "PyYAML==6.0.3",
     "markdown==3.10.2",
@@ -32,14 +32,14 @@ dev = [
     "pytest-asyncio==1.4.0",
     "black==26.5.1",
     "mypy==2.1.0",
-    "pre-commit==4.6.0",
-    "types-PyYAML==6.0.12.20260518",
+    "pre-commit==4.6.1",
+    "types-PyYAML==6.0.12.20260724",
     "types-Markdown==3.10.2.20260518",
 ]
 doc = [
     "mkdocs==1.6.1",
-    "mkdocs-material==9.7.6",
-    "mkdocstrings[python]==1.0.4"
+    "mkdocs-material==9.7.7",
+    "mkdocstrings[python]==1.0.6"
 ]
 
 [project.urls]
