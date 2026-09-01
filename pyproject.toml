@@ -20,7 +20,7 @@ dependencies = [
     "matrix-nio==0.26.0",
     "logger",
     "PyYAML==6.0.3",
-    "markdown==3.10.2",
+    "markdown==3.10.3",
     "APScheduler==3.11.3",
     "envyaml==1.10.211231",
 ]
