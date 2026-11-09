@@ -5,7 +5,7 @@ import logging
 
 from typing import Optional, Any
 
-from nio import AsyncClient, Event, MatrixRoom
+from nio import AsyncClient, Event, MatrixRoom, SyncResponse
 
 from .room import Room, make_room
 from .space import Space
@@ -297,6 +297,7 @@ class Bot(Registry):
         self.register_command(self.help)
 
         self.client.add_event_callback(self._on_matrix_event, Event)
+        self.client.add_response_callback(self._on_sync, SyncResponse)
         self._auto_register_events()
 
     def start(self, *, config: Config | str) -> None:
@@ -351,15 +352,16 @@ class Bot(Registry):
     async def _wait_until_synced(self) -> None:
         await self._synced.wait()
 
+    async def _on_sync(self, _response: SyncResponse) -> None:
+        """Mark the bot as synced once a sync with the homeserver completes."""
+        self._synced.set()
+
     # MATRIX EVENTS
 
     async def on_message(self, room: Room, event: Event) -> None:
         await self._process_commands(room, event)
 
     async def _on_matrix_event(self, matrix_room: MatrixRoom, event: Event) -> None:
-        if not self._synced.is_set():
-            self._synced.set()
-
         # ignore bot events
         if event.sender == self.client.user:
             return
