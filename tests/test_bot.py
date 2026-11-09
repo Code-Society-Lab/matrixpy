@@ -1,7 +1,7 @@
 import pytest
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from nio import MatrixRoom, RoomMessageText, LoginError
+from nio import MatrixRoom, RoomMessageText, LoginError, SyncResponse
 
 from matrix import Bot, Config, Context, Extension, Room, Space
 from matrix.errors import (
@@ -718,6 +718,47 @@ def test_start_handles_keyboard_interrupt(caplog):
 
     assert "bot interrupted by user" in caplog.text
     bot._client.close.assert_awaited_once()
+
+
+def test_load_config_registers_sync_response_callback():
+    bot = Bot()
+    bot._load_config(Config(username="grace", password="grace1234"))
+
+    assert any(
+        cb.func == bot._on_sync and cb.filter is SyncResponse
+        for cb in bot.client.response_callbacks
+    )
+
+
+@pytest.mark.asyncio
+async def test_room_event_does_not_mark_synced(bot, room, event):
+    with patch.object(bot, "_dispatch_matrix_event", new_callable=AsyncMock):
+        await bot._on_matrix_event(room, event)
+
+    assert not bot._synced.is_set()
+
+
+@pytest.mark.asyncio
+async def test_run_becomes_ready_after_first_sync_without_room_events(bot_with_token):
+    async def sync_forever(**_kwargs):
+        # A completed sync with no room events, then the loop keeps going.
+        await bot_with_token._on_sync(MagicMock(spec=SyncResponse))
+        await asyncio.Event().wait()
+
+    bot_with_token._client.sync_forever = AsyncMock(side_effect=sync_forever)
+    bot_with_token._on_ready = AsyncMock()
+    bot_with_token.scheduler.start = MagicMock()
+
+    task = asyncio.create_task(bot_with_token.run())
+
+    await asyncio.wait_for(bot_with_token._synced.wait(), timeout=1.0)
+    await asyncio.sleep(0)
+
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    bot_with_token._on_ready.assert_awaited_once()
+    bot_with_token.scheduler.start.assert_called_once()
 
 
 @pytest.mark.asyncio
