@@ -48,6 +48,20 @@ class Scheduler:
         cron_trigger = CronTrigger(**self._parse_cron(cron))
         self.scheduler.add_job(func, trigger=cron_trigger, name=func.__name__)
 
+    def unschedule(self, name: str) -> None:
+        """Remove a scheduled job by its name.
+
+        Args:
+            name: The name of the job to remove (typically the function name).
+
+        Example:
+            bot.scheduler.unschedule("morning_update")
+        """
+        for job in self.jobs:
+            if job.name == name:
+                self.scheduler.remove_job(job.id)
+                return
+
     def start(self) -> None:
         """Start the scheduler."""
         self.scheduler.start()
