@@ -48,7 +48,6 @@ class Bot(Registry):
         self._help: HelpCommand | None = help_
 
         self.extensions: dict[str, Extension] = {}
-        self.scheduler: Scheduler = Scheduler()
         self.log: logging.Logger = logging.getLogger(__name__)
         self.start_at: float | None = None
 
@@ -66,6 +65,10 @@ class Bot(Registry):
     def help(self) -> HelpCommand:
         assert self._help is not None, "Bot has not been started."
         return self._help
+
+    @property
+    def scheduler(self) -> Scheduler:
+        return self._scheduler
 
     def _auto_register_events(self) -> None:
         for attr in dir(self):
