@@ -795,13 +795,39 @@ async def test_scheduler_starts_after_ready(bot):
 
 
 @pytest.mark.asyncio
-async def test_scheduled_task_in_scheduler(bot):
+async def test_start_scheduler__with_bot_scheduled_task__expect_job_scheduled(bot: Bot):
     @bot.schedule("* * * * *")
-    async def scheduled_task():
+    async def bot_task():
         pass
 
-    job_names = list(map(lambda j: j.name, bot._scheduler.jobs))
-    assert "scheduled_task" in job_names, "Scheduled task not found in scheduler"
+    bot.scheduler.start()
+    try:
+        jobs = {j.name: j for j in bot.scheduler.jobs}
+        assert "bot_task" in jobs
+        assert jobs["bot_task"].next_run_time is not None
+    finally:
+        bot.scheduler.scheduler.shutdown(wait=False)
+
+
+@pytest.mark.asyncio
+async def test_start_scheduler__with_extension_scheduled_task__expect_job_scheduled(
+    bot: Bot,
+):
+    ext = Extension(name="scheduler_ext")
+
+    @ext.schedule("* * * * *")
+    async def extension_task():
+        pass
+
+    bot.load_extension(ext)
+
+    bot.scheduler.start()
+    try:
+        jobs = {j.name: j for j in bot.scheduler.jobs}
+        assert "extension_task" in jobs
+        assert jobs["extension_task"].next_run_time is not None
+    finally:
+        bot.scheduler.scheduler.shutdown(wait=False)
 
 
 @pytest.fixture
